@@ -1,7 +1,7 @@
 {
-  "name": "Cape Weather",
-  "short_name": "Cape Weather",
-  "description": "Cape Town local weather conditions and 5-day forecast.",
+  "name": "Clear Sky",
+  "short_name": "Clear Sky",
+  "description": "A lightweight weather page.",
   "start_url": "/survivor/",
   "scope": "/survivor/",
   "display": "standalone",

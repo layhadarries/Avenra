@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Cases{% endblock %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">Assigned work</p><h1>Cases</h1><p class="muted">Case records are restricted by your current access grants.</p></div>
+<div class="card table-scroll"><table><thead><tr><th scope="col">Case</th><th scope="col">Alerts</th><th scope="col">Latest alert</th></tr></thead><tbody>
+{% for case in cases %}<tr><th scope="row"><a href="{{ url_for('cases_page', case_code=case.case_code) }}">{{ case.case_code }}</a></th><td>{{ case.alert_count }}</td><td>{{ case.last_alert or 'No alerts recorded' }}</td></tr>
+{% else %}<tr><td colspan="3">You have no assigned case records.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

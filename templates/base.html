@@ -1,35 +1,47 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}avenra Response Portal{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="access-signature" content="{{ access_signature }}">
+  <meta name="session-expires" content="{{ session_expires }}">
+  <title>{% block title %}Dashboard{% endblock %} · Avenra</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="app-shell">
-        <aside class="sidebar">
-            <div class="sidebar-brand">avenra Portal</div>
-            <ul class="sidebar-nav">
-                <li><a href="{{ url_for('dashboard') }}" class="active">Alerts</a></li>
-                <li><a href="#cases">Cases</a></li>
-                <li><a href="#shelters">Shelters</a></li>
-                <li><a href="#referrals">Referrals</a></li>
-                <li><a href="#audit">Audit log</a></li>
-            </ul>
-        </aside>
-        <div class="main-area">
-            <header class="topbar">
-                <div class="topbar-user">
-                    Signed in as <strong>{{ user_name }}</strong>,
-                    <span>{{ 'Social worker' if user_role == 'responder' else ('Shelter staff' if user_role == 'shelter' else user_role|capitalize) }}</span>
-                </div>
-                <a href="{{ url_for('logout') }}" class="btn btn-outline">Sign out</a>
-            </header>
-            <main class="content">
-                {% block content %}{% endblock %}
-            </main>
-        </div>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">Avenra<span class="sidebar-caption">Partner portal</span></div>
+      <nav aria-label="Staff navigation">
+        <ul class="sidebar-nav">
+          {% if user.role in ('responder','admin') %}
+          <li><a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}aria-current="page" class="active"{% endif %}>Alerts</a></li>
+          <li><a href="{{ url_for('cases_page') }}" {% if request.endpoint == 'cases_page' %}aria-current="page" class="active"{% endif %}>Cases</a></li>
+          {% endif %}
+          <li><a href="{{ url_for('shelters_page') }}" {% if request.endpoint == 'shelters_page' %}aria-current="page" class="active"{% endif %}>Shelters</a></li>
+          <li><a href="{{ url_for('referrals_page') }}" {% if request.endpoint == 'referrals_page' %}aria-current="page" class="active"{% endif %}>Referrals</a></li>
+          {% if user.role in ('responder','admin') %}
+          <li><a href="{{ url_for('audit_log_page') }}" {% if request.endpoint == 'audit_log_page' %}aria-current="page" class="active"{% endif %}>Audit log</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </aside>
+    <div class="main-area">
+      <header class="topbar">
+        <p class="topbar-user">Signed in as <strong>{{ user.name }}</strong> · {{ role_label }}</p>
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-outline">Sign out everywhere</button>
+        </form>
+      </header>
+      <main class="content" id="main-content">
+        {% if config.EVALUATION_MODE %}<p class="evaluation-banner">Fictional evaluation · no real emergency response or notification delivery.</p>{% endif %}
+        {% block content %}{% endblock %}
+      </main>
     </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/portal.js') }}" defer></script>
 </body>
 </html>

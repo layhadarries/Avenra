@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f6f2">
+  <meta name="description" content="A lightweight weather page.">
+  <title>Clear Sky</title>
+  <link rel="manifest" href="/survivor/manifest.json">
+  <link rel="icon" href="/survivor/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="/survivor/shell.js" defer></script>
+</head>
+<body class="weather-body">
+  <main class="weather-shell">
+    <header class="weather-header"><span class="weather-brand"><img src="/survivor/icons/icon-192.png" width="38" height="38" alt="">Clear Sky</span><span class="connection-pill" id="connection-state" role="status">Checking connection</span></header>
+    <section class="weather-intro" aria-labelledby="weather-title"><p class="eyebrow">A moment for your day</p><h1 id="weather-title">A little<br>clearer.</h1><p>A quiet place to check the weather.</p></section>
+    <section class="card forecast-card" aria-labelledby="forecast-title"><span class="weather-symbol" aria-hidden="true">☀</span><div><p class="eyebrow">Local forecast</p><h2 id="forecast-title">Forecast unavailable</h2><p class="muted">Weather updates are not available in this version. No location is being collected.</p></div></section>
+    <section class="weather-footer" aria-labelledby="offline-title"><h2 id="offline-title">Ready for a quieter connection</h2><p id="offline-state" role="status">Offline opening will be checked when this page loads.</p><noscript><p>JavaScript is needed to enable offline opening.</p></noscript></section>
+    <footer class="weather-copyright">Clear Sky · A lighter day</footer>
+  </main>
+</body>
+</html>

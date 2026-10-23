@@ -32,8 +32,12 @@ class AuthController:
                 dest = self.auth_service.start_session(user)
                 return redirect(url_for(dest))
 
-            flash("That email and password don't match. Check them and try again.")
-            return render_template("login.html", demo_login=Config.DEMO_LOGIN), 401
+            # Anonymous-session validation may clear session flashes. Keep this
+            # request's generic error in template context instead of the cookie.
+            return render_template(
+                "login.html", demo_login=Config.DEMO_LOGIN,
+                error="That email and password don't match. Check them and try again.",
+            ), 401
 
         if current_user():
             return redirect(url_for("dashboard"))

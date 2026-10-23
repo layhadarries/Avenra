@@ -2,19 +2,20 @@
 
 A survivor-facing PWA and role-based staff portal under development. Python/Flask
 controllers, services and repositories live in `avenra/`; `app.py` remains the
-Gunicorn compatibility entrypoint. Existing case, alert, consent, diary and
-referral features are preserved.
+Gunicorn compatibility entrypoint. Backend APIs for alerts, consents, diary and
+referrals are present; the Stage 0 staff interface is an initial shell. Live alert
+triage, evidence views and the audit browser are not completed interfaces.
 
 This Stage 0 backend delivery is suitable for synthetic evaluation. It is not a
 production security certification or a live emergency response service. See
-`docs/STAGE0_BACKEND_HANDOFF.md` for remaining release gates.
+`docs/STAGE0_STATUS.md` for remaining release gates.
 
 ## Start locally in Fish (CachyOS)
 
 From the project directory, install the pinned dependencies:
 
 ```fish
-cd ~./Avenra
+cd ~/Desktop/Avenra
 python3 -m venv .venv
 source .venv/bin/activate.fish
 python -m pip install -r requirements-lock.txt
@@ -67,16 +68,12 @@ python migrate_staff_security.py
 
 The migration saves a private SQLite backup. It preserves existing activation and
 session versions; old accounts without activation columns become disabled.
-For a fresh database, initialize first, then create your first administrator:
+Normal startup leaves an empty account table. The controlled, one-time web owner
+setup and approved staff invitation workflow are **not implemented yet**. There
+is no `bootstrap_admin.py` in this repository and no public administrator signup.
+Use only the isolated fictional evaluation to review this checkpoint. Do not
+manually insert a real-data administrator as a workaround for missing onboarding.
 
-```fish
-python -c 'import db; db.init_db()'
-python bootstrap_admin.py
-python -m flask --app app run --port 5050
-```
-
-The bootstrap asks for your name, email, organisation and hidden password.
-It refuses to overwrite an account or create a second active administrator.
 Use `/login` for email/password authentication. Sessions expire 15 minutes after
 sign-in; polling does not extend them. Logout is a CSRF-protected POST and
 invalidates all sessions for that account. Account disabling also takes effect
@@ -95,8 +92,18 @@ python -m pip check
 
 The smoke check runs local Gunicorn with temporary data, checks startup guards,
 role login and audit, then restarts to verify account state is preserved.
-It sends no messages. CI is configured for Python 3.12 and 3.14; local verification
-for this delivery used Python 3.12.
+It sends no messages. No GitHub Actions workflow is currently configured.
+This checkpoint was verified on Python 3.12. The JavaScript cache boundary tests
+run with Node; the optional browser checks require a separate development install
+of Playwright and its Chromium (not a production dependency):
+
+```fish
+node --test tests/pwa-shell.cjs
+python tests/stage0_browser.py
+```
+
+Browser checks use temporary fictional data and start local Gunicorn. Mobile
+viewport checks do not replace installation testing on a physical Android phone.
 
 ## Render deployment
 
@@ -105,7 +112,7 @@ No public URL has been deployed or verified for this delivery.
 For a no-cost fictional hackathon preview, create a Render Blueprint from your
 Git repository and set its Blueprint Path to `render.evaluation.yaml`.
 Review its generated service settings, deploy, then record the actual Render URL
-in `DECISIONS.md`. Share `https://YOUR-ACTUAL-HOST/evaluation` with judges.
+in `docs/STAGE0_STATUS.md`. Share `https://YOUR-ACTUAL-HOST/evaluation` with judges.
 This free service sleeps when idle and uses ephemeral storage: data may disappear
 on redeployment or replacement. It is unsuitable for emergencies or real records.
 
@@ -156,7 +163,7 @@ case details or the product name. Do not repeat `--send` to check status: use
 An accepted, queued or sent status is not delivery. A provider `delivered` status
 is not proof of reading; confirm actual receipt with your recipient.
 Record the result without phone numbers, tokens or sensitive content in
-`DECISIONS.md`. Clear credentials afterward:
+`docs/STAGE0_STATUS.md`. Clear credentials afterward:
 
 ```fish
 set -e TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_FROM_NUMBER TEST_RECIPIENT_PHONE
@@ -172,6 +179,9 @@ a message creation request automatically. See
 Do not commit databases, their WAL/journal files, evidence uploads, environment
 files, credentials or private backups. SQLite file permissions are restricted on
 POSIX systems; filesystem permissions alone are not encryption.
-The current PWA still has a shared demo device identity. Individual device
-enrolment, revocation and end-to-end case authorization fixes are release blockers
-for real survivor data. See the handoff for the concrete unresolved findings.
+The public PWA shell contains no device credential and does not submit alerts.
+Legacy backend device authentication still has a shared demonstration identity.
+Individual enrolment, revocation, per-case API authorization and safe evidence
+handling remain release blockers. See [Stage 0 status](docs/STAGE0_STATUS.md) and
+[security requirements](docs/SECURITY_REQUIREMENTS.md) before working with real
+survivor information.
