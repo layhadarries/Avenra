@@ -19,6 +19,10 @@ def main():
         from avenra.services.sms_sender import TwilioSender
         TwilioSender(os.environ)  # Validate before starting either child.
         commands.append([sys.executable,'-m','avenra.notification_runner','--send','--watch'])
+    if os.environ.get('AVENRA_WEBPUSH_ENABLED')=='1' and not app.app.config['EVALUATION_MODE']:
+        from avenra.services.push_service import PushSettings
+        PushSettings()
+        commands.append([sys.executable,'-m','avenra.webpush_runner','--send','--watch'])
     children=[]; result=0
     try:
         for command in commands:children.append(subprocess.Popen(command))

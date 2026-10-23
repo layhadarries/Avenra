@@ -3,7 +3,11 @@ from datetime import datetime,timezone
 from avenra.repositories.notification_outbox_repository import NotificationOutboxRepository
 class NotificationStatusService:
     def __init__(self,connection):self.repo=NotificationOutboxRepository(connection)
-    def for_alert(self,alert_id):return self.repo.summary(alert_id)
+    def for_alert(self,alert_id):
+        summary=self.repo.summary(alert_id)
+        count=self.repo.conn.execute("SELECT COUNT(*) FROM push_acknowledgements p JOIN notification_outbox n ON n.id=p.job_id WHERE n.alert_id=? AND p.acknowledged_at IS NOT NULL",(alert_id,)).fetchone()[0]
+        summary['contact_acknowledged']=count
+        return summary
     @staticmethod
     def timing(client_ts,created_at):
         def parse(value):

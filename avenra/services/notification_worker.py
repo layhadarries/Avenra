@@ -38,7 +38,7 @@ class NotificationWorker:
         if self._disabled(): return False
         if self.conn.in_transaction: raise RuntimeError('Worker requires an idle connection.')
         with self.conn:
-            job=self.repo.claim_next()
+            job=self.repo.claim_next(channel='sms')
             if job is not None and not self.repo.reserve_alert_budget(job['alert_id']):
                 row=self.conn.execute('SELECT case_code FROM alerts WHERE id=?',(job['alert_id'],)).fetchone()
                 self.repo.finish(job['id'],job['claim_token'],'cancelled',reason_code='rate_limited')

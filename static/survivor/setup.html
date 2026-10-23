@@ -37,6 +37,8 @@
         <p class="setup-note">Save up to five trusted contacts. Notifications depend on service availability; location is included only when sharing is permitted.</p>
 
         <div id="contact-list"></div>
+        <p id="invite-help" role="status" hidden>Share this one-use link directly with the intended contact. It expires in 24 hours. Anyone holding it can accept; verify the recipient yourself.</p>
+        <input id="invite-link" type="text" aria-label="Contact invitation link" readonly hidden>
 
         <form id="contact-form" class="card" style="margin-top: 1rem;">
             <div class="form-group">
@@ -56,6 +58,7 @@
     (function () {
         "use strict";
         var DEVICE_TOKEN = "demo-device";
+        var pushAvailable = false;
         var listEl = document.getElementById("contact-list");
         var form = document.getElementById("contact-form");
         var errorEl = document.getElementById("form-error");
@@ -86,6 +89,24 @@
                 btn.addEventListener("click", function () { remove(c.id); });
                 row.appendChild(info);
                 row.appendChild(btn);
+                if (pushAvailable) {
+                    var invite = document.createElement("button");
+                    invite.type = "button"; invite.textContent = "Invite for notifications";
+                    invite.addEventListener("click", function () {
+                        invite.disabled = true;
+                        fetch("/api/contacts/" + c.id + "/push-invite", {method:"POST", cache:"no-store",
+                            headers:headers({"Content-Type":"application/json"}), body:"{}"})
+                            .then(function (response) { if (!response.ok) throw new Error(); return response.json(); })
+                            .then(function (body) {
+                                var field = document.getElementById("invite-link");
+                                field.value = location.origin + body.path;
+                                field.hidden = false; document.getElementById("invite-help").hidden = false;
+                                field.focus(); field.select();
+                            }).catch(function () { showError("Couldn't create an invitation. Try later; repeated requests are limited."); })
+                            .then(function () { invite.disabled = false; });
+                    });
+                    row.appendChild(invite);
+                }
                 listEl.appendChild(row);
             });
         }
@@ -149,6 +170,9 @@
                 });
         });
 
+        fetch("/api/contact-push/config", {cache:"no-store"})
+            .then(function (response) { if (response.ok) { pushAvailable = true; return load(); } })
+            .catch(function () {});
         load();
     })();
     </script>

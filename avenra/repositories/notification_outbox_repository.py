@@ -1,5 +1,6 @@
 """Durable notification jobs. Callers own all transaction boundaries."""
 import re
+import os
 import secrets
 from datetime import datetime, timezone
 from avenra.repositories.base import BaseRepository
@@ -8,6 +9,13 @@ class NotificationOutboxRepository(BaseRepository):
     def enqueue_for_alert(self, alert_id):
         if self.conn.execute('SELECT id FROM alerts WHERE id=?', (alert_id,)).fetchone() is None:
             raise ValueError('Alert does not exist.')
+        if os.environ.get('AVENRA_WEBPUSH_ENABLED') == '1':
+            cursor = self.conn.execute("""INSERT INTO notification_outbox(alert_id,contact_id)
+                SELECT a.id,c.id FROM alerts a JOIN contacts c ON c.user_id=a.user_id
+                WHERE a.id=? AND c.channel='webpush' AND EXISTS(
+                SELECT 1 FROM push_subscriptions s WHERE s.contact_id=c.id AND s.active=1)
+                ON CONFLICT(alert_id,contact_id) DO NOTHING""", (alert_id,))
+            return cursor.rowcount
         cursor = self.conn.execute("""INSERT INTO notification_outbox(alert_id,contact_id)
             SELECT a.id,c.id FROM alerts a JOIN contacts c ON c.user_id=a.user_id
             WHERE a.id=? ON CONFLICT(alert_id,contact_id) DO NOTHING""", (alert_id,))
@@ -19,12 +27,12 @@ class NotificationOutboxRepository(BaseRepository):
         return [dict(r) for r in self.conn.execute("""SELECT id,alert_id,contact_id,status
             FROM notification_outbox WHERE status='pending' ORDER BY id LIMIT ?""", (limit,))]
 
-    def claim_next(self):
+    def claim_next(self, channel=None):
         cursor = self.conn.execute("""UPDATE notification_outbox SET status='processing',
             claim_token=?,claimed_at=strftime('%Y-%m-%dT%H:%M:%SZ','now')
-            WHERE id=(SELECT id FROM notification_outbox WHERE status='pending' ORDER BY id LIMIT 1)
+            WHERE id=(SELECT id FROM notification_outbox WHERE status='pending' AND (? IS NULL OR EXISTS(SELECT 1 FROM contacts c WHERE c.id=notification_outbox.contact_id AND c.channel=?)) ORDER BY id LIMIT 1)
             AND status='pending' RETURNING id,alert_id,contact_id,status,claim_token,claimed_at""",
-            (secrets.token_hex(32),))
+            (secrets.token_hex(32),channel,channel))
         rows = cursor.fetchall()
         return dict(rows[0]) if rows else None
 

@@ -1,5 +1,7 @@
 """Alert business logic and notification dispatching service."""
 import sqlite3
+import os
+import math
 from typing import Optional, Tuple, Dict, Any, List
 from datetime import datetime, timezone
 from avenra.repositories.alert_repository import AlertRepository
@@ -9,7 +11,6 @@ from avenra.repositories.audit_repository import AuditRepository
 from avenra.models.user import User
 from avenra.models.alert import Alert
 import sms
-import math
 from avenra.repositories.notification_outbox_repository import NotificationOutboxRepository
 
 
@@ -35,38 +36,30 @@ def parse_client_ts(value: Any) -> Optional[str]:
     """Unknown unless an explicit timezone accompanies device time."""
     return parse_location_recorded_at(value)
 
+
 def parse_location_accuracy(value: Any) -> Optional[float]:
-    """Accept finite, non-negative numbers representing metres."""
+    """Accept finite, non-negative JSON numbers in metres; never block an alert."""
     if type(value) not in (int, float):
         return None
-
     try:
         number = float(value)
     except (OverflowError, ValueError):
         return None
-
     return number if math.isfinite(number) and number >= 0 else None
 
 
 def parse_location_recorded_at(value: Any) -> Optional[str]:
-    """Normalise an explicit device fix time without guessing its timezone."""
+    """Normalise an explicit device fix time; never infer its timezone or age."""
     if not isinstance(value, str) or len(value) > 64:
         return None
-
     try:
-        captured = datetime.fromisoformat(
-            value.strip().replace("Z", "+00:00")
-        )
+        captured = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
         if captured.tzinfo is None:
             return None
-
-        return (
-            captured.astimezone(timezone.utc)
-            .isoformat(timespec="seconds")
-            .replace("+00:00", "Z")
-        )
+        return captured.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
     except (ValueError, OverflowError):
         return None
+
 
 class AlertService:
     """Orchestrates emergency alert processing, idempotency, location privacy, and dispatch."""
@@ -84,30 +77,24 @@ class AlertService:
         self.audit_repo = audit_repo or AuditRepository()
 
     def create_alert(
-            self,
-            survivor: User,
-            client_id: Optional[str],
-            raw_lat: Any,
-            raw_lng: Any,
-            raw_client_ts: Any,
-            raw_location_accuracy: Any = None,
-            raw_location_recorded_at: Any = None,
+        self,
+        survivor: User,
+        client_id: Optional[str],
+        raw_lat: Any,
+        raw_lng: Any,
+        raw_client_ts: Any,
+        raw_location_accuracy: Any = None,
+        raw_location_recorded_at: Any = None,
     ) -> Tuple[Dict[str, Any], int]:
-        if (
-                not isinstance(client_id, str)
-                or not client_id.strip()
-                or len(client_id) > 64
-        ):
+        if not isinstance(client_id, str) or not client_id.strip() or len(client_id) > 64:
             return {"error": "client_id_required"}, 400
-
         client_id = client_id.strip()
         conn = self.alert_repo.conn
 
         try:
             with conn:
-                # Creation and retry checks share one write transaction.
+                # Serialize creation/retry checks and keep all writes atomic.
                 conn.execute("BEGIN IMMEDIATE")
-
                 existing = self.alert_repo.get_by_client_id(client_id)
                 if existing is not None:
                     if existing.user_id != survivor.id:
@@ -116,22 +103,13 @@ class AlertService:
 
                 lat = parse_coord(raw_lat, 90)
                 lng = parse_coord(raw_lng, 180)
-                location_allowed = self.consent_repo.is_active(
-                    survivor.id,
-                    "location_sharing",
-                )
-
-                if lat is None or lng is None or not location_allowed:
+                allowed = self.consent_repo.is_active(survivor.id, "location_sharing")
+                if lat is None or lng is None or not allowed:
                     lat = lng = None
 
-                accuracy = (
-                    parse_location_accuracy(raw_location_accuracy)
-                    if lat is not None else None
-                )
-                recorded_at = (
-                    parse_location_recorded_at(raw_location_recorded_at)
-                    if lat is not None else None
-                )
+                accuracy = parse_location_accuracy(raw_location_accuracy) if lat is not None else None
+                recorded_at = parse_location_recorded_at(raw_location_recorded_at) if lat is not None else None
+                client_ts = parse_client_ts(raw_client_ts)
 
                 alert = self.alert_repo.create(
                     user_id=survivor.id,
@@ -139,38 +117,26 @@ class AlertService:
                     lat=lat,
                     lng=lng,
                     client_id=client_id,
-                    client_ts=parse_client_ts(raw_client_ts),
+                    client_ts=client_ts,
                     location_accuracy=accuracy,
                     location_recorded_at=recorded_at,
                 )
-
-                queued = NotificationOutboxRepository(
-                    conn
-                ).enqueue_for_alert(alert.id)
-
+                queued = NotificationOutboxRepository(conn).enqueue_for_alert(alert.id)
                 self.audit_repo.log(
                     f"survivor {survivor.case_code}",
                     "alert_created",
                     survivor.case_code,
-                    (
-                        f"alert {alert.id}; "
-                        f"location {'yes' if lat is not None else 'no'}; "
-                        f"queued={queued}"
-                    ),
+                    f"alert {alert.id}; location {'yes' if lat is not None else 'no'}; queued={queued}",
                     commit=False,
                 )
-
         except sqlite3.Error:
             return {"error": "alert_storage_unavailable"}, 503
 
-        # Reached only after the transaction commits successfully.
         body = alert.created_body()
         body["contacts_queued"] = queued
         body["contacts_accepted"] = 0
         body["contacts_notified"] = 0
-        body["notification_mode"] = (
-            "queued" if queued else "no_contacts"
-        )
+        body["notification_mode"] = "queued" if queued else ("no_subscribed_contacts" if os.environ.get("AVENRA_WEBPUSH_ENABLED")=="1" else "no_contacts")
         return body, 201
 
     def list_alerts(self, limit: int = 50) -> List[Dict[str, Any]]:

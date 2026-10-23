@@ -29,7 +29,7 @@ def connect():
 
 
 def get_db():
-    """One connection per request, closed automatically after wards."""
+    """One connection per request, closed automatically afterwards."""
     if "db" not in g:
         g.db = connect()
     return g.db
@@ -67,12 +67,18 @@ def migrate(conn):
         conn.execute('ALTER TABLE users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 1 CHECK(auth_version>=1)')
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (1)')
     # Fixed identifiers/definitions: no request or environment input enters SQL.
-    additions = {'contacts': [('channel', "TEXT NOT NULL DEFAULT 'sms'"), ('chat_id', 'TEXT')],
-                 'shelters': [('updated_at', 'TEXT')],
-                 'alerts': [('notify_status', "TEXT NOT NULL DEFAULT 'pending'"), ('notify_detail', 'TEXT'),
-                            ('location_accuracy', 'REAL'), ('location_recorded_at', 'TEXT'), ],
-                 'diary_entries': [('captured_at', 'TEXT')], "notification_outbox": [
-            ("claim_token", "TEXT"), ("claimed_at", "TEXT"), ]}
+    additions = {
+        'contacts': [('channel', "TEXT NOT NULL DEFAULT 'sms'"), ('chat_id', 'TEXT')],
+        'shelters': [('updated_at', 'TEXT')],
+        'alerts': [
+            ('notify_status', "TEXT NOT NULL DEFAULT 'pending'"),
+            ('notify_detail', 'TEXT'),
+            ('location_accuracy', 'REAL'),
+            ('location_recorded_at', 'TEXT'),
+        ],
+        'diary_entries': [('captured_at', 'TEXT')],
+    }
+    additions["notification_outbox"] = [("claim_token", "TEXT"), ("claimed_at", "TEXT")]
     # Stage 2 completion migration: existing databases retain all records.
     additions["notification_outbox"] = [
         ("claim_token", "TEXT"), ("claimed_at", "TEXT"),
@@ -84,6 +90,10 @@ def migrate(conn):
         for column, definition in columns:
             if column not in present:
                 conn.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+    from avenra.repositories.push_repository import SCHEMA
+    # Fixed additive statements, without executescript committing the caller transaction.
+    for statement in SCHEMA.split(';'):
+        if statement.strip(): conn.execute(statement)
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (2)')
     conn.execute('''CREATE TABLE IF NOT EXISTS app_metadata (
         key TEXT PRIMARY KEY, value TEXT NOT NULL

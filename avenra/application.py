@@ -44,6 +44,8 @@ class AvenraApplication:
         self._register_extensions(app)
         self._register_middleware(app)
         self._register_controllers(app)
+        from avenra.controllers.push_controller import register_webpush
+        register_webpush(app)
 
         # All entrypoints, including gunicorn app:app, initialise the same schema.
         db.init_db()
@@ -76,7 +78,7 @@ class AvenraApplication:
         self.csrf.init_app(app)
         app.teardown_appcontext(db.close_db)
 
-    DEVICE_WRITE_ENDPOINTS = frozenset(('api_update_consent', 'create_alert', 'create_diary_entry', 'delete_contact', 'save_contacts'))
+    DEVICE_WRITE_ENDPOINTS = frozenset(('api_update_consent', 'create_alert', 'create_diary_entry', 'delete_contact', 'save_contacts', 'contact_push.invite'))
 
     def _register_middleware(self, app: Flask) -> None:
         @app.errorhandler(CSRFError)
@@ -97,10 +99,25 @@ class AvenraApplication:
                 return
             if request.endpoint in self.DEVICE_WRITE_ENDPOINTS:
                 return
+            if request.endpoint.startswith('contact_push.'):
+                # These pages deliberately suppress Referer. Keep session-bound
+                # CSRF token validation and require HTTPS browser Origin instead
+                # of disabling CSRF or weakening the site's other form checks.
+                from flask_wtf.csrf import validate_csrf
+                from wtforms.validators import ValidationError
+                try:
+                    validate_csrf(request.headers.get('X-CSRFToken'))
+                except ValidationError:
+                    raise CSRFError('Invalid contact form token.') from None
+                if request.is_secure and request.headers.get('Origin') != request.host_url.rstrip('/'):
+                    return jsonify({'error':'cross_origin_write_forbidden'}),403
+                return
             self.csrf.protect()
 
         @app.before_request
         def check_json_body():
+            if request.path.startswith('/api/contact-push/') and request.content_length and request.content_length>4096:
+                return jsonify({'error':'request_too_large'}),413
             return validate_json_body()
 
         @app.errorhandler(413)

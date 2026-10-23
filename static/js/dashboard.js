@@ -93,6 +93,9 @@
           not_requested: 'No contact notification jobs recorded.'
         };
         row.notification.textContent = notificationLabels[alert.notification?.status] || 'Contact notification status unavailable.';
+        if (alert.notification?.contact_acknowledged > 0) {
+          row.notification.textContent += ' Contacts who confirmed seeing it: ' + alert.notification.contact_acknowledged + '.';
+        }
         const located = !alert.location_redacted &&
           Number.isFinite(alert.lat) && Number.isFinite(alert.lng);
         row.location.textContent = located
