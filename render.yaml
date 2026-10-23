@@ -1,0 +1,27 @@
+# Persistent backend profile: deploying creates PAID compute and disk.
+# Review the price in Render first. This is not a production-readiness approval.
+services:
+  - type: web
+    name: avenra
+    runtime: python
+    plan: 0.5c-512mb
+    buildCommand: pip install -r requirements-lock.txt
+    startCommand: gunicorn app:app --workers 1 --threads 4 --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    disk:
+      name: avenra-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: DATABASE_PATH
+        value: /var/data/avenra.sqlite3
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
+      - key: DEVICE_TOKEN
+        generateValue: true

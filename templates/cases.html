@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Case {{ case_code }}{% endblock %}
+{% block content %}
+<div data-case-view="true"><div class="page-heading"><p class="eyebrow">Assigned case</p><h1>{{ case_code }}</h1></div>
+<section class="card"><h2>Case workspace</h2><p class="muted section-gap">Detailed case viewing is not enabled in this interface yet. Private notes, photographs and locations are not displayed here.</p><p class="section-gap"><a href="{{ url_for('cases_page') }}">Return to assigned cases</a></p></section></div>
+{% endblock %}

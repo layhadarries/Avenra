@@ -1,0 +1,22 @@
+# Optional FREE, disposable fictional-data demo with public one-click role access.
+# Sleeps when idle and can lose records on redeployment/replacement.
+# Never use for real people, emergencies, evidence, or delivery guarantees.
+services:
+  - type: web
+    name: avenra-evaluation
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-lock.txt
+    startCommand: gunicorn app:app --workers 1 --threads 4 --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: evaluation
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: DATABASE_PATH
+        value: /tmp/avenra-evaluation.sqlite3
+      - key: UPLOADS_DIR
+        value: /tmp/avenra-evaluation-uploads
