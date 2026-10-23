@@ -256,7 +256,7 @@
 
   doneBtn.addEventListener("click", function () { if (state === "sent") resetToReady(); });
   queuedDoneBtn.addEventListener("click", function () {
-    // Leaving the Queued screen does not cancel delivery: queue.js keeps trying in the background.
+    // Leaving the Queued screen does not cancel delivery: queue.js keeps trying in the background
     if (state === "queued") resetToReady();
   });
 
