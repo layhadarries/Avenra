@@ -5,6 +5,7 @@ from avenra.services.consent_service import ConsentService
 from avenra.repositories.user_repository import UserRepository
 from avenra.security import device_user, current_user
 from avenra.config import Config
+from avenra.repositories.case_access_repository import CaseAccessRepository
 
 
 class ConsentsController:
@@ -20,15 +21,28 @@ class ConsentsController:
 
     def get_consents(self):
         survivor = device_user()
+
         if survivor is None:
             user = current_user()
+
             if user is None:
                 return jsonify({"error": "unauthorized"}), 401
+
             if user.role not in Config.ALERT_ROLES:
                 return jsonify({"error": "forbidden"}), 403
-            survivor = self.user_repo.get_survivor_by_case(Config.DEMO_CASE_CODE)
 
-        return jsonify({"consents": self.consent_service.get_consents(survivor.id)})
+            survivor = self.user_repo.get_survivor_by_case(
+                Config.DEMO_CASE_CODE
+            )
+
+            if survivor is None or not CaseAccessRepository(
+                    self.user_repo.conn
+            ).allows(user.id, survivor.id):
+                return jsonify({"error": "not_found"}), 404
+
+        return jsonify({
+            "consents": self.consent_service.get_consents(survivor.id)
+        })
 
     def update_consent(self):
         survivor = device_user()

@@ -12,7 +12,7 @@ class SheltersController:
         self.shelter_service = shelter_service or ShelterService()
 
     def api_shelters(self):
-        # Used by both survivor PWA and partner dashboard
+        # Used by both survivor PWA and partner dashboard.js
         if current_user() is None and device_user() is None:
             return jsonify({"error": "unauthorized"}), 401
         return jsonify({"shelters": self.shelter_service.list_shelters()})

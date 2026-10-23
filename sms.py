@@ -1,6 +1,6 @@
 """Trusted-contact SMS / push notification dispatcher for Stage 2.
 
-In a crisis, one tap alerts both the verified responder dashboard AND the trusted contacts the survivor chose in advance
+In a crisis, one tap alerts both the verified responder dashboard.js AND the trusted contacts the survivor chose in advance
 
 Configuration (all optional; falls back to simulated SMS gateway for demos):
   SMS_WEBHOOK_URL      POST JSON {"to", "name", "message", "case_code"} to any SMS gateway or webhook

@@ -19,7 +19,7 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def main():
+def main(staff_check=None):
     with tempfile.TemporaryDirectory() as directory:
         env = os.environ.copy()
         for name in ('SMS_WEBHOOK_URL', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'):
@@ -53,6 +53,7 @@ def main():
                 page = context.new_page()
                 errors = []
                 page.on('pageerror', lambda error: errors.append(str(error)))
+                page.on('pageerror', lambda error: print(f"\nBROWSER ERROR: {error.stack}", flush=True))
                 page.goto(base + '/login')
                 page.get_by_label('Work email').fill('unknown@example.test')
                 page.get_by_label('Password', exact=True).fill('Wrong-Password-123!')
@@ -63,6 +64,8 @@ def main():
                 page.get_by_role('button', name='Sign in as Social worker').click()
                 page.wait_for_url('**/dashboard')
                 assert 'Nomsa D' in page.locator('.topbar-user').inner_text()
+                if staff_check is not None:
+                    staff_check(page, context, base, env)
                 page.get_by_role('link', name='Shelters', exact=True).click()
                 assert page.locator('tbody tr').count() == 3
                 if os.environ.get('AVENRA_SCREENSHOT_DIR'):
@@ -76,6 +79,7 @@ def main():
                 mobile = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True)
                 page = mobile.new_page()
                 page.on('pageerror', lambda error: errors.append(str(error)))
+                page.on('pageerror', lambda error: print(f"\nBROWSER ERROR: {error.stack}", flush=True))
                 page.goto(base + '/survivor/')
                 page.wait_for_function('navigator.serviceWorker.controller !== null')
                 page.wait_for_function("document.querySelector('#offline-state').textContent.includes('ready to open offline')")

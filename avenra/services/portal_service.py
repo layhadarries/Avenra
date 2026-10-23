@@ -39,9 +39,6 @@ class PortalService:
         for row in rows:
             item = Alert.from_row(row).serialize(consent.is_active(row['user_id'], 'location_sharing'))
             item.update({key: row[key] for key in ('assigned_to', 'assigned_name', 'escalated_at', 'revision')})
-            # The current sender does not supply a measured GPS accuracy or fix time.
-            item['location_accuracy'] = None
-            item['location_recorded_at'] = row['client_ts'] or row['created_at']
             items.append(item)
         return {'alerts': items, 'total': total, 'page': filters['page'],
                 'per_page': filters['per_page'],
