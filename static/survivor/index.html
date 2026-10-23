@@ -10,79 +10,104 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
         body {
-            display: flex;
-            flex-direction: column;
+            display: flex; 
+            flex-direction: column; 
             min-height: 100vh;
-            background-color: var(--warm-bg);
-            -webkit-user-select: none;
+            background-color: var(--warm-bg); 
+            -webkit-user-select: none; 
             user-select: none;
         }
         .pwa-header {
-            display: flex;
-            justify-content: space-between;
+            display: flex; 
+            justify-content: 
+            space-between; 
             align-items: center;
-            padding: 1rem 1.25rem;
-            background: var(--surface);
+            padding: 1rem 1.25rem; 
+            background: var(--surface); 
             border-bottom: 1px solid var(--border);
         }
-        .pwa-title {
-            font-weight: 700;
-            font-size: 1.05rem;
-            color: var(--navy);
-        }
+        .pwa-title { 
+            font-weight: 700; 
+            font-size: 1.05rem; 
+            color: var(--navy); }
         .quick-exit-pill {
-            background: var(--navy);
-            color: #ffffff;
+            background: var(--navy); 
+            color: #ffffff; 
             border: none;
-            padding: 0.35rem 0.85rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
+            padding: 0.35rem 0.85rem; 
+            border-radius: 999px; 
+            font-size: 0.8rem; 
+            font-weight: 600; 
             cursor: pointer;
         }
         .pwa-main {
-            flex: 1;
-            display: flex;
+            flex: 1; 
+            display: flex; 
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem 1.5rem;
+            align-items: center; 
+            justify-content: center; 
+            padding: 2rem 1.5rem; 
             text-align: center;
         }
-        .view {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 320px;
+        .view { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            width: 100%; 
+            max-width: 320px; 
         }
-        .view .btn {
-            margin-top: 0.75rem;
-            min-width: 160px;
+        .view .btn { 
+            margin-top: 0.75rem; 
+            min-width: 160px; 
         }
-        .panic-caption {
-            color: var(--dusty-blue);
-            font-size: 0.92rem;
-            max-width: 260px;
-            margin-top: 1rem;
+        .panic-caption { 
+            color: var(--dusty-blue); 
+            font-size: 0.92rem; 
+            max-width: 260px; 
+            margin-top: 1rem; 
+        }
+        .queue-note {
+            margin-top: 0.75rem; 
+            font-size: 0.82rem; 
+            color: var(--amber);
+            background: var(--amber-bg); 
+            padding: 0.35rem 0.75rem; 
+            border-radius: 999px;
         }
         .bottom-nav {
-            display: grid;
+            display: grid; 
             grid-template-columns: repeat(4, 1fr);
-            background: var(--surface);
-            border-top: 1px solid var(--border);
+            background: var(--surface); 
+            border-top: 1px solid var(--border); 
             padding: 0.65rem 0.5rem;
         }
-        .bottom-nav a {
-            text-align: center;
+        .bottom-nav button {
+            background: none; 
+            border: none; 
+            text-align: center; 
             font-size: 0.82rem;
-            color: var(--dusty-blue);
-            text-decoration: none;
-            font-weight: 600;
-            padding: 0.35rem 0;
+            color: var(--dusty-blue); 
+            font-weight: 600; 
+            padding: 0.35rem 0; cursor: pointer;
         }
-        .bottom-nav a.active {
-            color: var(--teal);
+        .bottom-nav button.active { color: var(--teal); }
+        .more-panel { 
+            width: 100%; 
+            max-width: 360px; 
+            margin: 0 auto; 
+            padding: 1.5rem 1.25rem; 
+            text-align: left; 
+        }
+        .more-row {
+            display: block;
+             background: var(--surface); 
+            border: 1px solid var(--border);
+            border-radius: var(--radius); 
+            padding: 0.9rem 1rem; 
+            text-decoration: none;
+            color: var(--navy); 
+            font-weight: 600; 
+            margin-bottom: 0.6rem;
         }
     </style>
 </head>
@@ -92,13 +117,14 @@
         <button type="button" id="quick-exit" class="quick-exit-pill">Quick exit</button>
     </header>
 
-    <main class="pwa-main">
+    <main class="pwa-main" id="pwa-main">
         <!-- Ready: hold the ring to start -->
         <section id="view-ready" class="view">
             <button type="button" id="panic-btn" class="panic-ring" aria-label="Hold to send alert">
                 <span class="panic-ring-inner">Hold to send alert</span>
             </button>
             <p class="panic-caption">Sends your location to the people you chose</p>
+            <p class="queue-note" id="queue-note" hidden></p>
         </section>
 
         <!-- Countdown: 5 seconds to undo -->
@@ -121,29 +147,78 @@
             <button type="button" id="done-btn" class="btn btn-outline">Done</button>
         </section>
 
-        <!-- Failed: same client_id is reused on retry -->
-        <section id="view-failed" class="view" hidden>
-            <p class="big">Couldn't send.</p>
-            <button type="button" id="retry-btn" class="btn btn-primary">Tap to retry</button>
+        <!-- Queued: no signal. Saved safely, delivers automatically, no retry tap needed. -->
+        <section id="view-queued" class="view" hidden>
+            <p class="big">Saved on this phone</p>
+            <p class="panic-caption">It will send automatically when you have signal.</p>
+            <button type="button" id="queued-done-btn" class="btn btn-outline">Done</button>
+        </section>
+
+        <!-- More: trusted contacts entry point -->
+        <section id="view-more" class="more-panel" hidden>
+            <a href="/survivor/setup.html" class="more-row">Trusted contacts</a>
         </section>
     </main>
 
     <nav class="bottom-nav">
-        <a href="/survivor/" class="active">Home</a>
-        <a href="#help">Find help</a>
-        <a href="#diary">Diary</a>
-        <a href="#more">More</a>
+        <button type="button" data-nav="home" class="active">Home</button>
+        <button type="button" data-nav="help">Find help</button>
+        <button type="button" data-nav="diary">Diary</button>
+        <button type="button" data-nav="more">More</button>
     </nav>
 
+    <script src="/survivor/queue.js" defer></script>
     <script src="/survivor/survivor.js" defer></script>
     <script>
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", function () {
-                navigator.serviceWorker.register("/survivor/service-worker.js", {
-                    scope: "/survivor/"
-                });
+                navigator.serviceWorker.register("/survivor/service-worker.js", { scope: "/survivor/" });
             });
         }
+
+        // Page chrome only: bottom-nav and the queue-size note
+        // - panic flow itself lives in survivor.js
+        (function () {
+            "use strict";
+            var navButtons = document.querySelectorAll(".bottom-nav button");
+            var morePanel = document.getElementById("view-more");
+            var homeViews = ["view-ready", "view-countdown", "view-sending", "view-sent", "view-queued"];
+
+            navButtons.forEach(function (btn) {
+                btn.addEventListener("click", function () {
+                    navButtons.forEach(function (b) { b.classList.remove("active"); });
+                    btn.classList.add("active");
+                    var tab = btn.getAttribute("data-nav");
+                    if (tab === "more") {
+                        homeViews.forEach(function (id) { document.getElementById(id).hidden = true; });
+                        morePanel.hidden = false;
+                    } else {
+                        morePanel.hidden = true;
+                        if (tab === "home") document.getElementById("view-ready").hidden = false;
+                    }
+                });
+            });
+
+            function refreshQueueNote() {
+                if (!window.CWQueue) return;
+                window.CWQueue.queueSize().then(function (n) {
+                    var note = document.getElementById("queue-note");
+                    if (n > 0) {
+                        note.hidden = false;
+                        note.textContent = n === 1 ? "1 waiting to send" : n + " waiting to send";
+                    } else {
+                        note.hidden = true;
+                    }
+                }).catch(function () {});
+            }
+
+            window.addEventListener("load", refreshQueueNote);
+            window.addEventListener("online", refreshQueueNote);
+            document.addEventListener("visibilitychange", refreshQueueNote);
+            if (window.CWQueue && window.CWQueue.onFlushed) {
+                window.CWQueue.onFlushed(refreshQueueNote);
+            }
+        })();
     </script>
 </body>
 </html>
