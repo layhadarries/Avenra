@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SafePath Response Portal{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-brand">SafePath Portal</div>
+            <ul class="sidebar-nav">
+                <li><a href="{{ url_for('dashboard') }}" class="active">Alerts</a></li>
+                <li><a href="#cases">Cases</a></li>
+                <li><a href="#shelters">Shelters</a></li>
+                <li><a href="#referrals">Referrals</a></li>
+                <li><a href="#audit">Audit log</a></li>
+            </ul>
+        </aside>
+        <div class="main-area">
+            <header class="topbar">
+                <div class="topbar-user">
+                    Signed in as <strong>{{ user_name }}</strong>,
+                    <span>{{ 'Social worker' if user_role == 'responder' else ('Shelter staff' if user_role == 'shelter' else user_role|capitalize) }}</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline">Sign out</a>
+            </header>
+            <main class="content">
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+</body>
+</html>
