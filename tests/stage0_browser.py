@@ -80,6 +80,7 @@ def main(staff_check=None):
                 page = mobile.new_page()
                 page.on('pageerror', lambda error: errors.append(str(error)))
                 page.on('pageerror', lambda error: print(f"\nBROWSER ERROR: {error.stack}", flush=True))
+                identity = mobile.request.get(base + '/survivor/manifest.json').json()
                 page.goto(base + '/survivor/')
                 page.wait_for_function('navigator.serviceWorker.controller !== null')
                 page.wait_for_function("document.querySelector('#offline-state').textContent.includes('ready to open offline')")
@@ -88,7 +89,7 @@ def main(staff_check=None):
                     page.screenshot(path=str(Path(os.environ['AVENRA_SCREENSHOT_DIR']) / 'pwa.png'), full_page=True)
                 mobile.set_offline(True)
                 page.goto(base + '/survivor/index.html')
-                assert page.title() == 'Clear Sky'
+                assert page.title() == identity['name']
                 assert 'offline' in page.locator('#connection-state').inner_text()
                 assert page.evaluate("fetch('/api/alerts').then(() => false, () => true)")
                 cached = page.evaluate('''async () => {

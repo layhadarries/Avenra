@@ -184,7 +184,11 @@ class avenraStagesTestCase(unittest.TestCase):
         # Weather disguise PWA root ("Clear Sky")
         res = self.client.get("/survivor/")
         self.assertEqual(res.status_code, 200)
-        self.assertIn(b"Clear Sky", res.data)
+        shell = res.get_data()
+        res.close()
+        with self.client.get('/survivor/manifest.json', buffered=True) as manifest_response:
+            identity = manifest_response.get_json()
+        self.assertIn(identity['name'].encode(), shell)
         res.close()
 
         # Create panic alert

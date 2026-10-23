@@ -76,12 +76,7 @@ class AvenraApplication:
         self.csrf.init_app(app)
         app.teardown_appcontext(db.close_db)
 
-    DEVICE_WRITE_ENDPOINTS = frozenset({
-        "create_alert",
-        "save_contacts",
-        "api_update_consent",
-        "create_diary_entry",
-    })
+    DEVICE_WRITE_ENDPOINTS = frozenset(('api_update_consent', 'create_alert', 'create_diary_entry', 'delete_contact', 'save_contacts'))
 
     def _register_middleware(self, app: Flask) -> None:
         @app.errorhandler(CSRFError)
@@ -168,6 +163,7 @@ class AvenraApplication:
         # API: Contacts
         app.add_url_rule("/api/contacts", endpoint="list_contacts", view_func=contacts_ctrl.list_contacts, methods=["GET"])
         app.add_url_rule("/api/contacts", endpoint="save_contacts", view_func=contacts_ctrl.save_contacts, methods=["POST"])
+        app.add_url_rule("/api/contacts/<int:contact_id>", endpoint="delete_contact", view_func=contacts_ctrl.delete_contact, methods=["DELETE"])
 
         # API: Shelters & Referrals
         app.add_url_rule("/api/shelters", endpoint="api_shelters", view_func=shelters_ctrl.api_shelters, methods=["GET"])

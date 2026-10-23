@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1d6f72">
     <title>Cape Weather</title>
     <link rel="manifest" href="/survivor/manifest.json">
@@ -10,103 +10,103 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
         body {
-            display: flex; 
-            flex-direction: column; 
+            display: flex;
+            flex-direction: column;
             min-height: 100vh;
-            background-color: var(--warm-bg); 
-            -webkit-user-select: none; 
+            background-color: var(--warm-bg);
+            -webkit-user-select: none;
             user-select: none;
         }
         .pwa-header {
-            display: flex; 
-            justify-content: 
-            space-between; 
+            display: flex;
+            justify-content:
+            space-between;
             align-items: center;
-            padding: 1rem 1.25rem; 
-            background: var(--surface); 
+            padding: 1rem 1.25rem;
+            background: var(--surface);
             border-bottom: 1px solid var(--border);
         }
-        .pwa-title { 
-            font-weight: 700; 
-            font-size: 1.05rem; 
+        .pwa-title {
+            font-weight: 700;
+            font-size: 1.05rem;
             color: var(--navy); }
         .quick-exit-pill {
-            background: var(--navy); 
-            color: #ffffff; 
+            background: var(--navy);
+            color: #ffffff;
             border: none;
-            padding: 0.35rem 0.85rem; 
-            border-radius: 999px; 
-            font-size: 0.8rem; 
-            font-weight: 600; 
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
             cursor: pointer;
         }
         .pwa-main {
-            flex: 1; 
-            display: flex; 
+            flex: 1;
+            display: flex;
             flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            padding: 2rem 1.5rem; 
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
             text-align: center;
         }
-        .view { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            width: 100%; 
-            max-width: 320px; 
+        .view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 320px;
         }
-        .view .btn { 
-            margin-top: 0.75rem; 
-            min-width: 160px; 
+        .view .btn {
+            margin-top: 0.75rem;
+            min-width: 160px;
         }
-        .panic-caption { 
-            color: var(--dusty-blue); 
-            font-size: 0.92rem; 
-            max-width: 260px; 
-            margin-top: 1rem; 
+        .panic-caption {
+            color: var(--dusty-blue);
+            font-size: 0.92rem;
+            max-width: 260px;
+            margin-top: 1rem;
         }
         .queue-note {
-            margin-top: 0.75rem; 
-            font-size: 0.82rem; 
+            margin-top: 0.75rem;
+            font-size: 0.82rem;
             color: var(--amber);
-            background: var(--amber-bg); 
-            padding: 0.35rem 0.75rem; 
+            background: var(--amber-bg);
+            padding: 0.35rem 0.75rem;
             border-radius: 999px;
         }
         .bottom-nav {
-            display: grid; 
+            display: grid;
             grid-template-columns: repeat(4, 1fr);
-            background: var(--surface); 
-            border-top: 1px solid var(--border); 
+            background: var(--surface);
+            border-top: 1px solid var(--border);
             padding: 0.65rem 0.5rem;
         }
         .bottom-nav button {
-            background: none; 
-            border: none; 
-            text-align: center; 
+            background: none;
+            border: none;
+            text-align: center;
             font-size: 0.82rem;
-            color: var(--dusty-blue); 
-            font-weight: 600; 
+            color: var(--dusty-blue);
+            font-weight: 600;
             padding: 0.35rem 0; cursor: pointer;
         }
         .bottom-nav button.active { color: var(--teal); }
-        .more-panel { 
-            width: 100%; 
-            max-width: 360px; 
-            margin: 0 auto; 
-            padding: 1.5rem 1.25rem; 
-            text-align: left; 
+        .more-panel {
+            width: 100%;
+            max-width: 360px;
+            margin: 0 auto;
+            padding: 1.5rem 1.25rem;
+            text-align: left;
         }
         .more-row {
             display: block;
-             background: var(--surface); 
+             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: var(--radius); 
-            padding: 0.9rem 1rem; 
+            border-radius: var(--radius);
+            padding: 0.9rem 1rem;
             text-decoration: none;
-            color: var(--navy); 
-            font-weight: 600; 
+            color: var(--navy);
+            font-weight: 600;
             margin-bottom: 0.6rem;
         }
     </style>
@@ -158,6 +158,10 @@
         <section id="view-more" class="more-panel" hidden>
             <a href="/survivor/setup.html" class="more-row">Trusted contacts</a>
         </section>
+        <div class="section-gap" aria-live="polite">
+            <p id="connection-state">Checking connection…</p>
+            <p id="offline-state">Preparing offline opening…</p>
+        </div>
     </main>
 
     <nav class="bottom-nav">
@@ -167,14 +171,11 @@
         <button type="button" data-nav="more">More</button>
     </nav>
 
+    <script src="/survivor/shell.js" defer></script>
     <script src="/survivor/queue.js" defer></script>
     <script src="/survivor/survivor.js" defer></script>
     <script>
-        if ("serviceWorker" in navigator) {
-            window.addEventListener("load", function () {
-                navigator.serviceWorker.register("/survivor/service-worker.js", { scope: "/survivor/" });
-            });
-        }
+
 
         // Page chrome only: bottom-nav and the queue-size note
         // - panic flow itself lives in survivor.js

@@ -34,14 +34,14 @@
     <main class="setup-wrap">
         <a href="/survivor/" class="back-link">&larr; Back</a>
         <h1 class="setup-title">Trusted contacts</h1>
-        <p class="setup-note">This person will get a text with your location when you send an alert.</p>
+        <p class="setup-note">Save up to five trusted contacts. Notifications depend on service availability; location is included only when sharing is permitted.</p>
 
         <div id="contact-list"></div>
 
         <form id="contact-form" class="card" style="margin-top: 1rem;">
             <div class="form-group">
                 <label for="c-name">Name</label>
-                <input id="c-name" type="text" maxlength="80" required>
+                <input id="c-name" type="text" maxlength="60" required>
             </div>
             <div class="form-group">
                 <label for="c-phone">Phone number</label>
@@ -130,7 +130,7 @@
                 })
                 .catch(function (err) {
                     var messages = {
-                        contact_limit: "You can save up to 3 trusted contacts.",
+                        contact_limit: "You can save up to 5 trusted contacts.",
                         invalid_phone: "That doesn't look like a South African number.",
                         name_required: "Please enter a name."
                     };

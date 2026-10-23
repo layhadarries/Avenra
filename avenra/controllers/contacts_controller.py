@@ -21,7 +21,10 @@ class ContactsController:
         if survivor is None:return jsonify({'error':'bad_device_token'}),401
         data=request.get_json(silent=True)
         if not isinstance(data,dict):return jsonify({'error':'contacts_object_required'}),400
-        if 'contacts' not in data:return jsonify({'error':'contacts_list_required'}),400
+        if 'contacts' not in data:
+            if 'name' in data or 'phone' in data:
+                return self.add_contact(survivor,data)
+            return jsonify({'error':'contacts_list_required'}),400
         conn=self.contact_repo.conn
         try:
             with conn:
@@ -46,6 +49,41 @@ class ContactsController:
                     f'{len(cleaned)} contact(s) saved',commit=False)
         except ContactValidationError as error:
             return jsonify({'error':'invalid_contacts','message':str(error)}),400
+        except sqlite3.Error:
+            return jsonify({'error':'contact_storage_unavailable'}),503
+        return self.list_contacts()
+
+    def add_contact(self,survivor,data):
+        conn=self.contact_repo.conn
+        try:
+            with conn:
+                conn.execute('BEGIN IMMEDIATE')
+                existing=self.contact_repo.get_for_user(survivor.id)
+                if len(existing)>=ContactService.MAX_CONTACTS:
+                    return jsonify({'error':'contact_limit'}),400
+                name,phone=ContactService.clean_contacts([data])[0]
+                if any(r['name']==name or r['phone']==phone for r in existing):
+                    raise ContactValidationError('Contact name and number must be distinct.')
+                self.contact_repo.add_contact(survivor.id,name,phone)
+                self.audit_repo.log(f'survivor {survivor.case_code}','contact_added',
+                    survivor.case_code,'Trusted contact added',commit=False)
+        except ContactValidationError as error:
+            return jsonify({'error':'invalid_contacts','message':str(error)}),400
+        except sqlite3.Error:
+            return jsonify({'error':'contact_storage_unavailable'}),503
+        return self.list_contacts(),201
+
+    def delete_contact(self,contact_id):
+        survivor=device_user()
+        if survivor is None:return jsonify({'error':'bad_device_token'}),401
+        conn=self.contact_repo.conn
+        try:
+            with conn:
+                conn.execute('BEGIN IMMEDIATE')
+                if not self.contact_repo.delete_contact(survivor.id,contact_id):
+                    return jsonify({'error':'not_found'}),404
+                self.audit_repo.log(f'survivor {survivor.case_code}','contact_removed',
+                    survivor.case_code,'Trusted contact removed',commit=False)
         except sqlite3.Error:
             return jsonify({'error':'contact_storage_unavailable'}),503
         return self.list_contacts()

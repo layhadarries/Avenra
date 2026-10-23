@@ -23,3 +23,13 @@ class ContactRepository(BaseRepository):
                 self.conn.execute('UPDATE contacts SET name=? WHERE id=? AND user_id=?',(name,row['id'],user_id))
             else:
                 self.conn.execute('INSERT INTO contacts(user_id,name,phone) VALUES(?,?,?)',(user_id,name,phone))
+
+    def add_contact(self,user_id,name,phone):
+        cursor=self.conn.execute('INSERT INTO contacts(user_id,name,phone) VALUES(?,?,?)',
+            (user_id,name,phone))
+        return cursor.lastrowid
+
+    def delete_contact(self,user_id,contact_id):
+        cursor=self.conn.execute('DELETE FROM contacts WHERE id=? AND user_id=?',
+            (contact_id,user_id))
+        return cursor.rowcount==1
