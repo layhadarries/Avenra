@@ -1,0 +1,24 @@
+# Stage 0 Checklist (Gate Verification)
+- [X] Run `python tools/make_icons.py` to generate `icon-192.png` and `icon-512.png`
+- [ ] `/login` renders the role buttons and footer line `"Access is logged. Verified organisations only."`
+- [X] `/survivor/` displays `"Cape Weather"` with zero mention of SafePath
+- [ ] Chrome on Android offers `"Install app"` and opens full-screen <- ISSUE
+- [ ] Turning on Airplane Mode and reopening the installed app loads the shell from the service worker cache
+
+
+## Stage 1
+
+Test on a real Android phone on mobile data, then on the live Render URL:
+
+- [ ] Hold the ring for about 1 second, then wait 5 seconds. The dashboard shows a new card within about 3 seconds.
+- [ ] Letting go before 1 second cancels the hold with no alert
+- [ ] Tapping Undo during the countdown creates no alert (check the database count)
+- [ ] The phone shows "Help status: Waiting". After Nomsa D acknowledges, it changes to "Help status: Someone has seen your alert" within about 5 seconds.
+- [ ] Turn off location permission, send an alert. It still sends, and the dashboard shows "Location not shared".
+- [ ] Turn on Slow 3G in DevTools. The alert still sends.
+- [ ] In DevTools, the alert request is under 1 KB, and its body holds only `client_id`, `lat`, `lng`, and `client_ts`
+- [ ] Quick exit lands on the Cape Weather cover. Pressing Back does not return to the panic screen.
+- [ ] Long-press the temperature on the cover returns to the panic screen
+- [ ] Airplane mode, then reopen the installed app: the panic screen and cover still load
+- [ ] Chrome offers "Install app", and the installed app opens full-screen with the name "Cape Weather"
+- [ ] Git tag `stage-1` exists once Me's checklist passes
