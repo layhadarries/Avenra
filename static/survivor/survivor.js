@@ -1,284 +1,133 @@
-/* Cape Weather: survivor panic flow (Stage 2).
-   States: ready -> holding -> countdown -> sending -> sent | queued.
-   Write first, send second: every alert is saved to CWQueue before the network attempt. */
+/* Stage 2 panic flow. Evaluation authentication only. */
 (function () {
-  "use strict";
-
-  var DEVICE_TOKEN = "demo-device";
-  var HOLD_MS = 1000;
-  var COUNTDOWN_S = 5;
-  var LOCATION_TIMEOUT_MS = 4000;
-  var REQUEST_TIMEOUT_MS = 25000;
-  var STATUS_POLL_MS = 5000;
-
+  'use strict';
   function $(id) { return document.getElementById(id); }
-
-  var panicBtn = $("panic-btn");
-  var undoBtn = $("undo-btn");
-  var doneBtn = $("done-btn");
-  var queuedDoneBtn = $("queued-done-btn");
-  var quitBtn = $("quick-exit");
-  var countdownText = $("countdown-text");
-  var countdownFill = $("countdown-fill");
-  var helpStatus = $("help-status");
-
-  var VIEWS = {
-    ready: $("view-ready"),
-    countdown: $("view-countdown"),
-    sending: $("view-sending"),
-    sent: $("view-sent"),
-    queued: $("view-queued")
-  };
-  var VIEW_FOR = {
-    ready: "ready", holding: "ready", countdown: "countdown",
-    sending: "sending", sent: "sent", queued: "queued"
-  };
-
-  var state = "ready";
-  var timers = { hold: null, holdTick: null, countdown: null, countdownTick: null, status: null };
-  var pending = null;  // { clientId, clientTs, location (Promise, never rejects), payload }
-
-  function round6(n) { return Math.round(n * 1e6) / 1e6; }
-
-  function newClientId() {
-    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-    var bytes = new Uint8Array(16);
-    crypto.getRandomValues(bytes);
-    return Array.prototype.map.call(bytes, function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
-  }
-
-  function clearTimers() {
-    clearTimeout(timers.hold);
-    clearInterval(timers.holdTick);
-    clearTimeout(timers.countdown);
-    clearInterval(timers.countdownTick);
-    clearInterval(timers.status);
-    Object.keys(timers).forEach(function (k) { timers[k] = null; });
-  }
-
+  var state = 'ready', pending = null, exited = false, statusTimer = null;
+  var holdTimer = null, tickTimer = null, countdownTimer = null;
+  var views = ['ready', 'countdown', 'sending', 'sent', 'queued', 'error'];
   function setState(next) {
     state = next;
-    var show = VIEW_FOR[next];
-    Object.keys(VIEWS).forEach(function (k) { VIEWS[k].hidden = (k !== show); });
-    if (next !== "holding") panicBtn.style.setProperty("--p", "0");
+    var view = next === 'holding' ? 'ready' : next;
+    views.forEach(function (name) { $('view-' + name).hidden = name !== view; });
+    if ($('view-more')) $('view-more').hidden = true;
+    $('panic-btn').style.setProperty('--p', '0');
   }
-
-  function resetToReady() {
-    clearTimers();
-    pending = null;
-    setState("ready");
+  function clearTimers() {
+    clearTimeout(holdTimer); clearTimeout(countdownTimer);
+    clearInterval(tickTimer); clearInterval(statusTimer);
+    holdTimer = tickTimer = countdownTimer = statusTimer = null;
   }
-
+  function reset() { clearTimers(); pending = null; setState('ready'); }
+  function newId() {
+    var bytes = new Uint8Array(16); crypto.getRandomValues(bytes);
+    return Array.prototype.map.call(bytes, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  }
   function getLocation() {
-    return new Promise(function (resolve) {
-      if (!("geolocation" in navigator)) { resolve(null); return; }
-      var settled = false;
-      function done(value) { if (!settled) { settled = true; resolve(value); } }
-      var giveUp = setTimeout(function () { done(null); }, LOCATION_TIMEOUT_MS);
-      navigator.geolocation.getCurrentPosition(
-        function (pos) {
-          clearTimeout(giveUp);
-          done({ lat: round6(pos.coords.latitude), lng: round6(pos.coords.longitude) });
-        },
-        function () { clearTimeout(giveUp); done(null); },
-        { enableHighAccuracy: true, timeout: LOCATION_TIMEOUT_MS, maximumAge: 30000 }
-      );
-    });
-  }
-
-  function warmUpLocation() {
-    if (!("geolocation" in navigator)) return;
-    navigator.geolocation.getCurrentPosition(function () {}, function () {}, {
-      enableHighAccuracy: false, timeout: 10000, maximumAge: 300000
-    });
-  }
-
-  function request(url, options) {
-    var opts = Object.assign({ credentials: "same-origin", cache: "no-store" }, options || {});
-    opts.headers = Object.assign({ "X-Device-Token": DEVICE_TOKEN }, (options && options.headers) || {});
-    var ctrl = new AbortController();
-    var timer = setTimeout(function () { ctrl.abort(); }, REQUEST_TIMEOUT_MS);
-    opts.signal = ctrl.signal;
-    return fetch(url, opts).then(function (res) {
-      clearTimeout(timer);
-      if (!res.ok) throw new Error("http " + res.status);
-      return res.json();
-    }, function (err) {
-      clearTimeout(timer);
-      throw err;
-    });
-  }
-
-  // ---------------------------------------------------------------- hold
-
-  function startHold(e) {
-    if (state !== "ready") return;
-    if (e.cancelable) e.preventDefault();
-
-    pending = { clientId: newClientId(), clientTs: new Date().toISOString(), location: getLocation(), payload: null };
-    setState("holding");
-
-    var started = Date.now();
-    timers.holdTick = setInterval(function () {
-      var pct = Math.min(100, (Date.now() - started) / HOLD_MS * 100);
-      panicBtn.style.setProperty("--p", pct.toFixed(1));
-    }, 50);
-    timers.hold = setTimeout(startCountdown, HOLD_MS);
-  }
-
-  function cancelHold() {
-    if (state !== "holding") return;
-    clearTimers();
-    pending = null;
-    setState("ready");
-  }
-
-  panicBtn.addEventListener("pointerdown", startHold);
-  ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) { panicBtn.addEventListener(ev, cancelHold); });
-  panicBtn.addEventListener("contextmenu", function (e) { e.preventDefault(); });
-
-  // ---------------------------------------------------------------- countdown
-
-  function paintCountdown(left) {
-    countdownText.textContent = left + (left === 1 ? " second" : " seconds") + " to undo";
-    countdownFill.style.width = (left / COUNTDOWN_S * 100) + "%";
-  }
-
-  function startCountdown() {
-    if (state !== "holding" || !pending) return;
-    clearInterval(timers.holdTick);
-    clearTimeout(timers.hold);
-    timers.holdTick = null;
-    timers.hold = null;
-
-    setState("countdown");
-    var left = COUNTDOWN_S;
-    paintCountdown(left);
-
-    timers.countdownTick = setInterval(function () { left -= 1; if (left > 0) paintCountdown(left); }, 1000);
-    timers.countdown = setTimeout(function () {
-      clearInterval(timers.countdownTick);
-      timers.countdownTick = null;
-      sendAlert();
-    }, COUNTDOWN_S * 1000);
-
-    undoBtn.focus();
-  }
-
-  // Undo stops the timer and makes no network call
-  // ! nothing is queued before this point
-  undoBtn.addEventListener("click", function () {
-    if (state === "countdown") resetToReady();
-  });
-
-  // ---------------------------------------------------------------- send
-
-  function sendAlert() {
-    if (!pending) return;
-    setState("sending");
-
-    pending.location.then(function (fix) {
-      pending.payload = {
-        client_id: pending.clientId,
-        lat: fix ? fix.lat : null,
-        lng: fix ? fix.lng : null,
-        client_ts: pending.clientTs
-      };
-      // Write first: the alert is safe on this phone before any network attempt
-      return window.CWQueue.queueAlert(pending.payload).then(function () {
-        return request("/api/alerts", {
-          method: "POST",
-          keepalive: true,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(pending.payload)
-        });
+    // Explicit per-alert choice plus current server consent; unknown/offline means no GPS.
+    if (!$('share-alert-location').checked || !navigator.geolocation) return Promise.resolve(null);
+    return window.CWQueue.locationPermitted().then(function (allowed) {
+      if (!allowed || exited) return null;
+      return new Promise(function (resolve) {
+        var finished = false;
+        var timer = setTimeout(function () { done(null); }, 4000);
+        function done(value) { if (!finished) { finished = true; clearTimeout(timer); resolve(value); } }
+        navigator.geolocation.getCurrentPosition(function (position) {
+          var coords = position.coords, stamp = new Date(position.timestamp);
+          if (!Number.isFinite(coords.latitude) || !Number.isFinite(coords.longitude)) return done(null);
+          done({lat: coords.latitude, lng: coords.longitude,
+            location_accuracy: Number.isFinite(coords.accuracy) && coords.accuracy >= 0 ? coords.accuracy : null,
+            location_recorded_at: Number.isFinite(stamp.getTime()) ? stamp.toISOString() : null});
+        }, function () { done(null); }, {enableHighAccuracy: true, timeout: 4000, maximumAge: 30000});
       });
-    }).then(function (data) {
-      // Sent immediately 
-      // Ask the queue to clear this entry: the same client_id makes that
-      // request idempotent even if the server already saw it once
-      window.CWQueue.flushQueue();
-      onSent(data);
-    }, onQueued);
+    }).catch(function () { return null; });
   }
-
-  function onSent(data) {
-    if (state !== "sending" && state !== "queued") return;  // ignore a late echo once Done was pressed
-    if (data.status === "acknowledged") {
-      helpStatus.textContent = "Help status: Someone has seen your alert";
-    } else {
-      helpStatus.textContent = "Help status: Waiting";
-      startStatusPoll(data.id);
-    }
-    setState("sent");
+  function startHold(event) {
+    if (state !== 'ready' || exited) return;
+    if (event.cancelable) event.preventDefault();
+    pending = {clientId: newId(), clientTs: new Date().toISOString(), phase: 'preparing'};
+    setState('holding');
+    var start = Date.now();
+    tickTimer = setInterval(function () {
+      $('panic-btn').style.setProperty('--p', String(Math.min(100, (Date.now() - start) / 10)));
+    }, 50);
+    holdTimer = setTimeout(startCountdown, 1000);
   }
-
-  // alert is already safely written to IndexedDB
-  // queue.js keeps retrying on its own,
-  // with no retry button and no "failed" wording — its saved, not lost
-  function onQueued() {
-    setState("queued");
+  function cancelHold() { if (state === 'holding') reset(); }
+  function startCountdown() {
+    if (state !== 'holding' || !pending || exited) return;
+    clearTimers(); setState('countdown');
+    var left = 5;
+    function paint() { $('countdown-text').textContent = left + ' seconds to undo'; $('countdown-fill').style.width = left / 5 * 100 + '%'; }
+    paint(); tickTimer = setInterval(function () { left = Math.max(0, left - 1); paint(); }, 1000);
+    countdownTimer = setTimeout(sendAlert, 5000); $('undo-btn').focus();
   }
-
-  // fires whenever queue.js delivers any queued alert, including ones sent while this screen
-  // wasn't open
-  // -only react if it's the alert currently on screen
-  if (window.CWQueue && window.CWQueue.onFlushed) {
-    window.CWQueue.onFlushed(function (evt) {
-      if (evt.type === "sent" && pending && evt.client_id === pending.clientId) {
-        onSent(evt.receipt);
-      }
+  function sendAlert() {
+    if (!pending || exited) return;
+    clearTimers(); setState('sending');
+    var attempt = pending;
+    getLocation().then(function (fix) {
+      // Exit before queueing cancels preparation. After saving starts, let it commit.
+      if (exited || pending !== attempt) return;
+      var payload = Object.assign({client_id: attempt.clientId, client_ts: attempt.clientTs,
+        lat: null, lng: null, location_accuracy: null, location_recorded_at: null}, fix || {});
+      attempt.phase = 'saving';
+      return window.CWQueue.queueAlert(payload).then(function () {
+        attempt.phase = 'saved';
+        if (!exited && pending === attempt) setState('queued');
+        return window.CWQueue.flushQueue();
+      });
+    }).catch(function () {
+      if (exited || pending !== attempt) return;
+      $('save-error').textContent = 'Could not confirm this alert was saved. Try again. No receipt has been confirmed.';
+      setState('error');
     });
   }
-
-  // ---------------------------------------------------------------- status
-
-  var statusAlertId = null;
-
-  function startStatusPoll(id) {
-    statusAlertId = id;
-    clearInterval(timers.status);
-    timers.status = setInterval(checkStatus, STATUS_POLL_MS);
+  function onSent(receipt) {
+    if (exited || !pending || receipt.client_id !== pending.clientId) return;
+    clearInterval(statusTimer); setState('sent');
+    $('help-status').textContent = receipt.status === 'acknowledged' ? 'Help status: Someone has seen your alert' : 'Help status: Waiting';
+    if (receipt.status === 'acknowledged') return;
+    var attempt = pending, busy = false;
+    function poll() {
+      if (busy || exited || pending !== attempt || state !== 'sent') return;
+      busy = true;
+      var ctrl = new AbortController(), timer = setTimeout(function () { ctrl.abort(); }, 10000);
+      fetch('/api/alerts/' + receipt.id + '/status', {cache: 'no-store', credentials: 'same-origin',
+        headers: {'X-Device-Token': 'demo-device'}, signal: ctrl.signal})
+        .then(function (response) { if (!response.ok) throw new Error('unavailable'); return response.json(); })
+        .then(function (body) {
+          if (!exited && pending === attempt && state === 'sent' && body.status === 'acknowledged') {
+            $('help-status').textContent = 'Help status: Someone has seen your alert'; clearInterval(statusTimer);
+          }
+        }).catch(function () {}).then(function () { busy = false; clearTimeout(timer); });
+    }
+    statusTimer = setInterval(poll, 5000); poll();
   }
-
-  function checkStatus() {
-    if (state !== "sent" || statusAlertId == null) return;
-    request("/api/alerts/" + statusAlertId + "/status")
-      .then(function (data) {
-        if (data.status === "acknowledged") {
-          helpStatus.textContent = "Help status: Someone has seen your alert";
-          clearInterval(timers.status);
-          timers.status = null;
-        }
-      })
-      .catch(function () { /* keep polling, the next tick retries */ });
-  }
-
-  doneBtn.addEventListener("click", function () { if (state === "sent") resetToReady(); });
-  queuedDoneBtn.addEventListener("click", function () {
-    // Leaving the Queued screen does not cancel delivery: queue.js keeps trying in the background
-    if (state === "queued") resetToReady();
+  window.CWQueue.onFlushed(function (event) {
+    if (event.type === 'sent') onSent(event.receipt);
+    if (event.type === 'blocked' && !exited && pending && pending.clientId === event.client_id) {
+      setState('queued');
+      $('queue-message').textContent = 'Saved on this phone, but the service could not accept it. Reopen after access is restored. Help has not been confirmed.';
+    }
   });
-
-  // ---------------------------------------------------------------- quick exit
-
-  // Clears on-screen state only  
-  // - queued alert is untouched in IndexedDB and still delivers
-  // because cover.html also loads queue.js
-  // - in-flight send uses keepalive, so it completes too
   function quickExit(event) {
     if (event) event.preventDefault();
-    clearTimers();
-    pending = null;
-    setState("ready");
-    location.replace("/survivor/cover.html");
+    exited = true; clearTimers(); pending = null;
+    location.replace('/survivor/cover.html');
   }
-
-  quitBtn.addEventListener("click", quickExit);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") quickExit(e); });
-
-  // ---------------------------------------------------------------- start
-
-  setState("ready");
-  warmUpLocation();
+  $('panic-btn').addEventListener('pointerdown', startHold);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (name) { $('panic-btn').addEventListener(name, cancelHold); });
+  $('panic-btn').addEventListener('contextmenu', function (event) { event.preventDefault(); });
+  // Keyboard and assistive technology can trigger the same hold/countdown flow.
+  $('panic-btn').addEventListener('keydown', function (event) { if (event.key === ' ' || event.key === 'Enter') startHold(event); });
+  $('panic-btn').addEventListener('keyup', cancelHold);
+  $('panic-btn').addEventListener('blur', cancelHold);
+  $('undo-btn').addEventListener('click', function () { if (state === 'countdown') reset(); });
+  ['done-btn', 'queued-done-btn', 'error-done-btn'].forEach(function (id) { $(id).addEventListener('click', reset); });
+  $('quick-exit').addEventListener('click', quickExit);
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') quickExit(event); });
+  window.addEventListener('pagehide', function () { exited = true; clearTimers(); pending = null; });
+  window.addEventListener('pageshow', function (event) { if (event.persisted && exited) location.replace('/survivor/cover.html'); });
+  window.CWPanic = {showHome: function () { if (!exited) setState(state); }};
+  setState('ready');
 })();

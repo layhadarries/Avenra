@@ -1,149 +1,136 @@
-/* Cape Weather: offline alert queue (Stage 2)
-        - IndexedDB only, no libraries.
-   Write first, send second: queueAlert() must resolve before survivor.js attempts to send. */
+/* Evaluation queue. Retries while a page is open, or when it is reopened.
+   IndexedDB contains sensitive pending payloads: individual auth and storage
+   protection remain release requirements. No closed-app delivery guarantee. */
 (function (global) {
-  "use strict";
-
-  var DB_NAME = "cape-weather-queue";
-  var STORE = "alerts";
-  var DEVICE_TOKEN = "demo-device";
-  var SEND_TIMEOUT_MS = 15000;   // generous: survives a Render cold start
-  var BACKOFF_STEPS_MS = [5000, 15000, 30000];
-
-  var dbPromise = null;
-  var flushing = false;
-  var backoffTimer = null;
-  var backoffIndex = 0;
-  var listeners = [];
-
+  'use strict';
+  var DB_NAME = 'cape-weather-queue', STORE = 'alerts';
+  var DEVICE_TOKEN = 'demo-device'; // Evaluation only; never a production credential.
+  var dbPromise = null, flushPromise = null, flushAgain = false, retryTimer = null, retryIndex = 0;
+  var listeners = [], BACKOFF = [5000, 15000, 30000];
+  function emit(event) {
+    listeners.forEach(function (fn) { try { fn(event); } catch (_) {} });
+  }
   function openDb() {
-    if (dbPromise) return dbPromise;
-    dbPromise = new Promise(function (resolve, reject) {
-      var req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = function () {
-        req.result.createObjectStore(STORE, { keyPath: "client_id" });
-      };
-      req.onsuccess = function () { resolve(req.result); };
-      req.onerror = function () { reject(req.error); };
-    });
+    if (!dbPromise) {
+      dbPromise = new Promise(function (resolve, reject) {
+        var req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = function () {
+          if (!req.result.objectStoreNames.contains(STORE))
+            req.result.createObjectStore(STORE, {keyPath: 'client_id'});
+        };
+        req.onerror = function () { dbPromise = null; reject(new Error('storage_unavailable')); };
+        req.onblocked = function () { dbPromise = null; reject(new Error('storage_unavailable')); };
+        req.onsuccess = function () {
+          var db = req.result;
+          db.onversionchange = function () { db.close(); dbPromise = null; };
+          resolve(db);
+        };
+      });
+    }
     return dbPromise;
   }
-
-  function store(mode) {
-    return openDb().then(function (db) { return db.transaction(STORE, mode).objectStore(STORE); });
+  function transaction(mode, operation) {
+    return openDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx, result;
+        try {
+          tx = db.transaction(STORE, mode);
+          tx.oncomplete = function () { resolve(result); };
+          tx.onabort = tx.onerror = function () { reject(new Error('storage_unavailable')); };
+          var req = operation(tx.objectStore(STORE));
+          req.onsuccess = function () { result = req.result; };
+          req.onerror = function () { reject(new Error('storage_unavailable')); };
+        } catch (_) { if (tx) { try { tx.abort(); } catch (_) {} } reject(new Error('storage_unavailable')); }
+      });
+    });
   }
-
   function queueAlert(item) {
-    // item: {client_id, lat, lng, client_ts}
-    return store("readwrite").then(function (s) {
-      return new Promise(function (resolve, reject) {
-        var req = s.put(item);
-        req.onsuccess = function () { resolve(); };
-        req.onerror = function () { reject(req.error); };
-      });
-    });
+    return transaction('readwrite', function (store) { return store.put(item); })
+      .then(function () { emit({type: 'queued', client_id: item.client_id}); });
   }
-
-  function removeAlert(clientId) {
-    return store("readwrite").then(function (s) {
-      return new Promise(function (resolve, reject) {
-        var req = s.delete(clientId);
-        req.onsuccess = function () { resolve(); };
-        req.onerror = function () { reject(req.error); };
-      });
-    });
+  function removeAlert(id) {
+    return transaction('readwrite', function (store) { return store.delete(id); });
   }
-
   function allAlerts() {
-    return store("readonly").then(function (s) {
-      return new Promise(function (resolve, reject) {
-        var req = s.getAll();
-        req.onsuccess = function () { resolve(req.result || []); };
-        req.onerror = function () { reject(req.error); };
+    return transaction('readonly', function (store) { return store.getAll(); });
+  }
+  function request(url, options, timeout) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, timeout);
+    options = Object.assign({credentials: 'same-origin', cache: 'no-store'}, options || {});
+    options.headers = Object.assign({'X-Device-Token': DEVICE_TOKEN}, options.headers || {});
+    options.signal = ctrl.signal;
+    return fetch(url, options).then(function (response) {
+      if (!response.ok) {
+        var error = new Error('request_failed'); error.status = response.status; throw error;
+      }
+      return response.json();
+    }).then(function (body) { clearTimeout(timer); return body; }, function (error) {
+      clearTimeout(timer); throw error;
+    });
+  }
+  function locationPermitted() {
+    return request('/api/consents', {}, 3000).then(function (body) {
+      return Array.isArray(body.consents) && body.consents.some(function (consent) {
+        return consent.item === 'location_sharing' && (consent.active === true || consent.active === 1);
+      });
+    }, function () { return false; });
+  }
+  function sendOne(item) {
+    return locationPermitted().then(function (allowed) {
+      var payload = Object.assign({}, item);
+      if (!allowed) {
+        payload.lat = payload.lng = null;
+        payload.location_accuracy = payload.location_recorded_at = null;
+      }
+      return request('/api/alerts', {
+        method: 'POST', keepalive: true, headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      }, 15000);
+    }).then(function (receipt) {
+      if (!receipt || !Number.isInteger(receipt.id) || receipt.id < 1 || receipt.client_id !== item.client_id)
+        throw new Error('invalid_receipt');
+      return removeAlert(item.client_id).then(function () {
+        emit({type: 'sent', client_id: item.client_id, receipt: receipt});
       });
     });
   }
-
-  function queueSize() {
-    return allAlerts().then(function (items) { return items.length; });
+  function scheduleRetry() {
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(flushQueue, BACKOFF[Math.min(retryIndex++, BACKOFF.length - 1)]);
   }
-
-  function sendOne(item) {
-    var ctrl = new AbortController();
-    var timer = setTimeout(function () { ctrl.abort(); }, SEND_TIMEOUT_MS);
-    return fetch("/api/alerts", {
-      method: "POST",
-      credentials: "same-origin",
-      cache: "no-store",
-      keepalive: true,
-      signal: ctrl.signal,
-      headers: { "Content-Type": "application/json", "X-Device-Token": DEVICE_TOKEN },
-      body: JSON.stringify(item)
-    }).then(function (res) {
-      clearTimeout(timer);
-      if (!res.ok) throw new Error("http " + res.status);
-      return res.json();
-    }, function (err) {
-      clearTimeout(timer);
-      throw err;
-    });
-  }
-
-  function emit(event) {
-    listeners.forEach(function (fn) {
-      try { fn(event); } catch (_e) { /* a bad listener must never break the queue */ }
-    });
-  }
-
-
-  function onFlushed(fn) { listeners.push(fn); }
-
-  // Don't trust navigator.onLine alone: a failed or timed-out request is what counts as offline.
-  // The same client_id is reused on every send, so a server-side duplicate (200) is treated as success.
   function flushQueue() {
-    if (flushing) return Promise.resolve();
-    flushing = true;
-
-    return allAlerts().then(function (items) {
-      if (!items.length) return;
+    if (flushPromise) { flushAgain = true; return flushPromise; }
+    clearTimeout(retryTimer);
+    flushPromise = allAlerts().then(function (items) {
+      var transientFailure = false;
       return items.reduce(function (chain, item) {
         return chain.then(function () {
-          return sendOne(item).then(function (receipt) {
-            return removeAlert(item.client_id).then(function () {
-              backoffIndex = 0;
-              emit({ type: "sent", client_id: item.client_id, receipt: receipt });
-            });
+          return sendOne(item).catch(function (error) {
+            // Keep rejected items. Do not hammer authentication/validation failures.
+            if ([400, 401, 403, 404, 409, 422].indexOf(error.status) !== -1)
+              emit({type: 'blocked', client_id: item.client_id});
+            else transientFailure = true;
           });
         });
-      }, Promise.resolve());
-    }).catch(function () {
-      scheduleBackoff();
-    }).then(function () {
-      flushing = false;
+      }, Promise.resolve()).then(function () {
+        if (transientFailure) scheduleRetry(); else retryIndex = 0;
+      });
+    }).catch(function () { emit({type: 'storage_error'}); }).then(function () {
+      flushPromise = null;
+      if (flushAgain) { flushAgain = false; return flushQueue(); }
     });
+    return flushPromise;
   }
-
-  function scheduleBackoff() {
-    clearTimeout(backoffTimer);
-    var wait = BACKOFF_STEPS_MS[Math.min(backoffIndex, BACKOFF_STEPS_MS.length - 1)];
-    backoffIndex = Math.min(backoffIndex + 1, BACKOFF_STEPS_MS.length - 1);
-    backoffTimer = setTimeout(flushQueue, wait);
-  }
-
-  // Flush triggers: online event, page load, foregrounding, and a 15s timer while the queue isn't empty.
-  global.addEventListener("online", flushQueue);
-  global.addEventListener("load", flushQueue);
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible") flushQueue();
+  global.addEventListener('online', flushQueue);
+  global.addEventListener('load', flushQueue);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') flushQueue();
   });
-  setInterval(function () {
-    queueSize().then(function (n) { if (n > 0) flushQueue(); });
-  }, 15000);
-
   global.CWQueue = {
-    queueAlert: queueAlert,
-    flushQueue: flushQueue,
-    queueSize: queueSize,
-    onFlushed: onFlushed
+    queueAlert: queueAlert, flushQueue: flushQueue,
+    queueSize: function () { return allAlerts().then(function (items) { return items.length; }); },
+    onFlushed: function (fn) { listeners.push(fn); },
+    locationPermitted: locationPermitted
   };
 })(window);

@@ -1,5 +1,5 @@
 /* Explicit public-shell cache. APIs, private routes and writes use the network. */
-const CACHE_NAME = 'cape-weather-shell-v4';
+const CACHE_NAME = 'cape-weather-shell-v5';
 const SHELL_ASSETS = [
   '/survivor/', '/survivor/index.html', '/survivor/cover.html',
   '/survivor/setup.html', '/survivor/shell.js', '/survivor/survivor.js',
