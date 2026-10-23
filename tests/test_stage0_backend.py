@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import test_safepath
+import test_avenra
 import db
 import seed
 
@@ -29,7 +29,7 @@ class FoundationTests(unittest.TestCase):
         import sys
         target = str(Path(db.DB_PATH).parent / 'must-not-touch.sqlite3')
         env = dict(os.environ, DATABASE_PATH=target, APP_ENV='evaluation')
-        code = "import sys; sys.path.insert(0, 'tests'); import db; import test_safepath; from pathlib import Path; assert not Path(" + repr(target) + ").exists()"
+        code = "import sys; sys.path.insert(0, 'tests'); import db; import test_avenra; from pathlib import Path; assert not Path(" + repr(target) + ").exists()"
         result = subprocess.run([sys.executable, '-c', code], env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -38,7 +38,7 @@ class FoundationTests(unittest.TestCase):
         conn = db.connect()
         try:
             tables = {r['name'] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            self.assertTrue(set(test_safepath.safepath_app.COUNT_TABLES) <= tables)
+            self.assertTrue(set(test_avenra.avenra_app.COUNT_TABLES) <= tables)
             columns = {r['name'] for r in conn.execute('PRAGMA table_info(users)')}
             self.assertTrue({'is_active', 'auth_version'} <= columns)
             self.assertTrue(conn.execute('SELECT version FROM schema_migrations').fetchall())
@@ -127,8 +127,8 @@ class EvaluationNotificationTests(unittest.TestCase):
 
 
 class EvaluationRoutesTests(unittest.TestCase):
-    setUp = test_safepath.SafePathStagesTestCase.setUp
-    tearDown = test_safepath.SafePathStagesTestCase.tearDown
+    setUp = test_avenra.avenraStagesTestCase.setUp
+    tearDown = test_avenra.avenraStagesTestCase.tearDown
 
     def token(self):
         html = self.client.get('/login').get_data(as_text=True)
@@ -142,7 +142,7 @@ class EvaluationRoutesTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_evaluation_mode_alone_cannot_open_existing_fixture_accounts(self):
-        with patch.dict(test_safepath.safepath_app.app.config, {'EVALUATION_MODE': True}):
+        with patch.dict(test_avenra.avenra_app.app.config, {'EVALUATION_MODE': True}):
             response = self.client.post('/evaluation/login/responder', data={'csrf_token': self.token()})
             self.assertEqual(response.status_code, 403)
 
@@ -151,11 +151,11 @@ class EvaluationRoutesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.object(db, 'DB_PATH', str(Path(directory) / 'evaluation.sqlite3')):
             db.init_db()
             seed.prepare_evaluation_database()
-            with patch.dict(test_safepath.safepath_app.app.config, {'EVALUATION_MODE': True}):
+            with patch.dict(test_avenra.avenra_app.app.config, {'EVALUATION_MODE': True}):
                 self.assertEqual(self.client.post('/evaluation/login/responder').status_code, 400)
                 self.assertEqual(self.client.post('/evaluation/login/responder', data={'csrf_token': self.token()}).status_code, 302)
                 self.assertEqual(self.client.get('/api/alerts').status_code, 200)
-                self.client = test_safepath.safepath_app.app.test_client()
+                self.client = test_avenra.avenra_app.app.test_client()
                 self.assertEqual(self.client.post('/evaluation/login/admin', data={'csrf_token': self.token()}).status_code, 404)
                 self.assertEqual(self.client.get('/health').json['counts']['users'], 4)
 

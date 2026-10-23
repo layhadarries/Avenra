@@ -1,15 +1,15 @@
-"""SafePath Application Factory and Lifecycle Orchestration."""
+"""avenra Application Factory and Lifecycle Orchestration."""
 import os
 from flask import Flask, jsonify, request, session
 from flask_wtf.csrf import CSRFProtect, CSRFError
 import db
-from safepath.config import Config, BASE_DIR
-from safepath.security import (
+from avenra.config import Config, BASE_DIR
+from avenra.security import (
     current_user,
     apply_security_headers,
     validate_json_body,
 )
-from safepath.controllers import (
+from avenra.controllers import (
     AuthController,
     PagesController,
     AlertsController,
@@ -23,8 +23,8 @@ from safepath.controllers import (
 )
 
 
-class SafePathApplication:
-    """Object-Oriented Application Builder for SafePath Flask application."""
+class AvenraApplication:
+    """Object-Oriented Application Builder for avenra Flask application."""
 
     def __init__(self, config_class=Config):
         self.config_class = config_class
@@ -35,7 +35,7 @@ class SafePathApplication:
         static_dir = os.path.join(BASE_DIR, "static")
 
         app = Flask(
-            "safepath",
+            "avenra",
             template_folder=template_dir,
             static_folder=static_dir,
         )
@@ -115,7 +115,7 @@ class SafePathApplication:
         @app.context_processor
         def inject_user():
             user = current_user()
-            from safepath.repositories.portal_repository import PortalRepository
+            from avenra.repositories.portal_repository import PortalRepository
             return {
                 "access_signature": PortalRepository().access_signature(user) if user else '',
                 "session_expires": session.get('issued_at', 0) + self.config_class.STAFF_SESSION_SECONDS,

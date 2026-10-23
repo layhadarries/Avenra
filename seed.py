@@ -11,8 +11,8 @@ from werkzeug.security import generate_password_hash
 import db
 
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "demo1234")
-FIXTURE_EMAILS = frozenset({'survivor@safepath.demo', 'nomsa@safepath.demo',
-                          'pieter@safepath.demo', 'admin@safepath.demo'})
+FIXTURE_EMAILS = frozenset({'survivor@avenra.demo', 'nomsa@avenra.demo',
+                          'pieter@avenra.demo', 'admin@avenra.demo'})
 
 # name, lat, lng, beds_total, beds_available, accepting, languages, hours, walk_ins, verified
 SHELTERS = [
@@ -47,10 +47,10 @@ def seed(password=None):
 
             # name, role, email, org, case_code, shelter_id, can_sign_in
             users = [
-                ("Thandi M (fictional)", "survivor", "survivor@safepath.demo", None,                 "SP-1042", None,       False),
-                ("Nomsa D",         "responder", "nomsa@safepath.demo",    "Cape Town Responder Hub", None,      None,       True),
-                ("Pieter V",        "shelter",   "pieter@safepath.demo",   "Sunrise Shelter",         None,      sunrise_id, True),
-                ("Admin (demo)",    "admin",     "admin@safepath.demo",    "SafePath compliance",     None,      None,       True),
+                ("Thandi M (fictional)", "survivor", "survivor@avenra.demo", None,                 "SP-1042", None,       False),
+                ("Nomsa D",         "responder", "nomsa@avenra.demo",    "Cape Town Responder Hub", None,      None,       True),
+                ("Pieter V",        "shelter",   "pieter@avenra.demo",   "Sunrise Shelter",         None,      sunrise_id, True),
+                ("Admin (demo)",    "admin",     "admin@avenra.demo",    "avenra compliance",     None,      None,       True),
             ]
             for name, role, email, org, case_code, shelter_id, can_sign_in in users:
                 exists = conn.execute(
@@ -67,13 +67,13 @@ def seed(password=None):
                 )
 
             survivor_id = conn.execute(
-                "SELECT id FROM users WHERE email = ?", ("survivor@safepath.demo",)
+                "SELECT id FROM users WHERE email = ?", ("survivor@avenra.demo",)
             ).fetchone()["id"]
 
             # Fictional demo access only. Real case grants are provisioned explicitly.
             conn.execute("""INSERT OR IGNORE INTO case_access(staff_id, survivor_id)
                             SELECT id, ? FROM users WHERE email IN
-                            ('nomsa@safepath.demo','admin@safepath.demo')""", (survivor_id,))
+                            ('nomsa@avenra.demo','admin@avenra.demo')""", (survivor_id,))
 
             for name, phone in CONTACTS:
                 conn.execute(

@@ -1,10 +1,10 @@
 """Authentication controller."""
 from typing import Optional
 from flask import request, render_template, render_template_string, redirect, url_for, flash, jsonify, session, current_app, abort
-from safepath.services.auth_service import AuthService
-from safepath.security import current_user
-from safepath.config import Config
-from safepath.repositories.portal_repository import PortalRepository
+from avenra.services.auth_service import AuthService
+from avenra.security import current_user
+from avenra.config import Config
+from avenra.repositories.portal_repository import PortalRepository
 
 
 class AuthController:
@@ -70,7 +70,7 @@ class AuthController:
         self._require_evaluation()
         if role not in {'responder', 'shelter'}:
             abort(404)
-        email = {'responder': 'nomsa@safepath.demo', 'shelter': 'pieter@safepath.demo'}[role]
+        email = {'responder': 'nomsa@avenra.demo', 'shelter': 'pieter@avenra.demo'}[role]
         user = self.auth_service.user_repo.get_by_email(email)
         if user is None or not user.can_sign_in() or user.role != role:
             abort(403)

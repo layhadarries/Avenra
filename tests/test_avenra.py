@@ -1,4 +1,4 @@
-"""Comprehensive automated test suite for SafePath (Stages 0 through 6)."""
+"""Comprehensive automated test suite for  (Stages 0 through 6)."""
 
 import base64
 import hashlib
@@ -8,9 +8,9 @@ import tempfile
 import unittest
 from werkzeug.security import generate_password_hash
 
-# Ensure importing app/db never creates safepath.db in the repository root
+# Ensure importing app/db never creates avenra.db in the repository root
 _BOOT_TMP = tempfile.TemporaryDirectory()
-os.environ["DATABASE_PATH"] = os.path.join(_BOOT_TMP.name, "boot_safepath.db")
+os.environ["DATABASE_PATH"] = os.path.join(_BOOT_TMP.name, "boot_avenra.db")
 os.environ['APP_ENV'] = 'development'
 os.environ['COOKIE_SECURE'] = '0'
 # Another test may have imported db before this fixture set DATABASE_PATH.
@@ -26,24 +26,24 @@ os.environ.setdefault(
     "test-only-key-never-use-outside-tests-0123456789",
 )
 
-import app as safepath_app  # noqa: E402
+import app as avenra_app  # noqa: E402
 import db  # noqa: E402
 import seed  # noqa: E402
 
 
-class SafePathStagesTestCase(unittest.TestCase):
+class avenraStagesTestCase(unittest.TestCase):
     """End-to-end verification of Stages 0–6 API and POPIA/security invariants."""
 
     def setUp(self):
         self.tmp_dir = tempfile.TemporaryDirectory()
-        self.db_path = os.path.join(self.tmp_dir.name, "test_safepath.db")
+        self.db_path = os.path.join(self.tmp_dir.name, "test_avenra.db")
         self.upload_dir = os.path.join(self.tmp_dir.name, "uploads")
         os.makedirs(self.upload_dir, exist_ok=True)
 
         db.DB_PATH = self.db_path
-        safepath_app.UPLOADS_DIR = self.upload_dir
+        avenra_app.UPLOADS_DIR = self.upload_dir
         db.init_db()
-        safepath_app.ensure_alert_columns()
+        avenra_app.ensure_alert_columns()
         seed.seed()
 
         # These changes apply only to this test's temporary database.
@@ -86,10 +86,10 @@ class SafePathStagesTestCase(unittest.TestCase):
         finally:
             conn.close()
 
-        safepath_app.app.config["TESTING"] = True
-        self.client = safepath_app.app.test_client()
+        avenra_app.app.config["TESTING"] = True
+        self.client = avenra_app.app.test_client()
         self.survivor_headers = {
-            "X-Device-Token": safepath_app.DEVICE_TOKEN,
+            "X-Device-Token": avenra_app.DEVICE_TOKEN,
         }
 
     def tearDown(self):
@@ -97,7 +97,7 @@ class SafePathStagesTestCase(unittest.TestCase):
 
     def _login_staff(self, role="responder"):
         # Use a fresh browser session for the requested test role.
-        self.client = safepath_app.app.test_client()
+        self.client = avenra_app.app.test_client()
 
         conn = db.connect()
         try:

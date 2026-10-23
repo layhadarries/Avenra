@@ -6,7 +6,7 @@ SURVIVOR_DIR = os.path.join(BASE_DIR, "static", "survivor")
 UPLOADS_DIR = os.environ.get('UPLOADS_DIR', os.path.join(BASE_DIR, 'uploads'))
 
 class Config:
-    """Encapsulates Flask and SafePath configuration."""
+    """Encapsulates Flask and avenra configuration."""
     BASE_DIR = BASE_DIR
     SURVIVOR_DIR = SURVIVOR_DIR
     UPLOADS_DIR = UPLOADS_DIR

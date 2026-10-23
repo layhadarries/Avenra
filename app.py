@@ -1,18 +1,18 @@
-"""SafePath: Core Application Entry Point and API.
+"""Avenra: Core Application Entry Point and API.
 
 Refactored to Object-Oriented Architecture:
-  Models:       safepath.models (User, Alert, Shelter, Referral, Consent, DiaryEntry, AuditEntry)
-  Repositories: safepath.repositories (OOP SQLite data access layers)
-  Services:     safepath.services (Business logic, authentication, dispatching)
-  Controllers:  safepath.controllers (HTTP request handling and responses)
-  Security:     safepath.security (Session validation, CSRF, route decorators)
-  Application:  safepath.application (Application factory)
+  Models:       avenra.models (User, Alert, Shelter, Referral, Consent, DiaryEntry, AuditEntry)
+  Repositories: avenra.repositories (OOP SQLite data access layers)
+  Services:     avenra.services (Business logic, authentication, dispatching)
+  Controllers:  avenra.controllers (HTTP request handling and responses)
+  Security:     avenra.security (Session validation, CSRF, route decorators)
+  Application:  avenra.application (Application factory)
 """
 import os
-from safepath.application import SafePathApplication
-from safepath.config import Config, BASE_DIR, SURVIVOR_DIR, UPLOADS_DIR
-from safepath.repositories import AlertRepository, ConsentRepository, AuditRepository
-from safepath.security import (
+from avenra.application import AvenraApplication
+from avenra.config import Config, BASE_DIR, SURVIVOR_DIR, UPLOADS_DIR
+from avenra.repositories import AlertRepository, ConsentRepository, AuditRepository
+from avenra.security import (
     current_user,
     device_user,
     login_required,
@@ -21,7 +21,7 @@ from safepath.security import (
     apply_security_headers,
     validate_json_body,
 )
-from safepath.services import (
+from avenra.services import (
     parse_coord,
     parse_client_ts,
     utc_now,
@@ -30,7 +30,7 @@ from safepath.services import (
 import db
 
 # Instantiate application following OOP factory pattern
-safe_app_factory = SafePathApplication(Config)
+safe_app_factory = AvenraApplication(Config)
 app = safe_app_factory.create_app()
 
 # Backward-compatibility exports for test suites and scripts
@@ -66,7 +66,7 @@ def table_counts():
 
 def start_session(user_row):
     """Initiate a staff user session."""
-    from safepath.models.user import User
+    from avenra.models.user import User
     from flask import redirect, url_for
     user = User.from_row(user_row)
     dest = AuthService().start_session(user)

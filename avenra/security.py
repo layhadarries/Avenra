@@ -3,10 +3,10 @@ import hmac
 from functools import wraps
 from typing import Optional
 from flask import request, redirect, url_for, jsonify, abort, g
-from safepath.services.auth_service import AuthService
-from safepath.repositories.user_repository import UserRepository
-from safepath.models.user import User
-from safepath.config import Config
+from avenra.services.auth_service import AuthService
+from avenra.repositories.user_repository import UserRepository
+from avenra.models.user import User
+from avenra.config import Config
 
 _auth_service = AuthService()
 _user_repo = UserRepository()

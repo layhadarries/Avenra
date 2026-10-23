@@ -1,12 +1,12 @@
 """Thin HTML controllers; services and repositories own data and business rules."""
 from flask import render_template, redirect, url_for, request, abort, jsonify, current_app
-from safepath.repositories.portal_repository import PortalRepository
-from safepath.repositories.shelter_repository import ShelterRepository
-from safepath.services.case_service import CaseService
-from safepath.services.portal_service import PortalService
-from safepath.services.referral_service import ReferralService
-from safepath.security import current_user, login_required, require_role
-from safepath.config import Config
+from avenra.repositories.portal_repository import PortalRepository
+from avenra.repositories.shelter_repository import ShelterRepository
+from avenra.services.case_service import CaseService
+from avenra.services.portal_service import PortalService
+from avenra.services.referral_service import ReferralService
+from avenra.security import current_user, login_required, require_role
+from avenra.config import Config
 
 
 class PagesController:
@@ -17,7 +17,7 @@ class PagesController:
         body = {'status': 'ok'}
         if current_app.config.get('EVALUATION_MODE'):
             import seed
-            from safepath.repositories.audit_repository import AuditRepository
+            from avenra.repositories.audit_repository import AuditRepository
             if seed.is_evaluation_database():
                 body['counts'] = AuditRepository().table_counts()
         return jsonify(body)

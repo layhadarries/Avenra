@@ -8,7 +8,7 @@ from flask import g
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Change the location with the DATABASE_PATH environment variable.
-DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, "safepath.db"))
+DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(BASE_DIR, "avenra.db"))
 SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
 
 
