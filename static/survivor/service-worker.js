@@ -1,12 +1,11 @@
-/* Cache public shell assets only
-Private pages and APIs always use the network */
-
-const CACHE_NAME = "cape-weather-shell-v2";
+const CACHE_NAME = "cape-weather-shell-v3";
 const SHELL_ASSETS = [
     "/survivor/",
     "/survivor/index.html",
     "/survivor/cover.html",
+    "/survivor/setup.html",
     "/survivor/survivor.js",
+    "/survivor/queue.js",
     "/survivor/manifest.json",
     "/survivor/icons/icon-192.png",
     "/survivor/icons/icon-512.png",
@@ -41,7 +40,7 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    // Live alert calls always go to the network - never cached
+    // Live alert and contact calls always go to the network. Never cached.
     if (url.pathname.startsWith("/api/")) {
         return;
     }
