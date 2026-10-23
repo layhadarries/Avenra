@@ -1,0 +1,16 @@
+<!-- same layout as base -->
+{% extends "base.html" %}
+
+{% block title %}Live Alerts — SafePath Portal{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom: 0.5rem;">Live Alerts Queue</h2>
+    <p style="color: var(--dusty-blue); margin-bottom: 1.25rem;">
+        Signed in as {{ user_name }}, {{ 'Social worker' if user_role == 'responder' else ('Shelter staff' if user_role == 'shelter' else user_role|capitalize) }}.
+    </p>
+    <div id="alerts-placeholder" style="padding: 2rem; border: 1px dashed var(--border); border-radius: 8px; text-align: center; color: var(--dusty-blue);">
+        no active alerts YET
+    </div>
+</div>
+{% endblock %}
