@@ -37,6 +37,7 @@ class ClientIntegrationTests(unittest.TestCase):
                 html = response.get_data(as_text=True)
                 self.assertEqual(response.status_code, 200)
                 self.assertIn('Nomsa D', html)
+                self.assertIn('Nomsa D', html)
                 self.assertIn('action="/logout"', html)
                 self.assertIn('name="csrf_token"', html)
                 self.assertIn('no-store', response.headers['Cache-Control'])

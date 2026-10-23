@@ -15,7 +15,7 @@ class DashboardAccessTests(unittest.TestCase):
         response = self.client.post(
             "/api/alerts",
             json={
-                "client_id": "dashboard-access-test",
+                "client_id": "dashboard.js-access-test",
                 "lat": -33.9249,
                 "lng": 18.4241,
             },
@@ -90,7 +90,7 @@ class DashboardAccessTests(unittest.TestCase):
         created = self.client.post(
             "/api/alerts",
             json={
-                "client_id": "dashboard-measured-location",
+                "client_id": "dashboard.js-measured-location",
                 "lat": -33.9249,
                 "lng": 18.4241,
                 "location_accuracy": 35.5,
@@ -115,7 +115,7 @@ class DashboardAccessTests(unittest.TestCase):
     def test_alert_without_location_has_no_fix_metadata(self):
         created = self.client.post(
             "/api/alerts",
-            json={"client_id": "dashboard-no-location"},
+            json={"client_id": "dashboard.js-no-location"},
             headers=self.survivor_headers,
         )
         self.assertEqual(created.status_code, 201)
