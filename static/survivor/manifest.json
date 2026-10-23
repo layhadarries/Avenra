@@ -1,0 +1,22 @@
+{
+  "name": "Cape Weather",
+  "short_name": "Cape Weather",
+  "description": "Cape Town local weather conditions and 5-day forecast.",
+  "start_url": "/survivor/",
+  "scope": "/survivor/",
+  "display": "standalone",
+  "background_color": "#f8f6f2",
+  "theme_color": "#1d6f72",
+  "icons": [
+    {
+      "src": "/survivor/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/survivor/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
