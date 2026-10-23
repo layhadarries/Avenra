@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1d6f72">
+    <title>Cape Weather</title>
+    <link rel="manifest" href="/survivor/manifest.json">
+    <link rel="icon" href="/survivor/icons/icon-192.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background: #e6f0f0;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .wx {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 1.75rem 1.25rem 2.5rem;
+        }
+        .wx-top {
+            text-align: center;
+            padding-top: 0.5rem;
+        }
+        .wx-place {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--navy);
+        }
+        .wx-temp {
+            font-size: 5.5rem;
+            font-weight: 300;
+            line-height: 1.05;
+            margin: 0.5rem 0;
+            color: var(--navy);
+            cursor: default;
+            touch-action: manipulation;
+        }
+        .wx-desc {
+            color: var(--dusty-blue);
+            font-size: 0.95rem;
+        }
+        .wx-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.6rem;
+            margin: 1.5rem 0;
+        }
+        .wx-stat {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 0.7rem 0.4rem;
+            text-align: center;
+            font-size: 0.78rem;
+            color: var(--dusty-blue);
+            box-shadow: var(--shadow);
+        }
+        .wx-stat strong {
+            display: block;
+            color: var(--navy);
+            font-size: 0.95rem;
+            margin-top: 0.15rem;
+        }
+        .wx-days {
+            background: var(--surface);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+        .wx-day {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+        .wx-day:first-child {
+            border-top: none;
+        }
+        .wx-day span:last-child {
+            color: var(--dusty-blue);
+        }
+    </style>
+</head>
+<body>
+    <main class="wx">
+        <div class="wx-top">
+            <div class="wx-place">Cape Town</div>
+            <div class="wx-temp" id="wx-temp">19°</div>
+            <div class="wx-desc">Partly cloudy · H:22° L:13°</div>
+        </div>
+
+        <div class="wx-stats">
+            <div class="wx-stat">Wind<strong>SE 24 km/h</strong></div>
+            <div class="wx-stat">Humidity<strong>61%</strong></div>
+            <div class="wx-stat">UV<strong>6 High</strong></div>
+        </div>
+
+        <section class="wx-days" aria-label="5-day forecast">
+            <div class="wx-day"><span>Sat</span><span>Partly cloudy · 22° / 13°</span></div>
+            <div class="wx-day"><span>Sun</span><span>Sunny · 24° / 14°</span></div>
+            <div class="wx-day"><span>Mon</span><span>Partly cloudy · 23° / 15°</span></div>
+            <div class="wx-day"><span>Tue</span><span>Showers · 18° / 12°</span></div>
+            <div class="wx-day"><span>Wed</span><span>Sunny · 20° / 13°</span></div>
+        </section>
+    </main>
+
+    <script>
+        // Hidden way back to the panic screen: press and hold the temperature.
+        (function () {
+            var temp = document.getElementById("wx-temp");
+            var timer = null;
+            function start() {
+                timer = setTimeout(function () { location.replace("/survivor/"); }, 900);
+            }
+            function stop() {
+                clearTimeout(timer);
+                timer = null;
+            }
+            temp.addEventListener("pointerdown", start);
+            ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) {
+                temp.addEventListener(ev, stop);
+            });
+            temp.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+        })();
+    </script>
+</body>
+</html>

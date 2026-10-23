@@ -1,24 +1,149 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f8f6f2">
-  <meta name="description" content="A lightweight weather page.">
-  <title>Clear Sky</title>
-  <link rel="manifest" href="/survivor/manifest.json">
-  <link rel="icon" href="/survivor/icons/icon-192.png" type="image/png">
-  <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
-  <link rel="stylesheet" href="/static/css/style.css">
-  <script src="/survivor/shell.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1d6f72">
+    <title>Cape Weather</title>
+    <link rel="manifest" href="/survivor/manifest.json">
+    <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: var(--warm-bg);
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .pwa-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+        .pwa-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--navy);
+        }
+        .quick-exit-pill {
+            background: var(--navy);
+            color: #ffffff;
+            border: none;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .pwa-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+            text-align: center;
+        }
+        .view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 320px;
+        }
+        .view .btn {
+            margin-top: 0.75rem;
+            min-width: 160px;
+        }
+        .panic-caption {
+            color: var(--dusty-blue);
+            font-size: 0.92rem;
+            max-width: 260px;
+            margin-top: 1rem;
+        }
+        .bottom-nav {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 0.65rem 0.5rem;
+        }
+        .bottom-nav a {
+            text-align: center;
+            font-size: 0.82rem;
+            color: var(--dusty-blue);
+            text-decoration: none;
+            font-weight: 600;
+            padding: 0.35rem 0;
+        }
+        .bottom-nav a.active {
+            color: var(--teal);
+        }
+    </style>
 </head>
-<body class="weather-body">
-  <main class="weather-shell">
-    <header class="weather-header"><span class="weather-brand"><img src="/survivor/icons/icon-192.png" width="38" height="38" alt="">Clear Sky</span><span class="connection-pill" id="connection-state" role="status">Checking connection</span></header>
-    <section class="weather-intro" aria-labelledby="weather-title"><p class="eyebrow">A moment for your day</p><h1 id="weather-title">A little<br>clearer.</h1><p>A quiet place to check the weather.</p></section>
-    <section class="card forecast-card" aria-labelledby="forecast-title"><span class="weather-symbol" aria-hidden="true">☀</span><div><p class="eyebrow">Local forecast</p><h2 id="forecast-title">Forecast unavailable</h2><p class="muted">Weather updates are not available in this version. No location is being collected.</p></div></section>
-    <section class="weather-footer" aria-labelledby="offline-title"><h2 id="offline-title">Ready for a quieter connection</h2><p id="offline-state" role="status">Offline opening will be checked when this page loads.</p><noscript><p>JavaScript is needed to enable offline opening.</p></noscript></section>
-    <footer class="weather-copyright">Clear Sky · A lighter day</footer>
-  </main>
+<body>
+    <header class="pwa-header">
+        <span class="pwa-title">Cape Weather</span>
+        <button type="button" id="quick-exit" class="quick-exit-pill">Quick exit</button>
+    </header>
+
+    <main class="pwa-main">
+        <!-- Ready: hold the ring to start -->
+        <section id="view-ready" class="view">
+            <button type="button" id="panic-btn" class="panic-ring" aria-label="Hold to send alert">
+                <span class="panic-ring-inner">Hold to send alert</span>
+            </button>
+            <p class="panic-caption">Sends your location to the people you chose</p>
+        </section>
+
+        <!-- Countdown: 5 seconds to undo -->
+        <section id="view-countdown" class="view" hidden>
+            <p class="big" id="countdown-text">5 seconds to undo</p>
+            <div class="countdown-track"><div class="countdown-fill" id="countdown-fill"></div></div>
+            <button type="button" id="undo-btn" class="btn btn-outline">Undo</button>
+        </section>
+
+        <!-- Sending -->
+        <section id="view-sending" class="view" hidden>
+            <p class="big">Sending your alert…</p>
+        </section>
+
+        <!-- Sent: waiting for a responder -->
+        <section id="view-sent" class="view" hidden>
+            <div class="sent-check" aria-hidden="true">&#10003;</div>
+            <p class="big">Your alert is on its way</p>
+            <p class="panic-caption" id="help-status">Help status: Waiting</p>
+            <button type="button" id="done-btn" class="btn btn-outline">Done</button>
+        </section>
+
+        <!-- Failed: same client_id is reused on retry -->
+        <section id="view-failed" class="view" hidden>
+            <p class="big">Couldn't send.</p>
+            <button type="button" id="retry-btn" class="btn btn-primary">Tap to retry</button>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="/survivor/" class="active">Home</a>
+        <a href="#help">Find help</a>
+        <a href="#diary">Diary</a>
+        <a href="#more">More</a>
+    </nav>
+
+    <script src="/survivor/survivor.js" defer></script>
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", function () {
+                navigator.serviceWorker.register("/survivor/service-worker.js", {
+                    scope: "/survivor/"
+                });
+            });
+        }
+    </script>
 </body>
 </html>
