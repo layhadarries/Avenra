@@ -38,20 +38,38 @@ class AlertRepository(BaseRepository):
         return Alert.from_row(row)
 
     def create(
-        self,
-        user_id: int,
-        case_code: str,
-        lat: Optional[float],
-        lng: Optional[float],
-        client_id: str,
-        client_ts: Optional[str],
+            self,
+            user_id: int,
+            case_code: str,
+            lat: Optional[float],
+            lng: Optional[float],
+            client_id: str,
+            client_ts: Optional[str],
+            location_accuracy: Optional[float] = None,
+            location_recorded_at: Optional[str] = None,
     ) -> Alert:
         cur = self.conn.execute(
-            """INSERT INTO alerts (user_id, case_code, lat, lng, status, client_id, client_ts, created_at)
-               VALUES (?, ?, ?, ?, 'new', ?, ?, ?)""",
-            (user_id, case_code, lat, lng, client_id, client_ts, utc_now()),
+            """INSERT INTO alerts (
+                   user_id, case_code, lat, lng, status,
+                   client_id, client_ts, created_at,
+                   location_accuracy, location_recorded_at
+               ) VALUES (?, ?, ?, ?, 'new', ?, ?, ?, ?, ?)""",
+            (
+                user_id,
+                case_code,
+                lat,
+                lng,
+                client_id,
+                client_ts,
+                utc_now(),
+                location_accuracy,
+                location_recorded_at,
+            ),
         )
-        row = self.conn.execute("SELECT * FROM alerts WHERE id = ?", (cur.lastrowid,)).fetchone()
+        row = self.conn.execute(
+            "SELECT * FROM alerts WHERE id = ?",
+            (cur.lastrowid,),
+        ).fetchone()
         return Alert.from_row(row)
 
     def get_recent(self, limit: int = 50) -> List[Alert]:

@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS alerts (
     case_code        TEXT NOT NULL,
     lat              REAL,
     lng              REAL,
+    location_accuracy REAL,
+    location_recorded_at TEXT,
     status           TEXT NOT NULL DEFAULT 'new'
                      CHECK (status IN ('new','acknowledged','in_progress','resolved')),
     acknowledged_by  TEXT,

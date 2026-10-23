@@ -9,6 +9,7 @@ from avenra.repositories.audit_repository import AuditRepository
 from avenra.models.user import User
 from avenra.models.alert import Alert
 import sms
+import math
 
 
 def utc_now() -> str:
@@ -41,6 +42,38 @@ def parse_client_ts(value: Any) -> Optional[str]:
         dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+def parse_location_accuracy(value: Any) -> Optional[float]:
+    """Accept finite, non-negative numbers representing metres."""
+    if type(value) not in (int, float):
+        return None
+
+    try:
+        number = float(value)
+    except (OverflowError, ValueError):
+        return None
+
+    return number if math.isfinite(number) and number >= 0 else None
+
+
+def parse_location_recorded_at(value: Any) -> Optional[str]:
+    """Normalise an explicit device fix time without guessing its timezone."""
+    if not isinstance(value, str) or len(value) > 64:
+        return None
+
+    try:
+        captured = datetime.fromisoformat(
+            value.strip().replace("Z", "+00:00")
+        )
+        if captured.tzinfo is None:
+            return None
+
+        return (
+            captured.astimezone(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
+        )
+    except (ValueError, OverflowError):
+        return None
 
 class AlertService:
     """Orchestrates emergency alert processing, idempotency, location privacy, and dispatch."""
@@ -64,6 +97,8 @@ class AlertService:
         raw_lat: Any,
         raw_lng: Any,
         raw_client_ts: Any,
+            raw_location_accuracy: Any = None,
+            raw_location_recorded_at: Any = None,
     ) -> Tuple[Dict[str, Any], int]:
         if not isinstance(client_id, str) or not client_id.strip() or len(client_id) > 64:
             return {"error": "client_id_required"}, 400
@@ -83,6 +118,12 @@ class AlertService:
         if lat is None or lng is None or not location_allowed:
             lat = lng = None
 
+        accuracy = (parse_location_accuracy(raw_location_accuracy)
+                    if lat is not None else None)
+
+        recorded_at = (parse_location_recorded_at(raw_location_recorded_at)
+                       if lat is not None else None)
+
         client_ts = parse_client_ts(raw_client_ts)
 
         try:
@@ -93,6 +134,8 @@ class AlertService:
                 lng=lng,
                 client_id=client_id,
                 client_ts=client_ts,
+                location_accuracy=accuracy,
+                location_recorded_at=recorded_at,
             )
         except sqlite3.IntegrityError:
             # Race condition handling

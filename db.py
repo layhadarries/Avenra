@@ -29,7 +29,7 @@ def connect():
 
 
 def get_db():
-    """One connection per request, closed automatically afterwards."""
+    """One connection per request, closed automatically after wards."""
     if "db" not in g:
         g.db = connect()
     return g.db
@@ -70,7 +70,7 @@ def migrate(conn):
     additions = {
         'contacts': [('channel', "TEXT NOT NULL DEFAULT 'sms'"), ('chat_id', 'TEXT')],
         'shelters': [('updated_at', 'TEXT')],
-        'alerts': [('notify_status', "TEXT NOT NULL DEFAULT 'pending'"), ('notify_detail', 'TEXT')],
+        'alerts': [('notify_status', "TEXT NOT NULL DEFAULT 'pending'"), ('notify_detail', 'TEXT'), ('location_accuracy', 'REAL'), ('location_recorded_at', 'TEXT'),],
         'diary_entries': [('captured_at', 'TEXT')],
     }
     for table, columns in additions.items():

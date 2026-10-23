@@ -25,6 +25,8 @@ class AlertsController:
             raw_lat=data.get("lat"),
             raw_lng=data.get("lng"),
             raw_client_ts=data.get("client_ts"),
+            raw_location_accuracy=data.get("location_accuracy"),
+            raw_location_recorded_at=data.get("location_recorded_at"),
         )
         return jsonify(res), status
 
