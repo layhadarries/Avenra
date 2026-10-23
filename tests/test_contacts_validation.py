@@ -77,6 +77,13 @@ class ContactValidationTests(unittest.TestCase):
                         {"name": "Contact", "phone": phone},
                     ])
 
+    def test_rejects_duplicate_names_after_trimming(self):
+        with self.assertRaises(ContactValidationError):
+            ContactService.clean_contacts([
+                {"name": "Contact One", "phone": "+27821234567"},
+                {"name": "  Contact One  ", "phone": "+27832345678"},
+            ])
+
 
 if __name__ == "__main__":
     unittest.main()

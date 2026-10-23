@@ -35,10 +35,14 @@ class PortalService:
             return {'error': 'invalid_filters'}, 400
         rows, total = self.repo.alert_page(user.id, filters)
         consent = ConsentRepository(self.repo.conn)
+        from avenra.services.notification_status_service import NotificationStatusService
+        notifications = NotificationStatusService(self.repo.conn)
         items = []
         for row in rows:
             item = Alert.from_row(row).serialize(consent.is_active(row['user_id'], 'location_sharing'))
             item.update({key: row[key] for key in ('assigned_to', 'assigned_name', 'escalated_at', 'revision')})
+            item['notification'] = notifications.for_alert(row['id'])
+            item['timing'] = notifications.timing(item['client_ts'], item['created_at'])
             items.append(item)
         return {'alerts': items, 'total': total, 'page': filters['page'],
                 'per_page': filters['per_page'],

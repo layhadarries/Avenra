@@ -71,7 +71,8 @@ def request_message(settings, message_sid=None, opener=None):
             raise GatewayError('Provider response too large.')
         result = json.loads(raw)
     except urllib.error.HTTPError as error:
-        raise GatewayError(f'Provider rejected request (HTTP {error.code}).') from None
+        error.close()
+        raise GatewayError(f"Provider rejected request (HTTP {error.code}).") from None
     except (urllib.error.URLError, TimeoutError, OSError):
         raise GatewayError('Could not reach the provider. Creation is not automatically retried.') from None
     except (ValueError, UnicodeError):

@@ -28,12 +28,18 @@ class ContactsAPITests(unittest.TestCase):
         response = self.post_contacts([
             {"name": "  Contact One  ", "phone": "082 123 4567"},
         ])
-
         self.assertEqual(response.status_code, 200)
         saved = self.saved_contacts()
         self.assertEqual(len(saved), 1)
         self.assertEqual(saved[0]["name"], "Contact One")
-        self.assertEqual(saved[0]["phone"], "+27821234567")
+        self.assertNotIn("phone", saved[0])
+        self.assertEqual(saved[0]["phone_masked"], "••••4567")
+        conn = test_avenra.db.connect()
+        try:
+            row = conn.execute("SELECT phone FROM contacts WHERE id = ?", (saved[0]["id"],)).fetchone()
+            self.assertEqual(row["phone"], "+27821234567")
+        finally:
+            conn.close()
 
     def test_invalid_submission_preserves_existing_contacts(self):
         initial = self.post_contacts([
@@ -135,6 +141,17 @@ class ContactsAPITests(unittest.TestCase):
             ).status_code,
             401,
         )
+        self.assertEqual(self.saved_contacts(), before)
+
+    def test_duplicate_names_preserve_existing_contacts(self):
+        before = self.saved_contacts()
+
+        response = self.post_contacts([
+            {"name": "Contact One", "phone": "+27821234567"},
+            {"name": "  Contact One  ", "phone": "+27832345678"},
+        ])
+
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(self.saved_contacts(), before)
 
 
