@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1d6f72">
+    <title>Cape Weather</title>
+    <link rel="manifest" href="/survivor/manifest.json">
+    <link rel="icon" href="/survivor/icons/icon-192.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body { background: var(--warm-bg); }
+        .setup-wrap { max-width: 420px; margin: 0 auto; padding: 1.25rem 1.25rem 2.5rem; }
+        .back-link { color: var(--teal); text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+        .setup-title { font-size: 1.2rem; color: var(--navy); margin: 0.75rem 0 0.25rem; }
+        .setup-note { font-size: 0.85rem; color: var(--dusty-blue); margin: 0.5rem 0 1.25rem; }
+        .contact-row {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 0.6rem;
+        }
+        .contact-row .phone { color: var(--dusty-blue); font-size: 0.85rem; }
+        .remove-btn { background: none; border: none; color: #b91c1c; font-size: 0.85rem; cursor: pointer; }
+        .form-error { color: #b91c1c; font-size: 0.85rem; margin-top: 0.4rem; }
+        .form-group { margin-bottom: 0.85rem; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--navy); margin-bottom: 0.3rem; }
+        .form-group input {
+            width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--border);
+            border-radius: var(--radius); font-size: 1rem; box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <main class="setup-wrap">
+        <a href="/survivor/" class="back-link">&larr; Back</a>
+        <h1 class="setup-title">Trusted contacts</h1>
+        <p class="setup-note">This person will get a text with your location when you send an alert.</p>
+
+        <div id="contact-list"></div>
+
+        <form id="contact-form" class="card" style="margin-top: 1rem;">
+            <div class="form-group">
+                <label for="c-name">Name</label>
+                <input id="c-name" type="text" maxlength="80" required>
+            </div>
+            <div class="form-group">
+                <label for="c-phone">Phone number</label>
+                <input id="c-phone" type="tel" placeholder="082 123 4567" required>
+            </div>
+            <p class="form-error" id="form-error" hidden></p>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Add contact</button>
+        </form>
+    </main>
+
+    <script>
+    (function () {
+        "use strict";
+        var DEVICE_TOKEN = "demo-device";
+        var listEl = document.getElementById("contact-list");
+        var form = document.getElementById("contact-form");
+        var errorEl = document.getElementById("form-error");
+
+        function headers(extra) {
+            return Object.assign({ "X-Device-Token": DEVICE_TOKEN }, extra || {});
+        }
+
+        function render(contacts) {
+            listEl.innerHTML = "";
+            if (!contacts.length) {
+                var empty = document.createElement("p");
+                empty.className = "setup-note";
+                empty.textContent = "No trusted contacts yet.";
+                listEl.appendChild(empty);
+                return;
+            }
+            contacts.forEach(function (c) {
+                var row = document.createElement("div");
+                row.className = "contact-row";
+                var info = document.createElement("div");
+                info.innerHTML = "<div>" + escapeHtml(c.name) + "</div>" +
+                                  '<div class="phone">' + escapeHtml(c.phone_masked) + "</div>";
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "remove-btn";
+                btn.textContent = "Remove";
+                btn.addEventListener("click", function () { remove(c.id); });
+                row.appendChild(info);
+                row.appendChild(btn);
+                listEl.appendChild(row);
+            });
+        }
+
+        function escapeHtml(s) {
+            var div = document.createElement("div");
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function load() {
+            fetch("/api/contacts", { headers: headers(), cache: "no-store" })
+                .then(function (r) { return r.json(); })
+                .then(function (d) { render(d.contacts || []); })
+                .catch(function () { /* offline: leave the list as it was */ });
+        }
+
+        function remove(id) {
+            fetch("/api/contacts/" + id, { method: "DELETE", headers: headers() })
+                .then(load)
+                .catch(function () {});
+        }
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            errorEl.hidden = true;
+            var name = document.getElementById("c-name").value.trim();
+            var phone = document.getElementById("c-phone").value.trim();
+
+            fetch("/api/contacts", {
+                method: "POST",
+                headers: headers({ "Content-Type": "application/json" }),
+                body: JSON.stringify({ name: name, phone: phone })
+            })
+                .then(function (r) {
+                    if (!r.ok) return r.json().then(function (b) { throw new Error(b.error || "failed"); });
+                    return r.json();
+                })
+                .then(function () {
+                    form.reset();
+                    load();
+                })
+                .catch(function (err) {
+                    var messages = {
+                        contact_limit: "You can save up to 3 trusted contacts.",
+                        invalid_phone: "That doesn't look like a South African number.",
+                        name_required: "Please enter a name."
+                    };
+                    errorEl.textContent = messages[err.message] || "Couldn't add this contact. Check the details and try again.";
+                    errorEl.hidden = false;
+                });
+        });
+
+        load();
+    })();
+    </script>
+</body>
+</html>
