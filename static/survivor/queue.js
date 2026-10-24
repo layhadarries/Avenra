@@ -1,21 +1,15 @@
-/* Clear Sky: offline alert queue (Stage 2)
-        - IndexedDB only, no libraries.
-   Write first, send second: queueAlert() must resolve before survivor.js attempts to send. */
+/* Evaluation queue. Retries while a page is open, or when it is reopened.
+   IndexedDB contains sensitive pending payloads: individual auth and storage
+   protection remain release requirements. No closed-app delivery guarantee. */
 (function (global) {
-  "use strict";
-
-  var DB_NAME = "clear-sky-queue";
-  var STORE = "alerts";
-  var DEVICE_TOKEN = "demo-device";
-  var SEND_TIMEOUT_MS = 15000;   // generous: survives a Render cold start
-  var BACKOFF_STEPS_MS = [5000, 15000, 30000];
-
-  var dbPromise = null;
-  var flushing = false;
-  var backoffTimer = null;
-  var backoffIndex = 0;
-  var listeners = [];
-
+  'use strict';
+  var DB_NAME = 'cape-weather-queue', STORE = 'alerts';
+  var DEVICE_TOKEN = 'demo-device'; // Evaluation only; never a production credential.
+  var dbPromise = null, flushPromise = null, flushAgain = false, retryTimer = null, retryIndex = 0;
+  var listeners = [], BACKOFF = [5000, 15000, 30000];
+  function emit(event) {
+    listeners.forEach(function (fn) { try { fn(event); } catch (_) {} });
+  }
   function openDb() {
     if (!dbPromise) {
       dbPromise = new Promise(function (resolve, reject) {
@@ -29,11 +23,49 @@
         req.onsuccess = function () {
           var db = req.result;
           db.onversionchange = function () { db.close(); dbPromise = null; };
-          resolve(db);
+          migrateLegacy(db).then(function () { resolve(db); }, function (error) { db.close(); dbPromise = null; reject(error); });
         };
       });
     }
     return dbPromise;
+  }
+  // Recover records written under the accidental merged database rename.
+  // Copy commits before legacy removal; crashes can replay an ID, never lose it.
+  function migrateLegacy(target) {
+    return new Promise(function (resolve, reject) {
+      var req = indexedDB.open('clear-sky-queue', 1);
+      req.onupgradeneeded = function () {
+        if (!req.result.objectStoreNames.contains(STORE))
+          req.result.createObjectStore(STORE, {keyPath: 'client_id'});
+      };
+      req.onerror = req.onblocked = function () { reject(new Error('storage_unavailable')); };
+      req.onsuccess = function () {
+        var legacy = req.result;
+        function fail() { legacy.close(); reject(new Error('storage_unavailable')); }
+        if (!legacy.objectStoreNames.contains(STORE)) { legacy.close(); resolve(); return; }
+        var read = legacy.transaction(STORE, 'readonly'), items = [];
+        read.objectStore(STORE).getAll().onsuccess = function (event) { items = event.target.result || []; };
+        read.onerror = read.onabort = fail;
+        read.oncomplete = function () {
+          if (!items.length) { legacy.close(); resolve(); return; }
+          var copy = target.transaction(STORE, 'readwrite'), store = copy.objectStore(STORE);
+          copy.onerror = copy.onabort = fail;
+          items.forEach(function (item) {
+            var existing = store.get(item.client_id);
+            existing.onsuccess = function () {
+              if (existing.result === undefined) store.put(item);
+              else if (JSON.stringify(existing.result) !== JSON.stringify(item)) copy.abort();
+            };
+          });
+          copy.oncomplete = function () {
+            var remove = legacy.transaction(STORE, 'readwrite');
+            remove.onerror = remove.onabort = fail;
+            items.forEach(function (item) { remove.objectStore(STORE).delete(item.client_id); });
+            remove.oncomplete = function () { legacy.close(); resolve(); };
+          };
+        };
+      };
+    });
   }
   function transaction(mode, operation) {
     return openDb().then(function (db) {

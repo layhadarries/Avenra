@@ -60,6 +60,8 @@ class ReferralService:
 
         if not CaseAccessRepository(self.referral_repo.conn).allows(user.id, alert.user_id):
             return {"error": "not_found"}, 404
+        if not self.consent_repo.is_active(alert.user_id, "shelter_referral_sharing"):
+            return {"error": "referral_consent_required"}, 403
         if alert.status == 'resolved':
             return {"error": "alert_resolved"}, 409
         existing = self.referral_repo.conn.execute(
@@ -69,8 +71,6 @@ class ReferralService:
             if referral.shelter_id == shelter_id:
                 return {"referral": referral.serialize(), "already": True}, 200
             return {"error": "active_referral"}, 409
-        if not self.consent_repo.is_active(alert.user_id, "shelter_referral_sharing"):
-            return {"error": "referral_consent_required"}, 403
 
         now = utc_now()
         referral = self.referral_repo.create(alert_id, shelter_id)

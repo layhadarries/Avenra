@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1d6f72">
-    <title>Clear Sky</title>
+    <title>Cape Weather</title>
     <link rel="manifest" href="/survivor/manifest.json">
     <link rel="icon" href="/survivor/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
@@ -86,8 +86,12 @@
         }
         .switch input {
             opacity: 0;
-            width: 0;
-            height: 0;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            z-index: 2;
         }
         .slider {
             position: absolute;
@@ -127,6 +131,7 @@
             box-shadow: var(--shadow);
             margin-bottom: 1rem;
         }
+        .switch input:focus-visible + .slider { outline: 3px solid var(--teal); outline-offset: 3px; }
         .access-row {
             padding: 0.85rem 1rem;
             border-top: 1px solid var(--border);
@@ -171,9 +176,10 @@
     <main class="privacy-wrap">
         <a href="/survivor/" class="back-link">&larr; Back</a>
         <h1 class="privacy-title">Your Privacy &amp; Sharing</h1>
-        <p class="privacy-subtitle">You have the right to choose what is shared. Turning off a setting takes effect immediately.</p>
+        <p class="privacy-subtitle">You have the right to choose what is shared. Changes apply after the service confirms saving. Information already shared cannot be recalled.</p>
 
-        <div id="status-banner" class="status-banner" hidden></div>
+        <div id="status-banner" class="status-banner" role="status" aria-live="polite" hidden></div>
+        <button type="button" id="privacy-refresh" class="btn btn-outline">Refresh privacy settings</button>
 
         <h2 class="section-header">Sharing Permissions</h2>
 
@@ -211,15 +217,18 @@
         </div>
 
         <h2 class="section-header">Who Has Seen My Case</h2>
-        <p class="privacy-subtitle">Every time a caseworker or responder accesses your file, it is recorded here.</p>
+        <p class="privacy-subtitle">Recorded case, shared diary and photo views appear here. This history does not cover every possible system action.</p>
 
         <div class="access-card" id="access-list">
             <div class="access-row">
                 <span style="color: var(--dusty-blue);">Loading activity history…</span>
             </div>
         </div>
+        <button type="button" id="access-more" class="btn btn-outline" hidden>Load older activity</button>
+        <p id="connection-state"></p><p id="offline-state"></p>
     </main>
 
+    <script src="/survivor/shell.js" defer></script>
     <script src="/survivor/privacy.js" defer></script>
 </body>
 </html>
