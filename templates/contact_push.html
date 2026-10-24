@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#1d6f72">
+<link rel="manifest" href="/contact-push/manifest.json">
+<link rel="icon" href="/survivor/icons/icon-192.png">
+<link rel="stylesheet" href="/contact-push/contact.css">
+<title>Contact notifications</title>
+</head>
+<body><main>
+<h1>Contact notifications</h1>
+<p>Only accept an invitation that someone you know shared with you directly. Accepting enables neutral notifications on this browser. It does not grant access to their location or case records.</p>
+<p>Notifications need an internet connection and may be delayed or blocked by your browser or device. They do not confirm that help is coming.</p>
+<p id="status" role="status" aria-live="polite">Checking this browser…</p>
+<button id="accept" hidden>Accept and enable notifications</button>
+<button id="decline" hidden>Dismiss invitation</button>
+<button id="acknowledge" hidden>Confirm I have seen this notification</button>
+<button id="test" hidden>Send one test notification</button>
+<button id="stop" hidden>Stop notifications on this browser</button>
+<p id="result" role="status" aria-live="polite"></p>
+</main><script src="/contact-push/contact.js" defer></script></body>
+</html>

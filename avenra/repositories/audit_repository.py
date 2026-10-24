@@ -9,17 +9,24 @@ class AuditRepository(BaseRepository):
     """Encapsulates SQL operations on the audit_log table."""
 
     def log(
-        self,
-        actor: str,
-        action: str,
-        case_code: Optional[str] = None,
-        detail: Optional[str] = None,
+            self,
+            actor: str,
+            action: str,
+            case_code: Optional[str] = None,
+            detail: Optional[str] = None,
+            *,
+            commit: bool = True,
     ) -> None:
         self.conn.execute(
-            "INSERT INTO audit_log (actor, action, case_code, detail) VALUES (?,?,?,?)",
+            """
+            INSERT INTO audit_log (actor, action, case_code, detail)
+            VALUES (?, ?, ?, ?)
+            """,
             (actor, action, case_code, detail),
         )
-        self.conn.commit()
+
+        if commit:
+            self.conn.commit()
 
     def list_entries(self, case_code: Optional[str] = None, limit: int = 100) -> List[AuditEntry]:
         if case_code:

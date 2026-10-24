@@ -34,20 +34,22 @@
     <main class="setup-wrap">
         <a href="/survivor/" class="back-link">&larr; Back</a>
         <h1 class="setup-title">Trusted contacts</h1>
-        <p class="setup-note">This person will get a text with your location when you send an alert.</p>
+        <p class="setup-note">Save up to five trusted contacts. Notifications depend on service availability; location is included only when sharing is permitted.</p>
 
         <div id="contact-list"></div>
+        <p id="invite-help" role="status" hidden>Share this one-use link directly with the intended contact. It expires in 24 hours. Anyone holding it can accept; verify the recipient yourself.</p>
+        <input id="invite-link" type="text" aria-label="Contact invitation link" readonly hidden>
 
         <form id="contact-form" class="card" style="margin-top: 1rem;">
             <div class="form-group">
                 <label for="c-name">Name</label>
-                <input id="c-name" type="text" maxlength="80" required>
+                <input id="c-name" type="text" maxlength="60" required>
             </div>
             <div class="form-group">
                 <label for="c-phone">Phone number</label>
                 <input id="c-phone" type="tel" placeholder="082 123 4567" required>
             </div>
-            <p class="form-error" id="form-error" hidden></p>
+            <p class="form-error" id="form-error" role="alert" hidden></p>
             <button type="submit" class="btn btn-primary" style="width: 100%;">Add contact</button>
         </form>
     </main>
@@ -56,6 +58,7 @@
     (function () {
         "use strict";
         var DEVICE_TOKEN = "demo-device";
+        var pushAvailable = false;
         var listEl = document.getElementById("contact-list");
         var form = document.getElementById("contact-form");
         var errorEl = document.getElementById("form-error");
@@ -86,6 +89,24 @@
                 btn.addEventListener("click", function () { remove(c.id); });
                 row.appendChild(info);
                 row.appendChild(btn);
+                if (pushAvailable) {
+                    var invite = document.createElement("button");
+                    invite.type = "button"; invite.textContent = "Invite for notifications";
+                    invite.addEventListener("click", function () {
+                        invite.disabled = true;
+                        fetch("/api/contacts/" + c.id + "/push-invite", {method:"POST", cache:"no-store",
+                            headers:headers({"Content-Type":"application/json"}), body:"{}"})
+                            .then(function (response) { if (!response.ok) throw new Error(); return response.json(); })
+                            .then(function (body) {
+                                var field = document.getElementById("invite-link");
+                                field.value = location.origin + body.path;
+                                field.hidden = false; document.getElementById("invite-help").hidden = false;
+                                field.focus(); field.select();
+                            }).catch(function () { showError("Couldn't create an invitation. Try later; repeated requests are limited."); })
+                            .then(function () { invite.disabled = false; });
+                    });
+                    row.appendChild(invite);
+                }
                 listEl.appendChild(row);
             });
         }
@@ -96,17 +117,27 @@
             return div.innerHTML;
         }
 
-        function load() {
-            fetch("/api/contacts", { headers: headers(), cache: "no-store" })
-                .then(function (r) { return r.json(); })
-                .then(function (d) { render(d.contacts || []); })
-                .catch(function () { /* offline: leave the list as it was */ });
+        function showError(message) {
+            errorEl.textContent = message;
+            errorEl.hidden = false;
         }
-
+        function checked(response) {
+            if (!response.ok) throw new Error("request_failed");
+            return response.json().then(function (body) {
+                if (!body || !Array.isArray(body.contacts)) throw new Error("invalid_response");
+                return body;
+            });
+        }
+        function load() {
+            return fetch("/api/contacts", {headers: headers(), cache: "no-store"})
+                .then(checked).then(function (body) { render(body.contacts); })
+                .catch(function () { showError("Couldn't load contacts. Connect and try again; saved contacts have not been cleared."); });
+        }
         function remove(id) {
-            fetch("/api/contacts/" + id, { method: "DELETE", headers: headers() })
-                .then(load)
-                .catch(function () {});
+            errorEl.hidden = true;
+            return fetch("/api/contacts/" + id, {method: "DELETE", headers: headers(), cache: "no-store"})
+                .then(checked).then(function (body) { render(body.contacts); })
+                .catch(function () { showError("Couldn't confirm removal. Your contact list has not been updated here. Connect and try again."); });
         }
 
         form.addEventListener("submit", function (e) {
@@ -126,11 +157,11 @@
                 })
                 .then(function () {
                     form.reset();
-                    load();
+                    return load();
                 })
                 .catch(function (err) {
                     var messages = {
-                        contact_limit: "You can save up to 3 trusted contacts.",
+                        contact_limit: "You can save up to 5 trusted contacts.",
                         invalid_phone: "That doesn't look like a South African number.",
                         name_required: "Please enter a name."
                     };
@@ -139,6 +170,9 @@
                 });
         });
 
+        fetch("/api/contact-push/config", {cache:"no-store"})
+            .then(function (response) { if (response.ok) { pushAvailable = true; return load(); } })
+            .catch(function () {});
         load();
     })();
     </script>

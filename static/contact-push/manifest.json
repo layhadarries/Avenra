@@ -1,0 +1,1 @@
+{"name":"Contact notifications","short_name":"Notifications","start_url":"/contact-push/","scope":"/contact-push/","display":"standalone","icons":[{"src":"/survivor/icons/icon-192.png","sizes":"192x192","type":"image/png"},{"src":"/survivor/icons/icon-512.png","sizes":"512x512","type":"image/png"}]}

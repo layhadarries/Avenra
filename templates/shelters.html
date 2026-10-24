@@ -1,9 +1,41 @@
 {% extends "base.html" %}
 {% block title %}Shelters{% endblock %}
+
 {% block content %}
-<div class="page-heading"><p class="eyebrow">Support directory</p><h1>Shelters</h1><p class="muted">Availability reflects the latest stored update, not a guaranteed placement.</p></div>
-<div class="card table-scroll"><table><thead><tr><th scope="col">Organisation</th><th scope="col">Available beds</th><th scope="col">Hours</th><th scope="col">Status</th></tr></thead><tbody>
-{% for shelter in shelters %}<tr><th scope="row">{{ shelter.name }}</th><td>{{ shelter.beds_available }} / {{ shelter.beds_total }}</td><td>{{ shelter.hours or 'Not provided' }}</td><td>{{ 'Accepting referrals' if shelter.accepting else 'Not accepting' }}</td></tr>
-{% else %}<tr><td colspan="4">No organisations have been added.</td></tr>{% endfor %}
-</tbody></table></div>
+<div class="page-heading">
+  <p class="eyebrow">Support directory</p>
+  <h1>Shelters</h1>
+  <p class="muted">
+    Contact each organisation to confirm current services,
+    admission requirements and availability.
+    A referral request does not reserve a place.
+  </p>
+</div>
+
+<div class="card table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Organisation</th>
+        <th scope="col">Hours</th>
+        <th scope="col">Languages</th>
+        <th scope="col">Availability</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for shelter in shelters %}
+      <tr>
+        <th scope="row">{{ shelter.name }}</th>
+        <td>{{ shelter.hours or "Not provided" }}</td>
+        <td>{{ shelter.languages or "Not provided" }}</td>
+        <td>Contact to confirm</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="4">No organisations have been added.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
 {% endblock %}

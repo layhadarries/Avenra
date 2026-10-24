@@ -37,6 +37,7 @@ class ClientIntegrationTests(unittest.TestCase):
                 html = response.get_data(as_text=True)
                 self.assertEqual(response.status_code, 200)
                 self.assertIn('Nomsa D', html)
+                self.assertIn('Nomsa D', html)
                 self.assertIn('action="/logout"', html)
                 self.assertIn('name="csrf_token"', html)
                 self.assertIn('no-store', response.headers['Cache-Control'])
@@ -60,15 +61,18 @@ class ClientIntegrationTests(unittest.TestCase):
     def test_pwa_has_consistent_identity_and_all_local_assets(self):
         with self.client.get('/survivor/', buffered=True) as response:
             html = response.get_data(as_text=True)
-        self.assertIn('Clear Sky', html)
-        self.assertNotIn('user-scalable=no', html)
-        self.assertNotIn('demo-device', html)
         with self.client.get('/survivor/manifest.json', buffered=True) as response:
             manifest = response.json
-        self.assertEqual(manifest['name'], 'Clear Sky')
+        self.assertIn('<title>' + manifest['name'] + '</title>', html)
+        self.assertEqual(manifest['short_name'], manifest['name'])
+        self.assertNotIn('user-scalable=no', html)
+        self.assertNotIn('maximum-scale=1', html)
+        self.assertNotIn('demo-device', html)
         self.assertEqual(manifest['scope'], '/survivor/')
         self.assertEqual(manifest['display'], 'standalone')
-        for path in ('/survivor/index.html','/survivor/shell.js','/static/css/style.css', *[i['src'] for i in manifest['icons']]):
+        for path in ('/survivor/index.html','/survivor/setup.html','/survivor/shell.js',
+                     '/survivor/queue.js','/survivor/survivor.js','/static/css/style.css',
+                     *[i['src'] for i in manifest['icons']]):
             with self.subTest(path=path), self.client.get(path, buffered=True) as response:
                 self.assertEqual(response.status_code,200)
                 self.assertGreater(len(response.data),0)

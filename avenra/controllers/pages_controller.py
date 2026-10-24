@@ -7,6 +7,7 @@ from avenra.services.portal_service import PortalService
 from avenra.services.referral_service import ReferralService
 from avenra.security import current_user, login_required, require_role
 from avenra.config import Config
+from avenra.services.shelter_service import ShelterService
 
 
 class PagesController:
@@ -43,9 +44,8 @@ class PagesController:
 
     @login_required
     def shelters_page(self):
-        user = current_user()
-        shelters = ShelterRepository().get_all()
-        return render_template('shelters.html', shelters=shelters)
+        shelters = ShelterService().list_shelters()
+        return render_template("shelters.html", shelters=shelters)
 
     @login_required
     def referrals_page(self):

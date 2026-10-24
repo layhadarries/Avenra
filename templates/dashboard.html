@@ -1,6 +1,72 @@
 {% extends "base.html" %}
 {% block title %}Alerts{% endblock %}
+
 {% block content %}
-<div class="page-heading"><p class="eyebrow">Response workspace</p><h1>Alerts</h1><p class="muted">Signed in as {{ user.name }}, {{ role_label }}.</p></div>
-<section class="card"><h2>Your response workspace</h2><p class="muted section-gap">Live alert triage will be connected in the next stage. This page does not confirm that an alert has been received or attended.</p></section>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='vendor/leaflet-1.9.4/leaflet.css') }}"
+>
+
+<div class="page-heading">
+  <p class="eyebrow">Response workspace</p>
+  <h1>Recent alerts</h1>
+  <p class="muted">
+    Only alerts within your authorised case access appear here.
+  </p>
+</div>
+
+<div class="dashboard-workspace">
+  <section aria-label="Alert queue">
+    <p id="queue-connection" role="status">
+      Connecting to the alert service…
+    </p>
+    <p id="queue-action" role="status"></p>
+    <p id="queue-summary" class="muted section-gap"></p>
+
+    <div id="alert-list" class="alert-list section-gap"></div>
+
+    <noscript>
+      <p>JavaScript is required to refresh and acknowledge alerts.</p>
+    </noscript>
+  </section>
+
+  <section class="map-panel">
+    <h2>Reported alert locations</h2>
+    <p id="map-status" role="status">
+      Waiting for permitted locations…
+    </p>
+
+    <div
+      id="alert-map"
+      role="region"
+      aria-label="Alert locations">
+    </div>
+
+    <p class="muted section-gap">
+      Loading the street map shares your IP address and the viewed
+      area with OpenStreetMap. Markers work without it.
+    </p>
+
+    <button
+      id="map-background"
+      class="btn btn-outline section-gap"
+      type="button"
+      disabled>
+      Load street map
+    </button>
+  </section>
+</div>
+
+<script
+  src="{{ url_for('static', filename='vendor/leaflet-1.9.4/leaflet.js') }}"
+  defer>
+</script>
+<script
+  src="{{ url_for('static', filename='js/alert-map.js') }}"
+  defer>
+</script>
+<script
+  src="{{ url_for('static', filename='js/dashboard.js') }}"
+  defer>
+</script>
 {% endblock %}

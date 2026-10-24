@@ -18,6 +18,8 @@ class Alert:
         client_id: Optional[str] = None,
         client_ts: Optional[str] = None,
         created_at: Optional[str] = None,
+        location_accuracy: Optional[float] = None,
+        location_recorded_at: Optional[str] = None,
     ):
         self.id = id
         self.user_id = user_id
@@ -30,6 +32,8 @@ class Alert:
         self.client_id = client_id
         self.client_ts = client_ts
         self.created_at = created_at
+        self.location_accuracy = location_accuracy
+        self.location_recorded_at = location_recorded_at
 
     @classmethod
     def from_row(cls, row) -> Optional["Alert"]:
@@ -47,6 +51,8 @@ class Alert:
             client_id=row["client_id"],
             client_ts=row["client_ts"],
             created_at=row["created_at"],
+            location_accuracy=row["location_accuracy"],
+            location_recorded_at=row["location_recorded_at"],
         )
 
     def is_acknowledged(self) -> bool:
@@ -56,15 +62,25 @@ class Alert:
         return self.lat is not None and self.lng is not None
 
     def serialize(self, location_allowed: bool = True) -> dict:
-        """The canonical JSON representation of an alert."""
+        """Return location information only when disclosure is permitted."""
         has_coords = self.has_coordinates()
+        location_visible = has_coords and location_allowed
+
         return {
             "id": self.id,
             "case_code": self.case_code,
             "status": self.status,
-            "lat": self.lat if location_allowed else None,
-            "lng": self.lng if location_allowed else None,
-            "location_redacted": bool(has_coords and not location_allowed),
+            "lat": self.lat if location_visible else None,
+            "lng": self.lng if location_visible else None,
+            "location_accuracy": (
+                self.location_accuracy if location_visible else None
+            ),
+            "location_recorded_at": (
+                self.location_recorded_at if location_visible else None
+            ),
+            "location_redacted": bool(
+                has_coords and not location_allowed
+            ),
             "client_ts": self.client_ts,
             "created_at": self.created_at,
             "acknowledged_by": self.acknowledged_by,

@@ -292,3 +292,56 @@ tbody tr:last-child > * { border-bottom: 0; }
   .weather-intro { padding-top: 3rem; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* Functional alert queue */
+[hidden] {
+    display: none !important;
+}
+
+.alert-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.alert-card {
+    overflow-wrap: anywhere;
+}
+
+.alert-card p {
+    margin-top: .5rem;
+}
+.dashboard-workspace {
+    display: grid;
+    grid-template-columns:
+        minmax(280px, 1fr)
+        minmax(320px, 1.3fr);
+    gap: 1.5rem;
+}
+
+.dashboard-workspace > section {
+    min-width: 0;
+}
+
+#alert-map {
+    height: 480px;
+    margin-top: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #e8eeeb;
+}
+
+.avenra-map-marker span {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #1d6f72;
+    border: 3px solid white;
+    box-shadow: 0 1px 4px #3336;
+}
+
+@media (max-width: 1000px) {
+    .dashboard-workspace {
+        grid-template-columns: 1fr;
+    }
+}

@@ -62,8 +62,6 @@ class ReferralService:
             return {"error": "not_found"}, 404
         if alert.status == 'resolved':
             return {"error": "alert_resolved"}, 409
-        if not shelter.accepting or (shelter.beds_total > 0 and shelter.beds_available <= 0):
-            return {"error": "no_capacity"}, 409
         existing = self.referral_repo.conn.execute(
             "SELECT id FROM referrals WHERE alert_id=? AND status IN ('sent','accepted','placed')", (alert_id,)).fetchone()
         if existing:
@@ -116,6 +114,14 @@ class ReferralService:
             return {"error": "not_found"}, 404
         if not self.consent_repo.is_active(alert.user_id, 'shelter_referral_sharing'):
             return {"error": "referral_consent_required"}, 403
+        decline_clean = None
+        if new_status == "declined":
+            if not isinstance(decline_reason, str):
+                return {"error": "invalid_decline_reason"}, 400
+
+            decline_clean = decline_reason.strip()
+            if not 1 <= len(decline_clean) <= 200:
+                return {"error": "invalid_decline_reason"}, 400
         if new_status == existing.status:
             return {"referral": existing.serialize(), "already": True}, 200
         if alert.status == 'resolved':
@@ -126,16 +132,12 @@ class ReferralService:
             return {"error": "invalid_transition"}, 409
 
         shelter = self.shelter_repo.get_by_id(existing.shelter_id)
-        if new_status == "placed" and existing.status != "placed":
-            if not shelter or (shelter.beds_total > 0 and shelter.beds_available <= 0):
-                return {"error": "no_capacity"}, 409
+        if shelter is None:
+            return {"error": "not_found"}, 404
 
-        decline_clean = str(decline_reason or "").strip()[:200] if new_status == "declined" else None
         updated = self.referral_repo.update_status(ref_id, new_status, decline_clean)
 
         if new_status == "placed" and existing.status != "placed":
-            if shelter.beds_total > 0:
-                self.shelter_repo.decrement_bed(existing.shelter_id)
             self.alert_repo.resolve(existing.alert_id)
 
         detail = f"referral {ref_id} ({existing.shelter_name}) -> {new_status}"

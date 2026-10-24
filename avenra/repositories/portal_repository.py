@@ -71,6 +71,14 @@ class PortalRepository(BaseRepository):
         params = [user.id]
         query += " OR (e.case_code IS NULL AND e.actor=?))"
         params.append(f'user:{user.id}')
+        case_code = args.get("case_code", "").strip().upper()
+        if len(case_code) > 80:
+            raise ValueError("Invalid case filter")
+
+        if case_code:
+            query += "AND e.case_code = ?"
+            params.append(case_code)
+
         if args.get('q'):
             query += " AND instr(lower(e.actor || ' ' || COALESCE(e.case_code,'') || ' ' || COALESCE(e.detail,'')),lower(?))>0"
             params.append(args['q'][:80])

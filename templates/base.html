@@ -3,45 +3,121 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta name="access-signature" content="{{ access_signature }}">
   <meta name="session-expires" content="{{ session_expires }}">
+
   <title>{% block title %}Dashboard{% endblock %} · Avenra</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet"
+        href="{{ url_for('static', filename='css/portal-shell.css') }}">
+
+  <script src="{{ url_for('static', filename='js/login-theme.js') }}"
+          defer></script>
 </head>
-<body>
+
+<body class="portal-body">
   <a class="skip-link" href="#main-content">Skip to content</a>
+
   <div class="app-shell">
     <aside class="sidebar">
-      <div class="sidebar-brand">Avenra<span class="sidebar-caption">Partner portal</span></div>
+      <div class="sidebar-brand">
+        <div class="portal-logo">
+          <img class="logo-light"
+               src="{{ url_for('static', filename='images/avenra-logo.png') }}"
+               alt="Avenra" width="1200" height="380">
+
+          <img class="logo-dark"
+               src="{{ url_for('static', filename='images/avenra-logo-dark.png') }}"
+               alt="Avenra" width="1200" height="380">
+        </div>
+        <span class="sidebar-caption">Partner portal</span>
+      </div>
+
       <nav aria-label="Staff navigation">
         <ul class="sidebar-nav">
-          {% if user.role in ('responder','admin') %}
-          <li><a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}aria-current="page" class="active"{% endif %}>Alerts</a></li>
-          <li><a href="{{ url_for('cases_page') }}" {% if request.endpoint == 'cases_page' %}aria-current="page" class="active"{% endif %}>Cases</a></li>
+          {% if user.role in ('responder', 'admin') %}
+          <li>
+            <a href="{{ url_for('dashboard') }}"
+               {% if request.endpoint == 'dashboard' %}
+               aria-current="page" class="active"
+               {% endif %}>Alerts</a>
+          </li>
+          <li>
+            <a href="{{ url_for('cases_page') }}"
+               {% if request.endpoint == 'cases_page' %}
+               aria-current="page" class="active"
+               {% endif %}>Cases</a>
+          </li>
           {% endif %}
-          <li><a href="{{ url_for('shelters_page') }}" {% if request.endpoint == 'shelters_page' %}aria-current="page" class="active"{% endif %}>Shelters</a></li>
-          <li><a href="{{ url_for('referrals_page') }}" {% if request.endpoint == 'referrals_page' %}aria-current="page" class="active"{% endif %}>Referrals</a></li>
-          {% if user.role in ('responder','admin') %}
-          <li><a href="{{ url_for('audit_log_page') }}" {% if request.endpoint == 'audit_log_page' %}aria-current="page" class="active"{% endif %}>Audit log</a></li>
+
+          <li>
+            <a href="{{ url_for('shelters_page') }}"
+               {% if request.endpoint == 'shelters_page' %}
+               aria-current="page" class="active"
+               {% endif %}>Shelters</a>
+          </li>
+          <li>
+            <a href="{{ url_for('referrals_page') }}"
+               {% if request.endpoint == 'referrals_page' %}
+               aria-current="page" class="active"
+               {% endif %}>Referrals</a>
+          </li>
+
+          {% if user.role in ('responder', 'admin') %}
+          <li>
+            <a href="{{ url_for('audit_log_page') }}"
+               {% if request.endpoint == 'audit_log_page' %}
+               aria-current="page" class="active"
+               {% endif %}>Audit log</a>
+          </li>
           {% endif %}
         </ul>
       </nav>
+
+      <p class="sidebar-footnote">Authorised staff workspace</p>
     </aside>
+
     <div class="main-area">
       <header class="topbar">
-        <p class="topbar-user">Signed in as <strong>{{ user.name }}</strong> · {{ role_label }}</p>
-        <form method="post" action="{{ url_for('logout') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="btn btn-outline">Sign out everywhere</button>
-        </form>
+        <p class="topbar-user">
+          <span class="identity-name">{{ user.name }}</span>
+          <span class="identity-role">{{ role_label }}</span>
+        </p>
+
+        <div class="topbar-actions">
+          <button id="theme-toggle"
+                  type="button"
+                  class="btn btn-outline"
+                  hidden>Switch theme</button>
+
+          <form method="post" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token"
+                   value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline">
+              Sign out everywhere
+            </button>
+          </form>
+        </div>
       </header>
+
       <main class="content" id="main-content">
-        {% if config.EVALUATION_MODE %}<p class="evaluation-banner">Fictional evaluation · no real emergency response or notification delivery.</p>{% endif %}
+        {% if config.EVALUATION_MODE %}
+        <p class="evaluation-banner">
+          Fictional evaluation · no real emergency response
+          or notification delivery.
+        </p>
+        {% endif %}
+
         {% block content %}{% endblock %}
       </main>
     </div>
   </div>
-  <script src="{{ url_for('static', filename='js/portal.js') }}" defer></script>
+
+  <script src="{{ url_for('static', filename='js/portal.js') }}"
+          defer></script>
 </body>
 </html>

@@ -43,15 +43,20 @@ class Config:
 
     CONSENT_CATALOG = {
         "location_sharing": {
-            "label": "Share GPS location during emergency alerts",
-            "granted_to": "Cape Town Responder Hub",
+            "label": "Share emergency alert location",
+            "granted_to": (
+                "Staff with access to your case; "
+                "trusted contacts when SMS is enabled"
+            ),
         },
         "diary_sharing": {
-            "label": "Share private case diary & photo evidence",
-            "granted_to": "Assigned Social Worker (Nomsa D)",
+            "label": "Share selected diary entries and photo evidence",
+            "granted_to": "Staff with access to your case",
         },
         "shelter_referral_sharing": {
-            "label": "Share case code & placement needs with shelters",
-            "granted_to": "Verified Partner Shelters",
+            "label": "Share case code and placement needs for referrals",
+            "granted_to": (
+                "Staff handling your referral and the selected shelter"
+            ),
         },
     }

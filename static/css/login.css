@@ -1,0 +1,321 @@
+/* Light theme */
+:root {
+  color-scheme: light;
+  --page: #f5f2eb;
+  --surface: #fffdf9;
+  --text: #352b37;
+  --muted: #716773;
+  --border: #ded7dc;
+  --input: #fffefa;
+  --accent: #543650;
+  --accent-hover: #42283f;
+  --focus: #46777a;
+  --error-bg: #fff0ed;
+  --error-text: #8c302d;
+  --error-border: #dfada5;
+}
+
+/* Follow the device theme unless light was explicitly selected */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #1c191e;
+    --surface: #262127;
+    --text: #f3ecef;
+    --muted: #b9acb8;
+    --border: #493c49;
+    --input: #201c22;
+    --accent: #dfc4d8;
+    --accent-hover: #edd9e8;
+    --focus: #91bdbe;
+    --error-bg: #3b2529;
+    --error-text: #ffbdb2;
+    --error-border: #805052;
+  }
+}
+
+/* Manually selected dark theme */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #1c191e;
+  --surface: #262127;
+  --text: #f3ecef;
+  --muted: #b9acb8;
+  --border: #493c49;
+  --input: #201c22;
+  --accent: #dfc4d8;
+  --accent-hover: #edd9e8;
+  --focus: #91bdbe;
+  --error-bg: #3b2529;
+  --error-text: #ffbdb2;
+  --error-border: #805052;
+}
+
+/* Base */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100svh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--page);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+a,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* Header and theme switch */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 70px;
+  padding: 16px 28px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#theme-toggle {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* Login layout */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px 20px 48px;
+}
+
+.login-panel {
+  width: 100%;
+  max-width: 360px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.login-content {
+  padding: 0;
+}
+
+/* Both PNGs use the same canvas and visible bounds */
+.brand {
+  display: grid;
+  place-items: center;
+  height: 110px;
+  margin-bottom: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.brand img {
+  grid-area: 1 / 1;
+  width: 100%;
+  max-width: 340px;
+  height: 110px;
+  object-fit: contain;
+  object-position: center;
+  transform: none;
+}
+
+.brand .logo-light {
+  display: block;
+}
+
+.brand .logo-dark {
+  display: none;
+}
+
+/* Explicit dark selection */
+:root[data-theme="dark"] .brand .logo-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .brand .logo-dark {
+  display: block;
+}
+
+/* Automatic dark selection */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .brand .logo-light {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .brand .logo-dark {
+    display: block;
+  }
+}
+
+/* Typography */
+.eyebrow {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+
+.intro {
+  margin: 8px 0 24px;
+  color: var(--muted);
+}
+
+/* Form */
+.field {
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--input);
+  color: var(--text);
+  font-size: 16px;
+}
+
+input:focus {
+  border-color: var(--focus);
+}
+
+.sign-in {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--surface);
+  font-weight: 650;
+}
+
+.sign-in:hover {
+  background: var(--accent-hover);
+}
+
+/* Feedback and supporting text */
+.error-banner {
+  margin: 0 0 20px;
+  padding: 10px 12px;
+  border: 1px solid var(--error-border);
+  border-radius: 6px;
+  background: var(--error-bg);
+  color: var(--error-text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.access-note {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.evaluation {
+  display: grid;
+  gap: 5px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.evaluation > span {
+  color: var(--muted);
+}
+
+.evaluation a {
+  width: fit-content;
+}
+
+.page-note {
+  max-width: 350px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+footer {
+  padding: 16px 24px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+/* Smaller screens */
+@media (max-width: 420px) {
+  .page-header {
+    padding-inline: 20px;
+  }
+
+  main {
+    padding-top: 12px;
+  }
+}
