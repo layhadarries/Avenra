@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1d6f72">
+    <title>Clear Sky</title>
+    <link rel="manifest" href="/survivor/manifest.json">
+    <link rel="icon" href="/survivor/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background-color: var(--warm-bg);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .privacy-wrap {
+            max-width: 480px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 1rem 1.25rem 4rem;
+            flex: 1;
+        }
+        .back-link {
+            display: inline-block;
+            color: var(--teal);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+        .privacy-title {
+            font-size: 1.25rem;
+            color: var(--navy);
+            margin: 0 0 0.25rem;
+            font-weight: 700;
+        }
+        .privacy-subtitle {
+            font-size: 0.85rem;
+            color: var(--dusty-blue);
+            margin: 0 0 1.25rem;
+            line-height: 1.4;
+        }
+        .section-header {
+            font-size: 1rem;
+            color: var(--navy);
+            font-weight: 600;
+            margin: 1.5rem 0 0.5rem;
+        }
+        .consent-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .consent-info {
+            flex: 1;
+        }
+        .consent-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-bottom: 0.2rem;
+        }
+        .consent-desc {
+            font-size: 0.8rem;
+            color: var(--dusty-blue);
+            line-height: 1.35;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: .25s ease;
+            border-radius: 999px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .25s ease;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider {
+            background-color: var(--teal);
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        input:disabled + .slider {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .access-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+        }
+        .access-row {
+            padding: 0.85rem 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .access-row:first-child {
+            border-top: none;
+        }
+        .access-actor {
+            color: var(--navy);
+            font-weight: 600;
+        }
+        .access-action {
+            color: var(--dusty-blue);
+            font-size: 0.78rem;
+            margin-top: 0.15rem;
+        }
+        .access-time {
+            color: var(--dusty-blue);
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+        .status-banner {
+            background: var(--amber-bg);
+            color: var(--amber);
+            font-size: 0.82rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header class="pwa-header" style="padding: 1rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <span class="pwa-title" style="font-weight: 700; font-size: 1.05rem; color: var(--navy);">Cape Weather</span>
+        <button type="button" id="quick-exit" class="quick-exit-pill" style="background: var(--navy); color: #fff; border: none; padding: 0.35rem 0.85rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Quick exit</button>
+    </header>
+
+    <main class="privacy-wrap">
+        <a href="/survivor/" class="back-link">&larr; Back</a>
+        <h1 class="privacy-title">Your Privacy &amp; Sharing</h1>
+        <p class="privacy-subtitle">You have the right to choose what is shared. Turning off a setting takes effect immediately.</p>
+
+        <div id="status-banner" class="status-banner" hidden></div>
+
+        <h2 class="section-header">Sharing Permissions</h2>
+
+        <div class="consent-card">
+            <div class="consent-info">
+                <div class="consent-title" id="title-location_sharing">Loading settings...</div>
+                <div class="consent-desc" id="desc-location_sharing">Please wait while your privacy settings are securely retrieved.</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="consent-location_sharing" data-item="location_sharing" disabled>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="consent-card">
+            <div class="consent-info">
+                <div class="consent-title" id="title-shelter_referral_sharing">Loading settings...</div>
+                <div class="consent-desc" id="desc-shelter_referral_sharing">Please wait while your privacy settings are securely retrieved.</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="consent-shelter_referral_sharing" data-item="shelter_referral_sharing" disabled>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="consent-card">
+            <div class="consent-info">
+                <div class="consent-title" id="title-diary_sharing">Loading settings...</div>
+                <div class="consent-desc" id="desc-diary_sharing">Please wait while your privacy settings are securely retrieved.</div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="consent-diary_sharing" data-item="diary_sharing" disabled>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <h2 class="section-header">Who Has Seen My Case</h2>
+        <p class="privacy-subtitle">Every time a caseworker or responder accesses your file, it is recorded here.</p>
+
+        <div class="access-card" id="access-list">
+            <div class="access-row">
+                <span style="color: var(--dusty-blue);">Loading activity history…</span>
+            </div>
+        </div>
+    </main>
+
+    <script src="/survivor/privacy.js" defer></script>
+</body>
+</html>

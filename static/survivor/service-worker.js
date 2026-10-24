@@ -1,5 +1,6 @@
-const CACHE_NAME = 'clear-sky-shell-v6';
-const DATA_CACHE_NAME = 'clear-sky-data-v1';
+/* Explicit public-shell cache. APIs, private routes and writes use the network. */
+const CACHE_NAME = 'cape-weather-shell-v7';
+const DATA_CACHE_NAME = 'cape-weather-data-v1';
 
 const SHELL_ASSETS = [
   '/survivor/',
@@ -8,6 +9,8 @@ const SHELL_ASSETS = [
   '/survivor/setup.html',
   '/survivor/help.html',
   '/survivor/help.js',
+  '/survivor/privacy.html',
+  '/survivor/privacy.js',
   '/survivor/shell.js',
   '/survivor/survivor.js',
   '/survivor/queue.js',
@@ -28,7 +31,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys
     .filter(key => key !== CACHE_NAME && key !== DATA_CACHE_NAME && (
-      key.startsWith('clear-sky-shell-') || key.startsWith('clear-sky-shell-')))
+      key.startsWith('cape-weather-shell-') || key.startsWith('clear-sky-shell-')))
     .map(key => caches.delete(key))))
     .then(() => self.clients.claim()));
 });
@@ -36,11 +39,12 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
+  // Non-GET or foreign origin always bypasses the shell cache
   if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
     return;
   }
 
-  // Network-first caching for shelter directory offline access
+  // Network-first caching for the shelter directory
   if (url.pathname === '/api/shelters') {
     event.respondWith(
       fetch(event.request)
@@ -56,7 +60,12 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Live alerts, mutations, and non-whitelisted paths go to network
+  // Consent queries, access logs, and live mutations must never be stale
+  if (url.pathname.startsWith('/api/')) {
+    return;
+  }
+
+  // Shell asset whitelisting
   if (url.search !== '' || !PUBLIC_PATHS.has(url.pathname)) return;
 
   // Cache-first for the static app shell

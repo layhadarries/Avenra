@@ -6,140 +6,152 @@
     <meta name="theme-color" content="#1d6f72">
     <title>Clear Sky</title>
     <link rel="manifest" href="/survivor/manifest.json">
+    <link rel="icon" href="/survivor/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
     <link rel="stylesheet" href="/static/css/style.css">
     <style>
         body {
-            display: flex; 
-            flex-direction: column; 
+            display: flex;
+            flex-direction: column;
             min-height: 100vh;
-            background-color: var(--warm-bg); 
-            -webkit-user-select: none; 
+            background-color: var(--warm-bg);
+            -webkit-user-select: none;
             user-select: none;
         }
         .pwa-header {
-            display: flex; 
-            justify-content: 
-            space-between; 
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            padding: 1rem 1.25rem; 
-            background: var(--surface); 
+            padding: 1rem 1.25rem;
+            background: var(--surface);
             border-bottom: 1px solid var(--border);
         }
-        .pwa-title { 
-            font-weight: 700; 
-            font-size: 1.05rem; 
-            color: var(--navy); }
+        .pwa-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--navy);
+        }
         .quick-exit-pill {
-            background: var(--navy); 
-            color: #ffffff; 
+            background: var(--navy);
+            color: #ffffff;
             border: none;
-            padding: 0.35rem 0.85rem; 
-            border-radius: 999px; 
-            font-size: 0.8rem; 
-            font-weight: 600; 
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
             cursor: pointer;
         }
         .pwa-main {
-            flex: 1; 
-            display: flex; 
+            flex: 1;
+            display: flex;
             flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            padding: 2rem 1.5rem; 
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1.5rem;
             text-align: center;
         }
-        .view { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            width: 100%; 
-            max-width: 320px; 
+        .view {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 320px;
         }
-        .view .btn { 
-            margin-top: 0.75rem; 
-            min-width: 160px; 
+        .view .btn {
+            margin-top: 0.75rem;
+            min-width: 160px;
         }
-        .panic-caption { 
-            color: var(--dusty-blue); 
-            font-size: 0.92rem; 
-            max-width: 260px; 
-            margin-top: 1rem; 
+        .panic-caption {
+            color: var(--dusty-blue);
+            font-size: 0.92rem;
+            max-width: 260px;
+            margin-top: 1rem;
         }
         .queue-note {
-            margin-top: 0.75rem; 
-            font-size: 0.82rem; 
+            margin-top: 0.75rem;
+            font-size: 0.82rem;
             color: var(--amber);
-            background: var(--amber-bg); 
-            padding: 0.35rem 0.75rem; 
+            background: var(--amber-bg);
+            padding: 0.35rem 0.75rem;
             border-radius: 999px;
         }
         .bottom-nav {
-            display: grid; 
+            display: grid;
             grid-template-columns: repeat(4, 1fr);
-            background: var(--surface); 
-            border-top: 1px solid var(--border); 
+            background: var(--surface);
+            border-top: 1px solid var(--border);
             padding: 0.65rem 0.5rem;
         }
         .bottom-nav button {
-            background: none; 
-            border: none; 
-            text-align: center; 
+            background: none;
+            border: none;
+            text-align: center;
             font-size: 0.82rem;
-            color: var(--dusty-blue); 
-            font-weight: 600; 
-            padding: 0.35rem 0; cursor: pointer;
+            color: var(--dusty-blue);
+            font-weight: 600;
+            padding: 0.35rem 0;
+            cursor: pointer;
         }
-        .bottom-nav button.active { color: var(--teal); }
-        .more-panel { 
-            width: 100%; 
-            max-width: 360px; 
-            margin: 0 auto; 
-            padding: 1.5rem 1.25rem; 
-            text-align: left; 
+        .bottom-nav button.active {
+            color: var(--teal);
+        }
+        .more-panel {
+            width: 100%;
+            max-width: 360px;
+            margin: 0 auto;
+            padding: 1.5rem 1.25rem;
+            text-align: left;
         }
         .more-row {
             display: block;
-             background: var(--surface); 
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: var(--radius); 
-            padding: 0.9rem 1rem; 
+            border-radius: var(--radius);
+            padding: 0.9rem 1rem;
             text-decoration: none;
-            color: var(--navy); 
-            font-weight: 600; 
+            color: var(--navy);
+            font-weight: 600;
             margin-bottom: 0.6rem;
+        }
+        .location-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--navy);
+            margin-top: 0.5rem;
         }
     </style>
 </head>
 <body>
     <header class="pwa-header">
-        <span class="pwa-title">Clear Sky</span>
+        <span class="pwa-title">Cape Weather</span>
         <button type="button" id="quick-exit" class="quick-exit-pill">Quick exit</button>
     </header>
 
     <main class="pwa-main" id="pwa-main">
-        <!-- Ready: hold the ring to start -->
         <section id="view-ready" class="view">
             <button type="button" id="panic-btn" class="panic-ring" aria-label="Hold to send alert">
                 <span class="panic-ring-inner">Hold to send alert</span>
             </button>
             <p class="panic-caption">Sends your location to the people you chose</p>
+            <label class="location-toggle-row">
+                <input type="checkbox" id="share-alert-location" checked>
+                <span>Include my location</span>
+            </label>
             <p class="queue-note" id="queue-note" hidden></p>
         </section>
 
-        <!-- Countdown: 5 seconds to undo -->
         <section id="view-countdown" class="view" hidden>
             <p class="big" id="countdown-text">5 seconds to undo</p>
             <div class="countdown-track"><div class="countdown-fill" id="countdown-fill"></div></div>
             <button type="button" id="undo-btn" class="btn btn-outline">Undo</button>
         </section>
 
-        <!-- Sending -->
         <section id="view-sending" class="view" hidden>
             <p class="big">Sending your alert…</p>
         </section>
 
-        <!-- Sent: waiting for a responder -->
         <section id="view-sent" class="view" hidden>
             <div class="sent-check" aria-hidden="true">&#10003;</div>
             <p class="big">Your alert is on its way</p>
@@ -147,17 +159,27 @@
             <button type="button" id="done-btn" class="btn btn-outline">Done</button>
         </section>
 
-        <!-- Queued: no signal. Saved safely, delivers automatically, no retry tap needed. -->
         <section id="view-queued" class="view" hidden>
             <p class="big">Saved on this phone</p>
-            <p class="panic-caption">It will send automatically when you have signal.</p>
+            <p class="panic-caption" id="queue-message">It will retry while this app is open and when you reopen it with a connection. Help has not been confirmed.</p>
             <button type="button" id="queued-done-btn" class="btn btn-outline">Done</button>
         </section>
 
-        <!-- More: trusted contacts entry point -->
+        <section id="view-error" class="view" hidden>
+            <p class="big">Alert not confirmed</p>
+            <p id="save-error" class="panic-caption" role="alert"></p>
+            <button type="button" id="error-done-btn" class="btn btn-outline">Back</button>
+        </section>
+
         <section id="view-more" class="more-panel" hidden>
             <a href="/survivor/setup.html" class="more-row">Trusted contacts</a>
+            <a href="/survivor/privacy.html" class="more-row">Privacy &amp; sharing</a>
         </section>
+        
+        <div class="section-gap" aria-live="polite">
+            <p id="connection-state">Checking connection…</p>
+            <p id="offline-state">Preparing offline opening…</p>
+        </div>
     </main>
 
     <nav class="bottom-nav">
@@ -167,34 +189,31 @@
         <button type="button" data-nav="more">More</button>
     </nav>
 
+    <script src="/survivor/shell.js" defer></script>
     <script src="/survivor/queue.js" defer></script>
     <script src="/survivor/survivor.js" defer></script>
     <script>
-        if ("serviceWorker" in navigator) {
-            window.addEventListener("load", function () {
-                navigator.serviceWorker.register("/survivor/service-worker.js", { scope: "/survivor/" });
-            });
-        }
-
-        // Page chrome only: bottom-nav and the queue-size note
-        // - panic flow itself lives in survivor.js
         (function () {
             "use strict";
             var navButtons = document.querySelectorAll(".bottom-nav button");
             var morePanel = document.getElementById("view-more");
-            var homeViews = ["view-ready", "view-countdown", "view-sending", "view-sent", "view-queued"];
+            var homeViews = ["view-ready", "view-countdown", "view-sending", "view-sent", "view-queued", "view-error"];
 
             navButtons.forEach(function (btn) {
                 btn.addEventListener("click", function () {
+                    var tab = btn.getAttribute("data-nav");
+                    if (tab === "help") {
+                        location.href = "/survivor/help.html";
+                        return;
+                    }
                     navButtons.forEach(function (b) { b.classList.remove("active"); });
                     btn.classList.add("active");
-                    var tab = btn.getAttribute("data-nav");
                     if (tab === "more") {
                         homeViews.forEach(function (id) { document.getElementById(id).hidden = true; });
                         morePanel.hidden = false;
                     } else {
                         morePanel.hidden = true;
-                        if (tab === "home") document.getElementById("view-ready").hidden = false;
+                        if (tab === "home" && window.CWPanic) window.CWPanic.showHome();
                     }
                 });
             });
@@ -203,6 +222,7 @@
                 if (!window.CWQueue) return;
                 window.CWQueue.queueSize().then(function (n) {
                     var note = document.getElementById("queue-note");
+                    if (!note) return;
                     if (n > 0) {
                         note.hidden = false;
                         note.textContent = n === 1 ? "1 waiting to send" : n + " waiting to send";
@@ -215,9 +235,9 @@
             window.addEventListener("load", refreshQueueNote);
             window.addEventListener("online", refreshQueueNote);
             document.addEventListener("visibilitychange", refreshQueueNote);
-            if (window.CWQueue && window.CWQueue.onFlushed) {
-                window.CWQueue.onFlushed(refreshQueueNote);
-            }
+            window.addEventListener("load", function () {
+                if (window.CWQueue) window.CWQueue.onFlushed(refreshQueueNote);
+            });
         })();
     </script>
 </body>
