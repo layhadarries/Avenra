@@ -23,3 +23,14 @@ class SheltersController:
         data = request.get_json(silent=True) or {}
         res, status = self.shelter_service.update_capacity(shelter_id, user, data)
         return jsonify(res), status
+
+    @require_role("responder", "admin")
+    def nearby_services(self, alert_id: int):
+        body, status = self.shelter_service.nearby_for_alert(
+            alert_id,
+            current_user(),
+            request.args.getlist("radius_km"),
+        )
+        response = jsonify(body)
+        response.headers["Cache-Control"] = "no-store"
+        return response, status

@@ -1,6 +1,70 @@
 {% extends "base.html" %}
 {% block title %}Case {{ case_code }}{% endblock %}
+
 {% block content %}
-<div data-case-view="true"><div class="page-heading"><p class="eyebrow">Assigned case</p><h1>{{ case_code }}</h1></div>
-<section class="card"><h2>Case workspace</h2><p class="muted section-gap">Detailed case viewing is not enabled in this interface yet. Private notes, photographs and locations are not displayed here.</p><p class="section-gap"><a href="{{ url_for('cases_page') }}">Return to assigned cases</a></p></section></div>
+<div data-case-view="true"
+     data-selected-alert-id="{{ selected_alert_id or '' }}">
+  <div class="page-heading">
+    <p class="eyebrow">Assigned case</p>
+    <h1>{{ case_code }}</h1>
+  </div>
+
+  <section class="card">
+    <h2>Nearby support services</h2>
+
+    <p class="muted">
+      Distances are straight-line estimates from the selected alert’s
+      reported location, not the person’s current position.
+      Contact to confirm services and availability.
+    </p>
+
+    {% if alerts %}
+    <p>
+      <label for="case-alert-select">Alert</label>
+      <select id="case-alert-select">
+        {% for alert in alerts %}
+        <option value="{{ alert.id }}"
+                {% if alert.id == selected_alert_id %}selected{% endif %}>
+          Alert #{{ alert.id }} · {{ alert.status }}
+          · {{ alert.created_at or "Time unavailable" }}
+        </option>
+        {% endfor %}
+      </select>
+    </p>
+
+    <p>
+      <label for="nearby-radius">Search radius</label>
+      <select id="nearby-radius">
+        <option value="25">25 km</option>
+        <option value="50">50 km</option>
+      </select>
+    </p>
+
+    <button type="button" class="btn btn-outline" id="nearby-refresh">
+      Refresh services
+    </button>
+    {% else %}
+    <p>No alerts have been recorded for this case.</p>
+    {% endif %}
+
+    <p id="nearby-status" role="status" aria-live="polite"></p>
+    <ul id="nearby-services" aria-label="Nearby support services"></ul>
+          <p id="referral-status" role="status" aria-live="polite"></p>
+    <p>
+      A referral request does not reserve or confirm a place.
+      <a href="{{ url_for('referrals_page') }}">Review referrals</a>
+    </p>
+
+    <noscript>
+      Enable JavaScript to look up nearby services.
+    </noscript>
+  </section>
+
+  <p class="section-gap">
+    <a href="{{ url_for('cases_page') }}">Return to assigned cases</a>
+  </p>
+</div>
+
+<script src="{{ url_for('static', filename='js/case-workspace.js') }}"
+        defer></script>
 {% endblock %}

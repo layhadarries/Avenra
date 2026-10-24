@@ -185,6 +185,7 @@ class AvenraApplication:
         # API: Shelters & Referrals
         app.add_url_rule("/api/shelters", endpoint="api_shelters", view_func=shelters_ctrl.api_shelters, methods=["GET"])
         app.add_url_rule("/api/shelters/<int:shelter_id>/capacity", endpoint="update_shelter_capacity", view_func=shelters_ctrl.update_capacity, methods=["POST"])
+        app.add_url_rule("/api/alerts/<int:alert_id>/nearby-services", endpoint="nearby_services", view_func=shelters_ctrl.nearby_services, methods=["GET"])
         app.add_url_rule("/api/referrals", endpoint="list_referrals", view_func=referrals_ctrl.list_referrals, methods=["GET"])
         app.add_url_rule("/api/referrals", endpoint="create_referral", view_func=referrals_ctrl.create_referral, methods=["POST"])
         app.add_url_rule("/api/referrals/<int:ref_id>/status", endpoint="update_referral_status", view_func=referrals_ctrl.update_referral_status, methods=["POST"])
