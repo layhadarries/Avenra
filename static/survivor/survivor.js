@@ -1,3 +1,4 @@
+
 /* Cape Weather: survivor panic flow (Stage 2).
    States: ready -> holding -> countdown -> sending -> sent | queued.
    Write first, send second: every alert is saved to CWQueue before the network attempt. */
@@ -204,13 +205,9 @@
 
   function onSent(data) {
     if (state !== "sending" && state !== "queued") return;  // ignore a late echo once Done was pressed
-    if (data.status === "acknowledged") {
-      helpStatus.textContent = "Help status: Someone has seen your alert";
-    } else {
-      helpStatus.textContent = "Help status: Waiting";
-      startStatusPoll(data.id);
-    }
     setState("sent");
+    if (updateStatusDisplay(data)) return;
+    startStatusPoll(data.id);
   }
 
   // alert is already safely written to IndexedDB
@@ -235,23 +232,74 @@
 
   var statusAlertId = null;
 
+  function updateStatusDisplay(body) {
+    var statusEl = $("help-status");
+    if (!statusEl) return false;
+
+    // Stage 3 referral lifecycle:
+    // 1. Referral accepted -> Show shelter name and hours + Directions
+    // 2. Referral pending / placed -> Show "Looking for a place for you"
+    // 3. Acknowledged by responder -> "Someone has seen your alert"
+    // 4. Default -> "Waiting"
+    if (body.referral && body.referral.status === "accepted") {
+      var name = body.referral.shelter_name || "Safe shelter";
+      var hours = body.referral.hours ? " (" + body.referral.hours + ")" : "";
+      var mapsQuery = encodeURIComponent(name + ", Cape Town");
+      var directionsUrl = "https://maps.google.com/?q=" + mapsQuery;
+
+      statusEl.innerHTML =
+        '<div style="color: var(--green); font-weight: 700; margin-bottom: 0.35rem;">' +
+          escapeHtml(name) + " has a place for you" + escapeHtml(hours) +
+        "</div>" +
+        '<a href="' + directionsUrl + '" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="margin-top: 0.5rem; text-decoration: none; display: inline-block;">' +
+          "Get Directions" +
+        "</a>";
+      return true; // Stop polling
+    }
+
+    if ((body.referral && body.referral.status === "sent") || body.status === "placed") {
+      statusEl.textContent = "Help status: Looking for a place for you";
+      return false;
+    }
+
+    if (body.status === "acknowledged") {
+      statusEl.textContent = "Help status: Someone has seen your alert";
+      return false;
+    }
+
+    statusEl.textContent = "Help status: Waiting";
+    return false;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   function startStatusPoll(id) {
     statusAlertId = id;
     clearInterval(timers.status);
-    timers.status = setInterval(checkStatus, STATUS_POLL_MS);
-  }
 
-  function checkStatus() {
-    if (state !== "sent" || statusAlertId == null) return;
-    request("/api/alerts/" + statusAlertId + "/status")
-      .then(function (data) {
-        if (data.status === "acknowledged") {
-          helpStatus.textContent = "Help status: Someone has seen your alert";
-          clearInterval(timers.status);
-          timers.status = null;
-        }
-      })
-      .catch(function () { /* keep polling, the next tick retries */ });
+    function checkStatus() {
+      if (state !== "sent" || statusAlertId == null) return;
+
+      request("/api/alerts/" + statusAlertId + "/status")
+        .then(function (data) {
+          if (state === "sent" && statusAlertId === id) {
+            var isFinished = updateStatusDisplay(data);
+            if (isFinished) {
+              clearInterval(timers.status);
+              timers.status = null;
+            }
+          }
+        })
+        .catch(function () { /* keep polling, the next tick retries */ });
+    }
+
+    timers.status = setInterval(checkStatus, STATUS_POLL_MS);
+    checkStatus();
   }
 
   doneBtn.addEventListener("click", function () { if (state === "sent") resetToReady(); });
