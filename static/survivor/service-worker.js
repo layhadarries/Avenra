@@ -1,75 +1,29 @@
-/* Explicit public-shell cache. APIs, private routes and writes use the network. */
-const CACHE_NAME = 'cape-weather-shell-v7';
-const DATA_CACHE_NAME = 'cape-weather-data-v1';
-
+/* Only public static shell assets are cached. */
+const CACHE_NAME = 'cape-weather-shell-v8';
 const SHELL_ASSETS = [
-  '/survivor/',
-  '/survivor/index.html',
-  '/survivor/cover.html',
-  '/survivor/setup.html',
-  '/survivor/help.html',
-  '/survivor/help.js',
-  '/survivor/privacy.html',
-  '/survivor/privacy.js',
-  '/survivor/shell.js',
-  '/survivor/survivor.js',
-  '/survivor/queue.js',
-  '/survivor/manifest.json',
-  '/survivor/icons/icon-192.png',
-  '/survivor/icons/icon-512.png',
-  '/static/css/style.css'
+  '/survivor/', '/survivor/index.html', '/survivor/cover.html',
+  '/survivor/setup.html', '/survivor/shell.js', '/survivor/survivor.js',
+  '/survivor/queue.js', '/survivor/manifest.json',
+  '/survivor/help.html', '/survivor/help.js',
+  '/survivor/privacy.html', '/survivor/privacy.js',
+  '/survivor/icons/icon-192.png', '/survivor/icons/icon-512.png', '/static/css/style.css'
 ];
-
 const PUBLIC_PATHS = new Set(SHELL_ASSETS);
-
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME)
-    .then(cache => cache.addAll(SHELL_ASSETS))
-    .then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS)));
 });
-
 self.addEventListener('activate', event => {
+  const prefixes = ['cape-weather-shell-', 'clear-sky-shell-', 'avenra-pwa-shell-',
+    'cape-weather-data-', 'clear-sky-data-'];
   event.waitUntil(caches.keys().then(keys => Promise.all(keys
-    .filter(key => key !== CACHE_NAME && key !== DATA_CACHE_NAME && (
-      key.startsWith('cape-weather-shell-') || key.startsWith('clear-sky-shell-')))
-    .map(key => caches.delete(key))))
-    .then(() => self.clients.claim()));
+    .filter(key => key !== CACHE_NAME && prefixes.some(prefix => key.startsWith(prefix)))
+    .map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
-
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-
-  // Non-GET or foreign origin always bypasses the shell cache
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) {
-    return;
-  }
-
-  // Network-first caching for the shelter directory
-  if (url.pathname === '/api/shelters') {
-    event.respondWith(
-      fetch(event.request)
-        .then(networkResponse => {
-          if (networkResponse.ok) {
-            const copy = networkResponse.clone();
-            caches.open(DATA_CACHE_NAME).then(cache => cache.put(event.request, copy));
-          }
-          return networkResponse;
-        })
-        .catch(() => caches.match(event.request))
-    );
-    return;
-  }
-
-  // Consent queries, access logs, and live mutations must never be stale
-  if (url.pathname.startsWith('/api/')) {
-    return;
-  }
-
-  // Shell asset whitelisting
-  if (url.search !== '' || !PUBLIC_PATHS.has(url.pathname)) return;
-
-  // Cache-first for the static app shell
-  event.respondWith(caches.open(CACHE_NAME)
-    .then(cache => cache.match(event.request))
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin ||
+      url.search !== '' || !PUBLIC_PATHS.has(url.pathname) ||
+      (event.request.headers && event.request.headers.has('Authorization'))) return;
+  event.respondWith(caches.open(CACHE_NAME).then(cache => cache.match(event.request))
     .then(cached => cached || fetch(event.request)));
 });

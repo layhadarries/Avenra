@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1d6f72">
-    <title>Clear Sky</title>
+    <title>Cape Weather</title>
     <link rel="manifest" href="/survivor/manifest.json">
     <link rel="icon" href="/survivor/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
@@ -148,22 +148,26 @@
 </head>
 <body>
     <header class="pwa-header" style="padding: 1rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-        <span class="pwa-title" style="font-weight: 700; font-size: 1.05rem; color: var(--navy);">Clear Sky</span>
+        <span class="pwa-title" style="font-weight: 700; font-size: 1.05rem; color: var(--navy);">Cape Weather</span>
         <button type="button" onclick="location.replace('/survivor/cover.html')" class="quick-exit-pill" style="background: var(--navy); color: #fff; border: none; padding: 0.35rem 0.85rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Quick exit</button>
     </header>
 
     <main class="help-wrap">
         <div class="help-header">
             <h1 class="help-title">Safe Havens &amp; Shelters</h1>
-            <span class="freshness-tag" id="freshness-tag">Updating…</span>
+            <span class="freshness-tag" id="freshness-tag" role="status">Location needed</span>
         </div>
         <p style="font-size: 0.85rem; color: var(--dusty-blue); margin-bottom: 1rem;">
             Calculated discreetly on this phone. Your location is never sent to find these shelters.
         </p>
 
-        <div id="shelter-list">
+        <label for="help-radius">Search radius</label>
+        <select id="help-radius"><option value="25">25 km</option><option value="50">50 km</option></select>
+        <button type="button" id="help-locate" class="btn btn-primary">Use my location</button>
+        <div id="shelter-list" aria-live="polite">
             <p style="color: var(--dusty-blue); font-size: 0.9rem;">Checking nearby places…</p>
         </div>
+        <p id="connection-state"></p><p id="offline-state"></p>
     </main>
 
     <nav class="bottom-nav">
@@ -173,6 +177,7 @@
         <button type="button" onclick="location.href='/survivor/#more'">More</button>
     </nav>
 
+    <script src="/survivor/shell.js" defer></script>
     <script src="/survivor/help.js" defer></script>
 </body>
 </html>
