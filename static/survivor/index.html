@@ -20,8 +20,7 @@
         }
         .pwa-header {
             display: flex;
-            justify-content:
-            space-between;
+            justify-content: space-between;
             align-items: center;
             padding: 1rem 1.25rem;
             background: var(--surface);
@@ -30,7 +29,8 @@
         .pwa-title {
             font-weight: 700;
             font-size: 1.05rem;
-            color: var(--navy); }
+            color: var(--navy);
+        }
         .quick-exit-pill {
             background: var(--navy);
             color: #ffffff;
@@ -89,9 +89,12 @@
             font-size: 0.82rem;
             color: var(--dusty-blue);
             font-weight: 600;
-            padding: 0.35rem 0; cursor: pointer;
+            padding: 0.35rem 0;
+            cursor: pointer;
         }
-        .bottom-nav button.active { color: var(--teal); }
+        .bottom-nav button.active {
+            color: var(--teal);
+        }
         .more-panel {
             width: 100%;
             max-width: 360px;
@@ -101,7 +104,7 @@
         }
         .more-row {
             display: block;
-             background: var(--surface);
+            background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             padding: 0.9rem 1rem;
@@ -110,38 +113,45 @@
             font-weight: 600;
             margin-bottom: 0.6rem;
         }
+        .location-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--navy);
+            margin-top: 0.5rem;
+        }
     </style>
 </head>
 <body>
     <header class="pwa-header">
-        <span class="pwa-title">Clear Sky</span>
+        <span class="pwa-title">Cape Weather</span>
         <button type="button" id="quick-exit" class="quick-exit-pill">Quick exit</button>
     </header>
 
     <main class="pwa-main" id="pwa-main">
-        <!-- Ready: hold the ring to start -->
         <section id="view-ready" class="view">
             <button type="button" id="panic-btn" class="panic-ring" aria-label="Hold to send alert">
                 <span class="panic-ring-inner">Hold to send alert</span>
             </button>
-            <p class="panic-caption">Sends an alert to the support service. Contact notifications depend on availability.</p>
-            <label class="panic-caption"><input type="checkbox" id="share-alert-location"> Include my location for this alert, if sharing consent is enabled.</label>
+            <p class="panic-caption">Sends your location to the people you chose</p>
+            <label class="location-toggle-row">
+                <input type="checkbox" id="share-alert-location" checked>
+                <span>Include my location</span>
+            </label>
             <p class="queue-note" id="queue-note" hidden></p>
         </section>
 
-        <!-- Countdown: 5 seconds to undo -->
         <section id="view-countdown" class="view" hidden>
             <p class="big" id="countdown-text">5 seconds to undo</p>
             <div class="countdown-track"><div class="countdown-fill" id="countdown-fill"></div></div>
             <button type="button" id="undo-btn" class="btn btn-outline">Undo</button>
         </section>
 
-        <!-- Sending -->
         <section id="view-sending" class="view" hidden>
             <p class="big">Sending your alert…</p>
         </section>
 
-        <!-- Sent: waiting for a responder -->
         <section id="view-sent" class="view" hidden>
             <div class="sent-check" aria-hidden="true">&#10003;</div>
             <p class="big">The service received your alert</p>
@@ -149,7 +159,6 @@
             <button type="button" id="done-btn" class="btn btn-outline">Done</button>
         </section>
 
-        <!-- Queued: transaction committed, server receipt not yet confirmed. -->
         <section id="view-queued" class="view" hidden>
             <p class="big">Saved on this phone</p>
             <p class="panic-caption" id="queue-message">It will retry while this app is open and when you reopen it with a connection. Help has not been confirmed.</p>
@@ -161,10 +170,12 @@
             <p id="save-error" class="panic-caption" role="alert"></p>
             <button type="button" id="error-done-btn" class="btn btn-outline">Back</button>
         </section>
-        <!-- More: trusted contacts entry point -->
+
         <section id="view-more" class="more-panel" hidden>
             <a href="/survivor/setup.html" class="more-row">Trusted contacts</a>
+            <a href="/survivor/privacy.html" class="more-row">Privacy &amp; sharing</a>
         </section>
+        
         <div class="section-gap" aria-live="polite">
             <p id="connection-state">Checking connection…</p>
             <p id="offline-state">Preparing offline opening…</p>
@@ -182,10 +193,6 @@
     <script src="/survivor/queue.js" defer></script>
     <script src="/survivor/survivor.js" defer></script>
     <script>
-
-
-        // Page chrome only: bottom-nav and the queue-size note
-        // - panic flow itself lives in survivor.js
         (function () {
             "use strict";
             var navButtons = document.querySelectorAll(".bottom-nav button");
@@ -194,9 +201,13 @@
 
             navButtons.forEach(function (btn) {
                 btn.addEventListener("click", function () {
+                    var tab = btn.getAttribute("data-nav");
+                    if (tab === "help") {
+                        location.href = "/survivor/help.html";
+                        return;
+                    }
                     navButtons.forEach(function (b) { b.classList.remove("active"); });
                     btn.classList.add("active");
-                    var tab = btn.getAttribute("data-nav");
                     if (tab === "more") {
                         homeViews.forEach(function (id) { document.getElementById(id).hidden = true; });
                         morePanel.hidden = false;
@@ -211,6 +222,7 @@
                 if (!window.CWQueue) return;
                 window.CWQueue.queueSize().then(function (n) {
                     var note = document.getElementById("queue-note");
+                    if (!note) return;
                     if (n > 0) {
                         note.hidden = false;
                         note.textContent = n === 1 ? "1 waiting to send" : n + " waiting to send";
