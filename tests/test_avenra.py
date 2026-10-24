@@ -6,6 +6,8 @@ import os
 import re
 import tempfile
 import unittest
+import io
+from PIL import Image
 from werkzeug.security import generate_password_hash
 
 # Ensure importing app/db never creates avenra.db in the repository root
@@ -438,7 +440,10 @@ class avenraStagesTestCase(unittest.TestCase):
 
     def test_stage_5_evidence_diary_upload_hash_and_consent_gate(self):
         """Stage 5: Evidence diary upload, SHA-256 verification, and diary_sharing consent gate."""
-        fake_jpeg = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9"
+        buffer = io.BytesIO()
+        with Image.new("RGB", (16, 16), "white") as image:
+            image.save(buffer, format="JPEG")
+        fake_jpeg = buffer.getvalue()
         expected_hash = hashlib.sha256(fake_jpeg).hexdigest()
         b64_photo = "data:image/jpeg;base64," + base64.b64encode(fake_jpeg).decode("ascii")
 

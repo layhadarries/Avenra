@@ -67,24 +67,18 @@ def migrate(conn):
         conn.execute('ALTER TABLE users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 1 CHECK(auth_version>=1)')
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (1)')
     # Fixed identifiers/definitions: no request or environment input enters SQL.
-    additions = {
-        'contacts': [('channel', "TEXT NOT NULL DEFAULT 'sms'"), ('chat_id', 'TEXT')],
-        'shelters': [('updated_at', 'TEXT')],
-        'alerts': [
+    additions = {'contacts': [('channel', "TEXT NOT NULL DEFAULT 'sms'"), ('chat_id', 'TEXT')],
+                 'shelters': [('updated_at', 'TEXT')], 'alerts': [
             ('notify_status', "TEXT NOT NULL DEFAULT 'pending'"),
             ('notify_detail', 'TEXT'),
             ('location_accuracy', 'REAL'),
             ('location_recorded_at', 'TEXT'),
-        ],
-        'diary_entries': [('captured_at', 'TEXT')],
-    }
-    additions["notification_outbox"] = [("claim_token", "TEXT"), ("claimed_at", "TEXT")]
+        ], 'diary_entries': [('captured_at', 'TEXT'), ('received_at', 'TEXT')], "notification_outbox": [
+            ("claim_token", "TEXT"), ("claimed_at", "TEXT"),
+            ("provider_message_id", "TEXT"), ("reason_code", "TEXT"),
+            ("completed_at", "TEXT"),
+        ]}
     # Stage 2 completion migration: existing databases retain all records.
-    additions["notification_outbox"] = [
-        ("claim_token", "TEXT"), ("claimed_at", "TEXT"),
-        ("provider_message_id", "TEXT"), ("reason_code", "TEXT"),
-        ("completed_at", "TEXT"),
-    ]
     for table, columns in additions.items():
         present = {row['name'] for row in conn.execute(f'PRAGMA table_info({table})')}
         for column, definition in columns:

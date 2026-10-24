@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS diary_entries (
     file_hash   TEXT,
     shared      INTEGER NOT NULL DEFAULT 0,
     client_id   TEXT UNIQUE,
+    captured_at TEXT,
+    received_at TEXT,
     created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 

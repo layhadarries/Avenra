@@ -16,19 +16,29 @@ class DiaryRepository(BaseRepository):
         return DiaryEntry.from_row(row)
 
     def create(
-        self,
-        user_id: int,
-        note: str,
-        photo_path: Optional[str],
-        file_hash: str,
-        shared: int,
-        client_id: str,
-        created_at: str,
+            self,
+            user_id: int,
+            note: str,
+            photo_path: Optional[str],
+            file_hash: str,
+            shared: int,
+            client_id: str,
+            created_at: str,
+            captured_at: Optional[str] = None,
+            received_at: Optional[str] = None,
     ) -> DiaryEntry:
         cur = self.conn.execute(
-            """INSERT INTO diary_entries (user_id, note, photo_path, file_hash, shared, client_id, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (user_id, note, photo_path, file_hash, shared, client_id, created_at),
+            """
+            INSERT INTO diary_entries (
+                user_id, note, photo_path, file_hash, shared,
+                client_id, created_at, captured_at, received_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id, note, photo_path, file_hash, shared,
+                client_id, created_at, captured_at, received_at,
+            ),
         )
         return self.get_by_id(cur.lastrowid)
 

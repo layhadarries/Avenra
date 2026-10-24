@@ -3,7 +3,7 @@ from typing import Optional, Any
 
 
 class DiaryEntry:
-    """Represents a private evidence entry (note and/or photo) in the vault."""
+    """Represents a private diary entry with separate capture and receipt times."""
 
     def __init__(
         self,
@@ -15,6 +15,8 @@ class DiaryEntry:
         file_hash: Optional[str] = None,
         shared: int = 0,
         created_at: Optional[str] = None,
+        captured_at: Optional[str] = None,
+        received_at: Optional[str] = None,
     ):
         self.id = id
         self.user_id = user_id
@@ -24,11 +26,14 @@ class DiaryEntry:
         self.file_hash = file_hash
         self.shared = bool(shared)
         self.created_at = created_at
+        self.captured_at = captured_at
+        self.received_at = received_at
 
     @classmethod
     def from_row(cls, row) -> Optional["DiaryEntry"]:
         if row is None:
             return None
+
         return cls(
             id=row["id"],
             user_id=row["user_id"],
@@ -38,10 +43,12 @@ class DiaryEntry:
             file_hash=row["file_hash"],
             shared=row["shared"],
             created_at=row["created_at"],
+            captured_at=row["captured_at"],
+            received_at=row["received_at"],
         )
 
     def stored_body(self) -> dict:
-        """Metadata returned to the survivor device upon successful storage."""
+        """Return storage receipt metadata without private note or photo content."""
         return {
             "id": self.id,
             "client_id": self.client_id,
@@ -50,6 +57,8 @@ class DiaryEntry:
             "shared": self.shared,
             "has_photo": bool(self.photo_path),
             "created_at": self.created_at,
+            "captured_at": self.captured_at,
+            "received_at": self.received_at,
         }
 
     def __getitem__(self, item: str) -> Any:

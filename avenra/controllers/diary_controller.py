@@ -66,6 +66,8 @@ class DiaryController:
                 "photo_url": url_for("diary_photo", entry_id=e["id"]) if e["has_photo"] else None,
                 "file_hash": e["file_hash"],
                 "created_at": e["created_at"],
+                "captured_at": e["captured_at"],
+                "received_at": e["received_at"],
             }
             for e in entries
         ]
