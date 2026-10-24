@@ -101,9 +101,21 @@ class PortalRepository(BaseRepository):
             '''SELECT c.survivor_id, co.id, co.item, co.granted_at, co.revoked_at
                FROM case_access c LEFT JOIN consents co ON co.user_id=c.survivor_id
                WHERE c.staff_id=? ORDER BY c.survivor_id,co.id''', (user.id,)).fetchall()
+        diary_rows = []
+        if user.role in ('responder', 'admin'):
+            diary_rows = self.conn.execute(
+                '''SELECT d.id, d.shared FROM case_access c
+                   JOIN diary_entries d ON d.user_id=c.survivor_id
+                   WHERE c.staff_id=? AND d.shared=1 ORDER BY d.id''',
+                (user.id,)).fetchall()
         if user.role == 'shelter':
             rows = self.conn.execute(
                 '''SELECT co.id, co.revoked_at FROM referrals r JOIN alerts a ON a.id=r.alert_id
                    JOIN consents co ON co.user_id=a.user_id WHERE r.shelter_id=? ORDER BY co.id''',
                 (user.shelter_id,)).fetchall()
-        return hashlib.sha256(repr(([tuple(r) for r in rows], user.role, user.shelter_id)).encode()).hexdigest()
+        return hashlib.sha256(repr((
+            [tuple(r) for r in rows],
+            [tuple(r) for r in diary_rows],
+            user.role,
+            user.shelter_id,
+        )).encode()).hexdigest()

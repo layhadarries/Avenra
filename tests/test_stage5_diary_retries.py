@@ -108,10 +108,11 @@ class DiaryRetryTests(unittest.TestCase):
     def test_photo_digest_cannot_hide_changed_note(self):
         buffer = io.BytesIO()
         with Image.new("RGB", (16, 16), "white") as image:
-            image.save(buffer,format="JPEG")
+            image.save(buffer, format="JPEG")
         photo = buffer.getvalue()
         self.entry.photo_path = "existing.jpg"
         self.entry.file_hash = hashlib.sha256(photo).hexdigest()
+        self.entry.photo_sha256 = self.entry.file_hash
 
         _, status = self.submit({
             "client_id": "entry-one",
@@ -122,6 +123,79 @@ class DiaryRetryTests(unittest.TestCase):
             ),
         })
         self.assertEqual(status, 409)
+
+    def test_client_supplied_authority_selectors_are_rejected(self):
+        for field in ("user_id", "case_code", "owner_id", "survivor_id"):
+            with self.subTest(field=field):
+                body, status = self.submit({
+                    "client_id": "entry-one",
+                    "note": "Original note",
+                    field: "SP-9999",
+                })
+                self.assertEqual(status, 400)
+                self.assertEqual(body["error"], "invalid_authority_selector")
+
+    def test_unicode_and_crlf_canonicalisation_matches_replay(self):
+        unicode_note = "Café — naïve façade 🌍\nSecond line\nThird line"
+        self.entry = DiaryEntry(
+            id=2,
+            user_id=10,
+            client_id="entry-unicode",
+            note=unicode_note,
+            shared=0,
+            captured_at="2026-10-24T12:00:00Z",
+            received_at="2026-10-24T12:01:00Z",
+            contract_version=2,
+        )
+        self.repo.get_by_client_id.return_value = self.entry
+
+        body, status = self.submit({
+            "client_id": "entry-unicode",
+            "note": "  Café — naïve façade 🌍\r\nSecond line\rThird line  ",
+            "captured_at": "2026-10-24T12:00:00Z",
+            "contract_version": 2,
+            "note_sha256": self.entry.note_sha256,
+            "entry_fingerprint": self.entry.entry_fingerprint,
+        })
+        self.assertEqual(status, 200)
+        self.assertEqual(body["note_sha256"], self.entry.note_sha256)
+        self.assertEqual(
+            body["entry_fingerprint"], self.entry.entry_fingerprint
+        )
+
+    def test_v2_mismatched_digests_and_fingerprint_return_422(self):
+        for field in ("note_sha256", "photo_sha256", "entry_fingerprint"):
+            with self.subTest(field=field):
+                _, status = self.submit({
+                    "client_id": "entry-one",
+                    "note": "Original note",
+                    field: "f" * 64,
+                })
+                self.assertEqual(status, 422)
+
+    def test_v2_photo_over_2mib_returns_413_and_exif_returns_400(self):
+        oversized = b"\xff\xd8" + (b"\x00" * (2 * 1024 * 1024 + 10)) + b"\xff\xd9"
+        body, status = self.submit({
+            "client_id": "entry-oversized",
+            "contract_version": 2,
+            "photo_bytes": oversized,
+        })
+        self.assertEqual(status, 413)
+        self.assertEqual(body["error"], "photo_too_large")
+
+        exif = Image.Exif()
+        exif[0x010F] = "PhoneVendor"
+        buf = io.BytesIO()
+        with Image.new("RGB", (16, 16), "white") as img:
+            img.save(buf, format="JPEG", exif=exif.tobytes())
+
+        body_exif, status_exif = self.submit({
+            "client_id": "entry-exif",
+            "contract_version": 2,
+            "photo_bytes": buf.getvalue(),
+        })
+        self.assertEqual(status_exif, 400)
+        self.assertEqual(body_exif["error"], "prohibited_photo_metadata")
 
 
 if __name__ == "__main__":

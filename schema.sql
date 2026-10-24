@@ -65,17 +65,22 @@ CREATE TABLE IF NOT EXISTS referrals (
 );
 
 CREATE TABLE IF NOT EXISTS diary_entries (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id     INTEGER NOT NULL REFERENCES users(id),
-    note        TEXT,
-    photo_path  TEXT,
-    file_hash   TEXT,
-    shared      INTEGER NOT NULL DEFAULT 0,
-    client_id   TEXT UNIQUE,
-    captured_at TEXT,
-    received_at TEXT,
-    created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id           INTEGER NOT NULL REFERENCES users(id),
+    note              TEXT,
+    photo_path        TEXT,
+    file_hash         TEXT,
+    note_sha256       TEXT,
+    photo_sha256      TEXT,
+    entry_fingerprint TEXT,
+    contract_version  INTEGER NOT NULL DEFAULT 1,
+    shared            INTEGER NOT NULL DEFAULT 0,
+    client_id         TEXT UNIQUE,
+    captured_at       TEXT,
+    received_at       TEXT,
+    created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
+CREATE INDEX IF NOT EXISTS idx_diary_user_client ON diary_entries(user_id, client_id);
 
 -- Unused until Stage 4 (consent records).
 CREATE TABLE IF NOT EXISTS consents (

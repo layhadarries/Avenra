@@ -73,7 +73,14 @@ def migrate(conn):
             ('notify_detail', 'TEXT'),
             ('location_accuracy', 'REAL'),
             ('location_recorded_at', 'TEXT'),
-        ], 'diary_entries': [('captured_at', 'TEXT'), ('received_at', 'TEXT')], "notification_outbox": [
+        ], 'diary_entries': [
+            ('captured_at', 'TEXT'),
+            ('received_at', 'TEXT'),
+            ('note_sha256', 'TEXT'),
+            ('photo_sha256', 'TEXT'),
+            ('entry_fingerprint', 'TEXT'),
+            ('contract_version', 'INTEGER NOT NULL DEFAULT 1'),
+        ], "notification_outbox": [
             ("claim_token", "TEXT"), ("claimed_at", "TEXT"),
             ("provider_message_id", "TEXT"), ("reason_code", "TEXT"),
             ("completed_at", "TEXT"),
@@ -84,11 +91,13 @@ def migrate(conn):
         for column, definition in columns:
             if column not in present:
                 conn.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+    conn.execute('CREATE INDEX IF NOT EXISTS idx_diary_user_client ON diary_entries(user_id, client_id)')
     from avenra.repositories.push_repository import SCHEMA
     # Fixed additive statements, without executescript committing the caller transaction.
     for statement in SCHEMA.split(';'):
         if statement.strip(): conn.execute(statement)
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (2)')
+    conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (3)')
     conn.execute('''CREATE TABLE IF NOT EXISTS app_metadata (
         key TEXT PRIMARY KEY, value TEXT NOT NULL
     )''')

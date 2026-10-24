@@ -64,7 +64,15 @@ class AvenraApplication:
         self.csrf.init_app(app)
         app.teardown_appcontext(db.close_db)
 
-    DEVICE_WRITE_ENDPOINTS = frozenset(('api_update_consent', 'create_alert', 'create_diary_entry', 'delete_contact', 'save_contacts', 'contact_push.invite'))
+    DEVICE_WRITE_ENDPOINTS = frozenset((
+        'api_update_consent',
+        'create_alert',
+        'create_diary_entry',
+        'update_diary_entry_sharing',
+        'delete_contact',
+        'save_contacts',
+        'contact_push.invite',
+    ))
 
     def _register_middleware(self, app: Flask) -> None:
         @app.errorhandler(CSRFError)
@@ -208,6 +216,9 @@ class AvenraApplication:
         # API: Diary
         app.add_url_rule("/api/diary", endpoint="create_diary_entry", view_func=diary_ctrl.create_diary_entry, methods=["POST"])
         app.add_url_rule("/api/diary", endpoint="list_diary_entries", view_func=diary_ctrl.list_diary_entries, methods=["GET"])
+        app.add_url_rule("/api/diary/<int:entry_id>", endpoint="get_diary_entry", view_func=diary_ctrl.get_diary_entry, methods=["GET"])
+        app.add_url_rule("/api/diary/<int:entry_id>/photo", endpoint="survivor_diary_photo", view_func=diary_ctrl.survivor_diary_photo, methods=["GET"])
+        app.add_url_rule("/api/diary/<int:entry_id>/share", endpoint="update_diary_entry_sharing", view_func=diary_ctrl.update_diary_entry_sharing, methods=["POST"])
         app.add_url_rule("/cases/diary-photo/<int:entry_id>", endpoint="diary_photo", view_func=diary_ctrl.diary_photo, methods=["GET"])
 
         # Survivor PWA static files

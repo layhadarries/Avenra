@@ -47,6 +47,46 @@ class DiaryImageTests(unittest.TestCase):
     def test_empty_input_is_rejected(self):
         self.assertFalse(valid_diary_jpeg(b""))
 
+    def test_v2_dimension_limit_is_enforced(self):
+        valid_1280 = make_image(size=(1280, 960))
+        oversized_1281 = make_image(size=(1281, 960))
+        self.assertTrue(
+            valid_diary_jpeg(
+                valid_1280,
+                max_dimension=1280,
+                max_pixels=1280 * 1280,
+                reject_metadata=True,
+            )
+        )
+        self.assertFalse(
+            valid_diary_jpeg(
+                oversized_1281,
+                max_dimension=1280,
+                max_pixels=1280 * 1280,
+                reject_metadata=True,
+            )
+        )
+
+    def test_v2_rejects_exif_and_comment_metadata(self):
+        exif = Image.Exif()
+        exif[0x010F] = "CameraMaker"
+        buf_exif = io.BytesIO()
+        with Image.new("RGB", (16, 16), "white") as image:
+            image.save(buf_exif, format="JPEG", exif=exif.tobytes())
+        jpeg_with_exif = buf_exif.getvalue()
+
+        self.assertTrue(valid_diary_jpeg(jpeg_with_exif, reject_metadata=False))
+        self.assertFalse(valid_diary_jpeg(jpeg_with_exif, reject_metadata=True))
+
+        buf_comment = io.BytesIO()
+        with Image.new("RGB", (16, 16), "white") as image:
+            image.save(buf_comment, format="JPEG", comment=b"gps-note")
+        jpeg_with_comment = buf_comment.getvalue()
+
+        self.assertFalse(
+            valid_diary_jpeg(jpeg_with_comment, reject_metadata=True)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -132,6 +132,89 @@ class DiaryStorageTests(unittest.TestCase):
         self.assertEqual(self.counts(), before)
         self.assertEqual(set(os.listdir(self.upload_dir)), files_before)
 
+    def test_orphan_reconciliation_quarantines_unreferenced_files(self):
+        from avenra.services.diary_service import DiaryService
+
+        self.assertEqual(self.upload().status_code, 201)
+        committed_file = os.path.basename(self.photo_path())
+        orphan_file = "diary_00000000000000000000000000000000.jpg"
+        with open(os.path.join(self.upload_dir, orphan_file), "wb") as fh:
+            fh.write(b"unreferenced-orphan")
+
+        with self.client.application.app_context():
+            reconciled = DiaryService().reconcile_orphans(self.upload_dir)
+
+        self.assertEqual(reconciled, [orphan_file])
+        self.assertTrue(
+            os.path.exists(os.path.join(self.upload_dir, committed_file))
+        )
+        self.assertFalse(
+            os.path.exists(os.path.join(self.upload_dir, orphan_file))
+        )
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(self.upload_dir, ".quarantine", orphan_file)
+            )
+        )
+
+    def test_private_object_storage_verifies_checksum_and_reconciles_orphans(self):
+        import hashlib
+        from avenra.services.diary_service import PrivateObjectDiaryStorage
+
+        class FakeObjectClient:
+            def __init__(self):
+                self.objects = {}
+                self.corrupt_next_read = False
+                self.fail_delete = False
+
+            def put_object(self, bucket, key, body, content_type, sha256):
+                self.objects[(bucket, key)] = (
+                    b"tampered" if self.corrupt_next_read else body
+                )
+
+            def get_object(self, bucket, key, max_bytes):
+                if (bucket, key) not in self.objects:
+                    raise OSError("missing")
+                return self.objects[(bucket, key)][:max_bytes]
+
+            def delete_object(self, bucket, key):
+                if self.fail_delete:
+                    raise OSError("delete_denied")
+                self.objects.pop((bucket, key), None)
+
+            def list_objects(self, bucket, prefix=""):
+                return [
+                    k for (b, k) in self.objects if b == bucket and k.startswith(prefix)
+                ]
+
+        client = FakeObjectClient()
+        store = PrivateObjectDiaryStorage(client, bucket="private-diary")
+        raw = b"valid-photo-bytes"
+        digest = hashlib.sha256(raw).hexdigest()
+
+        store.put_object("diary_a1.jpg", raw, digest)
+        self.assertTrue(store.verify_object("diary_a1.jpg", digest))
+
+        # Checksum mismatch during put_object cleans up the bad object and raises OSError
+        client.corrupt_next_read = True
+        with self.assertRaises(OSError):
+            store.put_object("diary_bad.jpg", raw, digest)
+        self.assertNotIn(("private-diary", "diary_bad.jpg"), client.objects)
+        client.corrupt_next_read = False
+
+        # Interrupted cleanup records quarantine and reconcile_orphans removes it
+        store.put_object("diary_orphan.jpg", raw, digest)
+        client.fail_delete = True
+        store.delete_object("diary_orphan.jpg")
+        self.assertIn("diary_orphan.jpg", store.quarantined)
+
+        client.fail_delete = False
+        reconciled = store.reconcile_orphans({"diary_a1.jpg"})
+        self.assertEqual(reconciled, ["diary_orphan.jpg"])
+        self.assertEqual(store.quarantined, [])
+        self.assertIn(("private-diary", "diary_a1.jpg"), client.objects)
+        self.assertNotIn(("private-diary", "diary_orphan.jpg"), client.objects)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -75,6 +75,63 @@ class CaseWorkspaceTests(unittest.TestCase):
             response.get_data(as_text=True),
         )
 
+    def test_case_workspace_renders_shared_diary_and_updates_access_signature(self):
+        self.client.post(
+            "/api/consents",
+            json={"item": "diary_sharing", "active": True},
+            headers=self.survivor_headers,
+        )
+        shared_res = self.client.post(
+            "/api/diary",
+            headers=self.survivor_headers,
+            json={
+                "client_id": "workspace-shared-entry",
+                "note": "VISIBLE-SHARED-NOTE",
+                "shared": True,
+                "captured_at": "2026-04-01T10:00:00Z",
+            },
+        )
+        self.assertEqual(shared_res.status_code, 201)
+        shared_id = shared_res.json["id"]
+
+        private_res = self.client.post(
+            "/api/diary",
+            headers=self.survivor_headers,
+            json={
+                "client_id": "workspace-private-entry",
+                "note": "HIDDEN-PRIVATE-NOTE",
+                "shared": False,
+            },
+        )
+        self.assertEqual(private_res.status_code, 201)
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.headers.get("Cache-Control"), "private, no-store"
+        )
+        html = response.get_data(as_text=True)
+        self.assertIn('id="case-diary-section"', html)
+        self.assertIn('id="case-diary-entries"', html)
+        self.assertIn("VISIBLE-SHARED-NOTE", html)
+        self.assertNotIn("HIDDEN-PRIVATE-NOTE", html)
+        self.assertNotIn("download all", html.lower())
+
+        sig_before = self.client.get("/api/session").json["access_signature"]
+        unshare_res = self.client.post(
+            f"/api/diary/{shared_id}/share",
+            headers=self.survivor_headers,
+            json={"shared": False},
+        )
+        self.assertEqual(unshare_res.status_code, 200)
+        sig_after = self.client.get("/api/session").json["access_signature"]
+        self.assertNotEqual(sig_before, sig_after)
+
+        response_after = self.client.get(self.url)
+        self.assertNotIn(
+            "VISIBLE-SHARED-NOTE", response_after.get_data(as_text=True)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

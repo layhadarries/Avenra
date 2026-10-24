@@ -69,7 +69,12 @@ def require_role(*roles):
 def validate_json_body():
     """Request validator for JSON API endpoints."""
     if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
-        if not isinstance(request.get_json(silent=True), dict) and request.content_length:
+        is_diary_multipart = (
+            request.path == "/api/diary"
+            and request.method == "POST"
+            and request.mimetype == "multipart/form-data"
+        )
+        if not is_diary_multipart and not isinstance(request.get_json(silent=True), dict) and request.content_length:
             return jsonify({"error": "json_object_required"}), 400
         origin = request.headers.get("Origin")
         if origin and origin != request.host_url.rstrip("/"):
@@ -93,5 +98,5 @@ def apply_security_headers(resp):
         "/logout",
         "/evaluation",
     )):
-        resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Cache-Control"] = "private, no-store"
     return resp

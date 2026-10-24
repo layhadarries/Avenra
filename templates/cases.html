@@ -3,6 +3,7 @@
 
 {% block content %}
 <div data-case-view="true"
+     data-case-code="{{ case_code }}"
      data-selected-alert-id="{{ selected_alert_id or '' }}">
   <div class="page-heading">
     <p class="eyebrow">Assigned case</p>
@@ -58,6 +59,48 @@
     <noscript>
       Enable JavaScript to look up nearby services.
     </noscript>
+  </section>
+
+  <section class="card section-gap" id="case-diary-section">
+    <h2>Shared diary entries</h2>
+
+    <p class="muted">
+      Only entries shared by the survivor while diary-sharing consent is active
+      are shown. Capture times are device-reported and may differ from server
+      receipt time.
+    </p>
+
+    <button type="button" class="btn btn-outline" id="diary-refresh">
+      Refresh diary
+    </button>
+
+    <p id="diary-status" role="status" aria-live="polite">
+      {% if not diary_consent_active %}
+      Diary-sharing consent is not active.
+      {% elif not diary_entries %}
+      No shared diary entries for this case.
+      {% endif %}
+    </p>
+
+    <ul id="case-diary-entries" aria-label="Shared diary entries">
+      {% if diary_consent_active and diary_entries %}
+      {% for entry in diary_entries %}
+      <li data-diary-entry-id="{{ entry.id }}">
+        <p class="diary-note">{{ entry.note }}</p>
+        <p class="muted diary-timestamps">
+          Device-reported capture time: {{ entry.captured_at or "Not reported by device" }}
+          · Server receipt time: {{ entry.received_at or entry.created_at }}
+          · Shared with assigned case staff
+        </p>
+        {% if entry.photo_path %}
+        <img src="{{ url_for('diary_photo', entry_id=entry.id) }}"
+             alt="Shared diary photo for entry #{{ entry.id }}"
+             loading="lazy">
+        {% endif %}
+      </li>
+      {% endfor %}
+      {% endif %}
+    </ul>
   </section>
 
   <p class="section-gap">
