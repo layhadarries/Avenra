@@ -22,3 +22,32 @@ Test on a real Android phone on mobile data, then on the live Render URL:
 - [ ] Airplane mode, then reopen the installed app: the panic screen and cover still load
 - [ ] Chrome offers "Install app", and the installed app opens full-screen with the name "Cape Weather"
 - [ ] Git tag `stage-1` exists once Me's checklist passes
+
+
+## Stage 2 Checklist (Gate Verification)
+
+Test on a real Android phone, both online and in airplane mode:
+
+- [ ] Open the More tab, add a contact in `setup.html`. It appears in the list showing only the last 3 digits.
+- [ ] Removing a contact removes it from the list immediately
+- [ ] Adding a 4th contact shows "You can save up to 3 trusted contacts."
+- [ ] Turn on airplane mode. Hold and wait out the countdown: the screen shows "Saved on this phone. It will send automatically when you have signal." Never "sent" or "on its way."
+- [ ] In DevTools → Application → IndexedDB, confirm exactly one entry in `cape-weather-queue`
+- [ ] Turn airplane mode off. Within about 30 seconds, the screen moves to "Your alert is on its way" on its own, with no tap needed. The IndexedDB entry is gone.
+- [ ] Swipe the app away while queued, reconnect, reopen the app: the alert still delivers and the dashboard shows it
+- [ ] Undo during the countdown creates no IndexedDB entry
+- [ ] Quick exit while queued lands on the weather page. The alert still delivers in the background, because `queue.js` is loaded there too.
+- [ ] PWA still installs and opens offline with the updated cache (check the service worker shows `cape-weather-shell-v3` in DevTools)
+- [ ] Everything from the Stage 1 checklist still passes
+- [ ] Git tag `stage-2` exists once checklist passes
+
+## Stage 3 Checklist (Gate Verification)
+- [ ] Tapping "Find help" opens `help.html` and renders shelter cards without sending coordinates to any remote server.
+- [ ] Shelters display local distance in kilometers (e.g. `1.8 km away`) when location is permitted.
+- [ ] Shelters display a "Last updated" freshness timestamp based on `updated_at`.
+- [ ] Turn on **Airplane Mode** and reload `/survivor/help.html`: the shell loads from cache, and the shelter list loads via the network-first `/api/shelters` cache fallback.
+- [ ] Trigger an alert:
+  - Responding to the alert from Nomsa D's portal updates the phone to *"Someone has seen your alert"*.
+  - When Nomsa sends a referral, the phone displays *"Looking for a place for you"*.
+  - When Pieter V accepts the referral at Sunrise Shelter, the phone updates to *"Sunrise Shelter has a place for you (24/7)"* alongside a calm green status and a **Get Directions** button.
+- [ ] Rejections never reveal decline reasons to the survivor; the phone continues displaying *"Looking for a place for you"*.
