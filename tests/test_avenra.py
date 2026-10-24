@@ -399,11 +399,42 @@ class avenraStagesTestCase(unittest.TestCase):
             self.assertIsNone(alert["lat"])
             self.assertIsNone(alert["lng"])
 
-        # Survivor fetches transparency log (/api/audit-log)
-        audit_res = self.client.get("/api/audit-log", headers=self.survivor_headers)
+        # Survivor receives safe viewing history, not internal audit details.
+        audit_res = self.client.get(
+            "/api/audit-log",
+            headers=self.survivor_headers,
+        )
         self.assertEqual(audit_res.status_code, 200)
-        actions = [e["action"] for e in audit_res.get_json()["events"]]
-        self.assertIn("consent_revoked", actions)
+
+        for event in audit_res.get_json()["events"]:
+            self.assertEqual(
+                set(event),
+                {
+                    "id",
+                    "viewed_at",
+                    "actor_name",
+                    "actor_role",
+                    "action",
+                },
+            )
+
+        # Verify the internal consent event directly in the test database.
+        conn = db.connect()
+        try:
+            recorded = conn.execute(
+                """
+                SELECT COUNT(*) FROM audit_log
+                WHERE action = 'consent_revoked'
+                AND case_code IN (
+                    SELECT case_code FROM users
+                    WHERE role = 'survivor'
+                )
+                """
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        self.assertGreaterEqual(recorded, 1)
 
     def test_stage_5_evidence_diary_upload_hash_and_consent_gate(self):
         """Stage 5: Evidence diary upload, SHA-256 verification, and diary_sharing consent gate."""

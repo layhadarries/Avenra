@@ -23,10 +23,27 @@ class CaseService:
         location_active = consents['location_sharing']['active']
         alerts = [dict(r) for r in self.repo.case_rows(survivor.id)]
         for alert in alerts:
-            if not location_active:
-                alert['lat'] = alert['lng'] = None
-            alert.update(self.repo.workflow(alert['id']))
-            alert['history'] = self.repo.history(alert['id'])
+            has_coordinates = (
+                    alert.get("lat") is not None
+                    and alert.get("lng") is not None
+            )
+            location_visible = location_active and has_coordinates
+
+            alert["location_redacted"] = bool(
+                has_coordinates and not location_active
+            )
+
+            if not location_visible:
+                for field in (
+                        "lat",
+                        "lng",
+                        "location_accuracy",
+                        "location_recorded_at",
+                ):
+                    alert[field] = None
+
+            alert.update(self.repo.workflow(alert["id"]))
+            alert["history"] = self.repo.history(alert["id"])
         diary = DiaryRepository(conn).list_shared_for_case(survivor.id) if diary_active else []
         AuditRepository(conn).log(f'user:{user.id}', 'case_viewed', case_code)
         if diary:

@@ -4,6 +4,7 @@ from flask import request, jsonify
 from avenra.services.audit_service import AuditService
 from avenra.security import device_user, current_user
 from avenra.config import Config
+from avenra.services.access_history_service import AccessHistoryService
 
 
 class AuditController:
@@ -15,8 +16,10 @@ class AuditController:
     def api_audit_log(self):
         survivor = device_user()
         if survivor is not None:
-            # Survivor sees only actions affecting their case
-            return jsonify({"events": self.audit_service.list_for_survivor(survivor.case_code)})
+            body, status = AccessHistoryService().list_history(survivor, request.args)
+            response = jsonify(body)
+            response.headers["Cache-Control"] = "no-store"
+            return response, status
 
         user = current_user()
         if user is None:

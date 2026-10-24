@@ -1,6 +1,78 @@
 {% extends "base.html" %}
 {% block title %}Audit log{% endblock %}
+
 {% block content %}
-<div class="page-heading"><p class="eyebrow">Accountability</p><h1>Audit log</h1></div>
-<section class="card"><h2>Activity history</h2><p class="muted section-gap">The activity browser is not connected in this interface yet. No event totals or security assurances are implied by this page.</p></section>
+<div data-audit-view data-case-view="true">
+  <div class="page-heading">
+    <p class="eyebrow">Accountability</p>
+    <h1>Audit log</h1>
+    <p class="muted">
+      Recorded activity within your current access permissions.
+      This log does not prove that every displayed item was read.
+    </p>
+  </div>
+
+  <section class="card" aria-label="Audit activity">
+    <form id="audit-filters">
+      <p>
+        <label for="audit-case">Case code</label>
+        <input id="audit-case" name="case_code"
+               type="text" maxlength="80"
+               autocomplete="off" spellcheck="false"
+               placeholder="All permitted cases">
+      </p>
+
+      <p class="section-gap">
+        <label for="audit-category">Event category</label>
+        <select id="audit-category" name="category">
+          <option value="">All categories</option>
+          <option value="alert">Alerts and contacts</option>
+          <option value="referral">Referrals and shelters</option>
+          <option value="consent">Consent</option>
+          <option value="diary">Diary</option>
+          <option value="access">Account and case access</option>
+        </select>
+      </p>
+
+      <button class="btn btn-primary section-gap" type="submit">
+        Apply filters
+      </button>
+      <button class="btn btn-outline section-gap"
+              id="audit-refresh" type="button">
+        Refresh
+      </button>
+    </form>
+
+    <p id="audit-status" class="section-gap"
+       role="status" aria-live="polite"></p>
+
+    <div class="table-scroll section-gap">
+      <table aria-label="Recorded audit events">
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Actor</th>
+            <th scope="col">Action</th>
+            <th scope="col">Case</th>
+            <th scope="col">Detail</th>
+          </tr>
+        </thead>
+        <tbody id="audit-rows"></tbody>
+      </table>
+    </div>
+
+    <div class="section-gap">
+      <button id="audit-previous" type="button"
+              class="btn btn-outline" disabled>Previous</button>
+      <span id="audit-page" aria-live="polite"></span>
+      <button id="audit-next" type="button"
+              class="btn btn-outline" disabled>Next</button>
+    </div>
+
+    <noscript>Enable JavaScript to load audit activity.</noscript>
+  </section>
+</div>
+
+<script src="{{ url_for('static', filename='js/audit-log.js') }}"
+        defer></script>
 {% endblock %}

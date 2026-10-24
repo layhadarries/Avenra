@@ -4,23 +4,9 @@ from flask import Flask, jsonify, request, session
 from flask_wtf.csrf import CSRFProtect, CSRFError
 import db
 from avenra.config import Config, BASE_DIR
-from avenra.security import (
-    current_user,
-    apply_security_headers,
-    validate_json_body,
-)
-from avenra.controllers import (
-    AuthController,
-    PagesController,
-    AlertsController,
-    ContactsController,
-    SheltersController,
-    ReferralsController,
-    ConsentsController,
-    DiaryController,
-    AuditController,
-    SurvivorController,
-)
+from avenra.security import current_user,apply_security_headers,validate_json_body
+from avenra.controllers import AuthController, PagesController,AlertsController,ContactsController,SheltersController,ReferralsController,ConsentsController,DiaryController,AuditController,SurvivorController
+from avenra.controllers.access_history_controller import AccessHistoryController
 
 
 class AvenraApplication:
@@ -136,6 +122,28 @@ class AvenraApplication:
             }
 
         @app.after_request
+        def record_audit_access_denial(response):
+            if response.status_code != 403:
+                return response
+
+            from avenra.services.access_denial_service import (
+                AccessDenialService,
+            )
+
+            if request.endpoint not in AccessDenialService.ENDPOINTS:
+                return response
+
+            user = current_user()
+            if user is not None:
+                AccessDenialService().record(
+                    user,
+                    request.endpoint,
+                    request.method,
+                )
+
+            return response
+
+        @app.after_request
         def security_headers(resp):
             return apply_security_headers(resp)
 
@@ -150,6 +158,7 @@ class AvenraApplication:
         diary_ctrl = DiaryController()
         audit_ctrl = AuditController()
         survivor_ctrl = SurvivorController()
+        access_history_ctrl = AccessHistoryController()
 
         # Core Pages
         app.add_url_rule("/", endpoint="home", view_func=pages_ctrl.home, methods=["GET"])
@@ -194,6 +203,7 @@ class AvenraApplication:
         app.add_url_rule("/api/consents", endpoint="api_get_consents", view_func=consents_ctrl.get_consents, methods=["GET"])
         app.add_url_rule("/api/consents", endpoint="api_update_consent", view_func=consents_ctrl.update_consent, methods=["POST"])
         app.add_url_rule("/api/audit-log", endpoint="api_audit_log", view_func=audit_ctrl.api_audit_log, methods=["GET"])
+        app.add_url_rule("/api/my-access", endpoint="my_access", view_func=access_history_ctrl.my_access, methods=["GET"])
 
         # API: Diary
         app.add_url_rule("/api/diary", endpoint="create_diary_entry", view_func=diary_ctrl.create_diary_entry, methods=["POST"])
