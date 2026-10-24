@@ -12,7 +12,7 @@ The five-contact limit supersedes the original three-contact handout. The server
 - No startup GPS warm-up. Location requires an explicit per-alert choice and active server consent. If consent cannot be established, send without GPS. This intentionally means offline-created alerts may have no GPS.
 - Capture actual device accuracy and position timestamp. Recheck consent before flushing older payloads. The backend remains the authority for disclosure and dispatch.
 - Contact load/removal errors are visible, with no fake empty list or successful removal.
-- Preserve the neutral Cape Weather identity, styles, and public-shell-only caching. Current manifest references only the existing regular icons; no maskable icon or root favicon is fabricated. Old cached references should disappear after the updated worker takes control and the page reloads.
+- Preserve the neutral Clear Sky identity, styles, and public-shell-only caching. Current manifest references only the existing regular icons; no maskable icon or root favicon is fabricated. Old cached references should disappear after the updated worker takes control and the page reloads.
 
 ## Checks
 

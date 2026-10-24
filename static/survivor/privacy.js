@@ -96,12 +96,93 @@
       }).then(function () { if (token === generation) { saving = false; refresh.disabled = false; } });
     });
   });
-  more.addEventListener('click', function () { if (cursor && !departed) history(false, generation); });
-  refresh.addEventListener('click', reload);
-  function clearPrivate() {
-    generation++; saving = false; historyBusy = false;
-    controllers.forEach(function (ctrl) { ctrl.abort(); }); controllers = [];
-    unknown(); clearHistory(''); message(''); refresh.disabled = false;
+
+  // ---------------------------------------------------------------- Access Trail
+
+  var currentCursor = null;
+
+  function renderAccessRows(entries, append) {
+    if (!append) {
+      accessList.innerHTML = "";
+    }
+    entries.forEach(function (entry) {
+      var row = document.createElement("div");
+      row.className = "access-row";
+      var actor = escapeHtml(entry.actor_name || entry.actor || "Authorized responder");
+      var action = escapeHtml(entry.action || entry.description || "Viewed case record");
+      var time = formatTimestamp(entry.viewed_at || entry.created_at);
+
+      row.innerHTML =
+        '<div>' +
+          '<div class="access-actor">' + actor + '</div>' +
+          '<div class="access-action">' + action + '</div>' +
+        '</div>' +
+        '<div class="access-time">' + time + '</div>';
+      accessList.appendChild(row);
+    });
+  }
+
+  function updateLoadOlderButton(nextCursor) {
+    currentCursor = nextCursor;
+    var existingBtn = document.getElementById("btn-load-older-access");
+    if (existingBtn) {
+      existingBtn.remove();
+    }
+    if (nextCursor) {
+      var btnWrap = document.createElement("div");
+      btnWrap.id = "btn-load-older-access";
+      btnWrap.style.padding = "0.75rem 1rem";
+      btnWrap.style.textAlign = "center";
+      btnWrap.style.borderTop = "1px solid var(--border)";
+
+      var loadBtn = document.createElement("button");
+      loadBtn.type = "button";
+      loadBtn.textContent = "Load older activity";
+      loadBtn.className = "btn btn-outline";
+      loadBtn.style.padding = "0.35rem 0.85rem";
+      loadBtn.style.fontSize = "0.82rem";
+      loadBtn.style.width = "100%";
+      loadBtn.addEventListener("click", function () {
+        loadBtn.disabled = true;
+        loadBtn.textContent = "Loading older activity…";
+        loadAccessTrail(true);
+      });
+
+      btnWrap.appendChild(loadBtn);
+      accessList.appendChild(btnWrap);
+    }
+  }
+
+  function loadAccessTrail(append) {
+    var url = "/api/my-access";
+    if (append && currentCursor) {
+      url += "?cursor=" + encodeURIComponent(currentCursor);
+    }
+    fetch(url, {
+      headers: { "X-Device-Token": DEVICE_TOKEN },
+      cache: "no-store",
+      credentials: "same-origin"
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        var entries = data.events || data.access_log || [];
+        if (!entries.length && !append) {
+          accessList.innerHTML =
+            '<div class="access-row"><span style="color: var(--dusty-blue);">No activity recorded yet on your case.</span></div>';
+          return;
+        }
+        renderAccessRows(entries, append);
+        updateLoadOlderButton(data.next_cursor || null);
+      })
+      .catch(function () {
+        if (!append) {
+          accessList.innerHTML =
+            '<div class="access-row"><span style="color: var(--dusty-blue);">Activity history is currently unavailable offline.</span></div>';
+        }
+      });
   }
   function quickExit(event) { if (event) event.preventDefault(); departed = true; clearPrivate(); location.replace('/survivor/cover.html'); }
   document.getElementById('quick-exit').addEventListener('click', quickExit);
