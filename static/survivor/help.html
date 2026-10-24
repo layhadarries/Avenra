@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1d6f72">
+    <title>Clear Sky</title>
+    <link rel="manifest" href="/survivor/manifest.json">
+    <link rel="icon" href="/survivor/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background-color: var(--warm-bg);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .help-wrap {
+            max-width: 480px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 1rem 1.25rem 5rem;
+            flex: 1;
+        }
+        .help-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        .help-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .freshness-tag {
+            font-size: 0.78rem;
+            color: var(--dusty-blue);
+            background: var(--surface);
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+        }
+        .shelter-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.15rem;
+            margin-bottom: 0.85rem;
+            box-shadow: var(--shadow);
+        }
+        .shelter-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.35rem;
+        }
+        .shelter-name {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .shelter-dist {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--teal);
+            white-space: nowrap;
+        }
+        .shelter-badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin: 0.5rem 0;
+        }
+        .badge-verified {
+            background: var(--green-bg);
+            color: var(--green);
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .badge-beds {
+            background: #e0f2fe;
+            color: #0369a1;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .badge-full {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .shelter-detail {
+            font-size: 0.83rem;
+            color: var(--dusty-blue);
+            margin: 0.2rem 0;
+        }
+        .shelter-detail strong {
+            color: var(--navy);
+        }
+        .directions-btn {
+            display: inline-block;
+            margin-top: 0.65rem;
+            padding: 0.45rem 0.9rem;
+            background: var(--teal);
+            color: #ffffff;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border-radius: 6px;
+            text-decoration: none;
+            text-align: center;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 0.65rem 0.5rem;
+            z-index: 50;
+        }
+        .bottom-nav button {
+            background: none;
+            border: none;
+            text-align: center;
+            font-size: 0.82rem;
+            color: var(--dusty-blue);
+            font-weight: 600;
+            padding: 0.35rem 0;
+            cursor: pointer;
+        }
+        .bottom-nav button.active {
+            color: var(--teal);
+        }
+    </style>
+</head>
+<body>
+    <header class="pwa-header" style="padding: 1rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <span class="pwa-title" style="font-weight: 700; font-size: 1.05rem; color: var(--navy);">Clear Sky</span>
+        <button type="button" onclick="location.replace('/survivor/cover.html')" class="quick-exit-pill" style="background: var(--navy); color: #fff; border: none; padding: 0.35rem 0.85rem; border-radius: 999px; font-size: 0.8rem; font-weight: 600; cursor: pointer;">Quick exit</button>
+    </header>
+
+    <main class="help-wrap">
+        <div class="help-header">
+            <h1 class="help-title">Safe Havens &amp; Shelters</h1>
+            <span class="freshness-tag" id="freshness-tag">Updating…</span>
+        </div>
+        <p style="font-size: 0.85rem; color: var(--dusty-blue); margin-bottom: 1rem;">
+            Calculated discreetly on this phone. Your location is never sent to find these shelters.
+        </p>
+
+        <div id="shelter-list">
+            <p style="color: var(--dusty-blue); font-size: 0.9rem;">Checking nearby places…</p>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <button type="button" onclick="location.href='/survivor/'">Home</button>
+        <button type="button" class="active">Find help</button>
+        <button type="button" onclick="location.href='/survivor/#diary'">Diary</button>
+        <button type="button" onclick="location.href='/survivor/#more'">More</button>
+    </nav>
+
+    <script src="/survivor/help.js" defer></script>
+</body>
+</html>

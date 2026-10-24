@@ -1,4 +1,7 @@
-/* Stage 2 panic flow. Evaluation authentication only. */
+
+/* Clear Sky: survivor panic flow (Stage 2).
+   States: ready -> holding -> countdown -> sending -> sent | queued.
+   Write first, send second: every alert is saved to CWQueue before the network attempt. */
 (function () {
   'use strict';
   function $(id) { return document.getElementById(id); }
@@ -76,58 +79,132 @@
         if (!exited && pending === attempt) setState('queued');
         return window.CWQueue.flushQueue();
       });
-    }).catch(function () {
-      if (exited || pending !== attempt) return;
-      $('save-error').textContent = 'Could not confirm this alert was saved. Try again. No receipt has been confirmed.';
-      setState('error');
+    }).then(function (data) {
+      // Sent immediately 
+      // Ask the queue to clear this entry: the same client_id makes that
+      // request idempotent even if the server already saw it once
+      window.CWQueue.flushQueue();
+      onSent(data);
+    }, onQueued);
+  }
+
+  function onSent(data) {
+    if (state !== "sending" && state !== "queued") return;  // ignore a late echo once Done was pressed
+    setState("sent");
+    if (updateStatusDisplay(data)) return;
+    startStatusPoll(data.id);
+  }
+
+  // alert is already safely written to IndexedDB
+  // queue.js keeps retrying on its own,
+  // with no retry button and no "failed" wording — its saved, not lost
+  function onQueued() {
+    setState("queued");
+  }
+
+  // fires whenever queue.js delivers any queued alert, including ones sent while this screen
+  // wasn't open
+  // -only react if it's the alert currently on screen
+  if (window.CWQueue && window.CWQueue.onFlushed) {
+    window.CWQueue.onFlushed(function (evt) {
+      if (evt.type === "sent" && pending && evt.client_id === pending.clientId) {
+        onSent(evt.receipt);
+      }
     });
   }
-  function onSent(receipt) {
-    if (exited || !pending || receipt.client_id !== pending.clientId) return;
-    clearInterval(statusTimer); setState('sent');
-    $('help-status').textContent = receipt.status === 'acknowledged' ? 'Help status: Someone has seen your alert' : 'Help status: Waiting';
-    if (receipt.status === 'acknowledged') return;
-    var attempt = pending, busy = false;
-    function poll() {
-      if (busy || exited || pending !== attempt || state !== 'sent') return;
-      busy = true;
-      var ctrl = new AbortController(), timer = setTimeout(function () { ctrl.abort(); }, 10000);
-      fetch('/api/alerts/' + receipt.id + '/status', {cache: 'no-store', credentials: 'same-origin',
-        headers: {'X-Device-Token': 'demo-device'}, signal: ctrl.signal})
-        .then(function (response) { if (!response.ok) throw new Error('unavailable'); return response.json(); })
-        .then(function (body) {
-          if (!exited && pending === attempt && state === 'sent' && body.status === 'acknowledged') {
-            $('help-status').textContent = 'Help status: Someone has seen your alert'; clearInterval(statusTimer);
-          }
-        }).catch(function () {}).then(function () { busy = false; clearTimeout(timer); });
+
+  // ---------------------------------------------------------------- status
+
+  var statusAlertId = null;
+
+  function updateStatusDisplay(body) {
+    var statusEl = $("help-status");
+    if (!statusEl) return false;
+
+    // Stage 3 referral lifecycle:
+    // 1. Referral accepted -> Show shelter name and hours + Directions
+    // 2. Referral pending / placed -> Show "Looking for a place for you"
+    // 3. Acknowledged by responder -> "Someone has seen your alert"
+    // 4. Default -> "Waiting"
+    if (body.referral && body.referral.status === "accepted") {
+      var name = body.referral.shelter_name || "Safe shelter";
+      var hours = body.referral.hours ? " (" + body.referral.hours + ")" : "";
+      var mapsQuery = encodeURIComponent(name + ", Cape Town");
+      var directionsUrl = "https://maps.google.com/?q=" + mapsQuery;
+
+      statusEl.innerHTML =
+        '<div style="color: var(--green); font-weight: 700; margin-bottom: 0.35rem;">' +
+          escapeHtml(name) + " has a place for you" + escapeHtml(hours) +
+        "</div>" +
+        '<a href="' + directionsUrl + '" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="margin-top: 0.5rem; text-decoration: none; display: inline-block;">' +
+          "Get Directions" +
+        "</a>";
+      return true; // Stop polling
     }
-    statusTimer = setInterval(poll, 5000); poll();
+
+    if ((body.referral && body.referral.status === "sent") || body.status === "placed") {
+      statusEl.textContent = "Help status: Looking for a place for you";
+      return false;
+    }
+
+    if (body.status === "acknowledged") {
+      statusEl.textContent = "Help status: Someone has seen your alert";
+      return false;
+    }
+
+    statusEl.textContent = "Help status: Waiting";
+    return false;
   }
-  window.CWQueue.onFlushed(function (event) {
-    if (event.type === 'sent') onSent(event.receipt);
-    if (event.type === 'blocked' && !exited && pending && pending.clientId === event.client_id) {
-      setState('queued');
-      $('queue-message').textContent = 'Saved on this phone, but the service could not accept it. Reopen after access is restored. Help has not been confirmed.';
+
+  function escapeHtml(str) {
+    if (!str) return "";
+    var div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function startStatusPoll(id) {
+    statusAlertId = id;
+    clearInterval(timers.status);
+
+    function checkStatus() {
+      if (state !== "sent" || statusAlertId == null) return;
+
+      request("/api/alerts/" + statusAlertId + "/status")
+        .then(function (data) {
+          if (state === "sent" && statusAlertId === id) {
+            var isFinished = updateStatusDisplay(data);
+            if (isFinished) {
+              clearInterval(timers.status);
+              timers.status = null;
+            }
+          }
+        })
+        .catch(function () { /* keep polling, the next tick retries */ });
     }
+
+    timers.status = setInterval(checkStatus, STATUS_POLL_MS);
+    checkStatus();
+  }
+
+  doneBtn.addEventListener("click", function () { if (state === "sent") resetToReady(); });
+  queuedDoneBtn.addEventListener("click", function () {
+    // Leaving the Queued screen does not cancel delivery: queue.js keeps trying in the background
+    if (state === "queued") resetToReady();
   });
   function quickExit(event) {
     if (event) event.preventDefault();
-    exited = true; clearTimers(); pending = null;
-    location.replace('/survivor/cover.html');
+    clearTimers();
+    pending = null;
+    setState("ready");
+    location.replace("/survivor/cover.html");
   }
-  $('panic-btn').addEventListener('pointerdown', startHold);
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (name) { $('panic-btn').addEventListener(name, cancelHold); });
-  $('panic-btn').addEventListener('contextmenu', function (event) { event.preventDefault(); });
-  // Keyboard and assistive technology can trigger the same hold/countdown flow.
-  $('panic-btn').addEventListener('keydown', function (event) { if (event.key === ' ' || event.key === 'Enter') startHold(event); });
-  $('panic-btn').addEventListener('keyup', cancelHold);
-  $('panic-btn').addEventListener('blur', cancelHold);
-  $('undo-btn').addEventListener('click', function () { if (state === 'countdown') reset(); });
-  ['done-btn', 'queued-done-btn', 'error-done-btn'].forEach(function (id) { $(id).addEventListener('click', reset); });
-  $('quick-exit').addEventListener('click', quickExit);
-  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') quickExit(event); });
-  window.addEventListener('pagehide', function () { exited = true; clearTimers(); pending = null; });
-  window.addEventListener('pageshow', function (event) { if (event.persisted && exited) location.replace('/survivor/cover.html'); });
-  window.CWPanic = {showHome: function () { if (!exited) setState(state); }};
-  setState('ready');
+
+  quitBtn.addEventListener("click", quickExit);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") quickExit(e); });
+
+  // ---------------------------------------------------------------- start
+
+  setState("ready");
+  warmUpLocation();
 })();

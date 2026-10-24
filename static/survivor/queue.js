@@ -1,15 +1,21 @@
-/* Evaluation queue. Retries while a page is open, or when it is reopened.
-   IndexedDB contains sensitive pending payloads: individual auth and storage
-   protection remain release requirements. No closed-app delivery guarantee. */
+/* Clear Sky: offline alert queue (Stage 2)
+        - IndexedDB only, no libraries.
+   Write first, send second: queueAlert() must resolve before survivor.js attempts to send. */
 (function (global) {
-  'use strict';
-  var DB_NAME = 'cape-weather-queue', STORE = 'alerts';
-  var DEVICE_TOKEN = 'demo-device'; // Evaluation only; never a production credential.
-  var dbPromise = null, flushPromise = null, flushAgain = false, retryTimer = null, retryIndex = 0;
-  var listeners = [], BACKOFF = [5000, 15000, 30000];
-  function emit(event) {
-    listeners.forEach(function (fn) { try { fn(event); } catch (_) {} });
-  }
+  "use strict";
+
+  var DB_NAME = "clear-sky-queue";
+  var STORE = "alerts";
+  var DEVICE_TOKEN = "demo-device";
+  var SEND_TIMEOUT_MS = 15000;   // generous: survives a Render cold start
+  var BACKOFF_STEPS_MS = [5000, 15000, 30000];
+
+  var dbPromise = null;
+  var flushing = false;
+  var backoffTimer = null;
+  var backoffIndex = 0;
+  var listeners = [];
+
   function openDb() {
     if (!dbPromise) {
       dbPromise = new Promise(function (resolve, reject) {
