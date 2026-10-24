@@ -1,6 +1,6 @@
 {
-  "name": "Clear Sky",
-  "short_name": "Clear Sky",
+  "name": "Cape Weather",
+  "short_name": "Cape Weather",
   "description": "A lightweight weather page.",
   "start_url": "/survivor/",
   "scope": "/survivor/",

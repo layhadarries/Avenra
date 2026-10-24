@@ -1,5 +1,7 @@
 """Alert business logic and notification dispatching service."""
 import sqlite3
+import os
+import math
 from typing import Optional, Tuple, Dict, Any, List
 from datetime import datetime, timezone
 from avenra.repositories.alert_repository import AlertRepository
@@ -9,6 +11,7 @@ from avenra.repositories.audit_repository import AuditRepository
 from avenra.models.user import User
 from avenra.models.alert import Alert
 import sms
+from avenra.repositories.notification_outbox_repository import NotificationOutboxRepository
 
 
 def utc_now() -> str:
@@ -30,16 +33,32 @@ def parse_coord(value: Any, limit: float) -> Optional[float]:
 
 
 def parse_client_ts(value: Any) -> Optional[str]:
-    """The phone's clock when she pressed. Stored as UTC text, or None."""
-    if not isinstance(value, str) or not value.strip():
+    """Unknown unless an explicit timezone accompanies device time."""
+    return parse_location_recorded_at(value)
+
+
+def parse_location_accuracy(value: Any) -> Optional[float]:
+    """Accept finite, non-negative JSON numbers in metres; never block an alert."""
+    if type(value) not in (int, float):
         return None
     try:
-        dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
-    except ValueError:
+        number = float(value)
+    except (OverflowError, ValueError):
         return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return number if math.isfinite(number) and number >= 0 else None
+
+
+def parse_location_recorded_at(value: Any) -> Optional[str]:
+    """Normalise an explicit device fix time; never infer its timezone or age."""
+    if not isinstance(value, str) or len(value) > 64:
+        return None
+    try:
+        captured = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        if captured.tzinfo is None:
+            return None
+        return captured.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    except (ValueError, OverflowError):
+        return None
 
 
 class AlertService:
@@ -64,72 +83,60 @@ class AlertService:
         raw_lat: Any,
         raw_lng: Any,
         raw_client_ts: Any,
+        raw_location_accuracy: Any = None,
+        raw_location_recorded_at: Any = None,
     ) -> Tuple[Dict[str, Any], int]:
         if not isinstance(client_id, str) or not client_id.strip() or len(client_id) > 64:
             return {"error": "client_id_required"}, 400
         client_id = client_id.strip()
-
-        # Idempotency check: replay of known client_id returns identical response
-        existing = self.alert_repo.get_by_client_id(client_id)
-        if existing is not None:
-            if existing.user_id != survivor.id:
-                return {"error": "client_id_conflict"}, 409
-            return existing.created_body(), 200
-
-        # Location parsing & privacy consent verification
-        lat = parse_coord(raw_lat, 90)
-        lng = parse_coord(raw_lng, 180)
-        location_allowed = self.consent_repo.is_active(survivor.id, "location_sharing")
-        if lat is None or lng is None or not location_allowed:
-            lat = lng = None
-
-        client_ts = parse_client_ts(raw_client_ts)
+        conn = self.alert_repo.conn
 
         try:
-            alert = self.alert_repo.create(
-                user_id=survivor.id,
-                case_code=survivor.case_code,
-                lat=lat,
-                lng=lng,
-                client_id=client_id,
-                client_ts=client_ts,
-            )
-        except sqlite3.IntegrityError:
-            # Race condition handling
-            self.alert_repo.conn.rollback()
-            existing = self.alert_repo.get_by_client_id(client_id)
-            if existing is None or existing.user_id != survivor.id:
-                return {"error": "client_id_conflict"}, 409
-            return existing.created_body(), 200
+            with conn:
+                # Serialize creation/retry checks and keep all writes atomic.
+                conn.execute("BEGIN IMMEDIATE")
+                existing = self.alert_repo.get_by_client_id(client_id)
+                if existing is not None:
+                    if existing.user_id != survivor.id:
+                        return {"error": "client_id_conflict"}, 409
+                    return existing.created_body(), 200
 
-        self.audit_repo.log(
-            f"survivor {survivor.case_code}",
-            "alert_created",
-            survivor.case_code,
-            f"alert {alert.id}; location {'yes' if lat is not None else 'no'}",
-        )
+                lat = parse_coord(raw_lat, 90)
+                lng = parse_coord(raw_lng, 180)
+                allowed = self.consent_repo.is_active(survivor.id, "location_sharing")
+                if lat is None or lng is None or not allowed:
+                    lat = lng = None
 
-        # Dispatch notifications to trusted contacts
-        notified = sms.notify_contacts(
-            self.alert_repo.conn,
-            survivor,
-            alert.id,
-            lat=lat,
-            lng=lng,
-            client_ts=client_ts,
-        )
-        if notified:
-            self.audit_repo.log(
-                "system",
-                "contact_dispatch_attempted",
-                survivor.case_code,
-                f"alert {alert.id}; attempted={len(notified)}; accepted={sum(bool(c['ok']) for c in notified)}",
-            )
+                accuracy = parse_location_accuracy(raw_location_accuracy) if lat is not None else None
+                recorded_at = parse_location_recorded_at(raw_location_recorded_at) if lat is not None else None
+                client_ts = parse_client_ts(raw_client_ts)
+
+                alert = self.alert_repo.create(
+                    user_id=survivor.id,
+                    case_code=survivor.case_code,
+                    lat=lat,
+                    lng=lng,
+                    client_id=client_id,
+                    client_ts=client_ts,
+                    location_accuracy=accuracy,
+                    location_recorded_at=recorded_at,
+                )
+                queued = NotificationOutboxRepository(conn).enqueue_for_alert(alert.id)
+                self.audit_repo.log(
+                    f"survivor {survivor.case_code}",
+                    "alert_created",
+                    survivor.case_code,
+                    f"alert {alert.id}; location {'yes' if lat is not None else 'no'}; queued={queued}",
+                    commit=False,
+                )
+        except sqlite3.Error:
+            return {"error": "alert_storage_unavailable"}, 503
 
         body = alert.created_body()
+        body["contacts_queued"] = queued
+        body["contacts_accepted"] = 0
         body["contacts_notified"] = 0
-        body["contacts_accepted"] = sum(bool(c["ok"]) for c in notified)
-        body["notification_mode"] = "provider" if any(c["ok"] for c in notified) else "unconfirmed"
+        body["notification_mode"] = "queued" if queued else ("no_subscribed_contacts" if os.environ.get("AVENRA_WEBPUSH_ENABLED")=="1" else "no_contacts")
         return body, 201
 
     def list_alerts(self, limit: int = 50) -> List[Dict[str, Any]]:
@@ -182,6 +189,9 @@ class AlertService:
         alert = self.alert_repo.get_by_id(alert_id)
         if alert is None or alert.user_id != survivor.id:
             return {"error": "not_found"}, 404
-
-        referral_info = self.referral_repo.get_latest_for_alert(alert_id)
-        return {"status": alert.status, "referral": referral_info}, 200
+        from avenra.services.notification_status_service import NotificationStatusService
+        return {
+            "status": alert.status,
+            "referral": self.referral_repo.get_latest_for_alert(alert_id),
+            "notification": NotificationStatusService(self.alert_repo.conn).for_alert(alert_id),
+        }, 200

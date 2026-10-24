@@ -1,22 +1,35 @@
-"""Contact data access repository."""
-from typing import List, Tuple
+"""Trusted-contact persistence. Preserve unchanged recipients and their jobs."""
+import secrets
 from avenra.repositories.base import BaseRepository
-
-
 class ContactRepository(BaseRepository):
-    """Encapsulates SQL operations on the contacts table."""
+    def get_for_user(self,user_id):
+        return [dict(r) for r in self.conn.execute(
+            'SELECT id,name,phone FROM contacts WHERE user_id=? ORDER BY id',(user_id,))]
+    def replace_contacts(self,user_id,contacts):
+        existing=self.get_for_user(user_id)
+        by_phone={row['phone']:row for row in existing}
+        phones={phone for name,phone in contacts}
+        for row in existing:
+            if row['phone'] not in phones:
+                self.conn.execute('DELETE FROM contacts WHERE id=? AND user_id=?',(row['id'],user_id))
+        # Avoid temporary unique-name conflicts during a rename/swap.
+        for row in existing:
+            if row['phone'] in phones:
+                self.conn.execute('UPDATE contacts SET name=? WHERE id=? AND user_id=?',
+                    ('_avenra_'+secrets.token_hex(16),row['id'],user_id))
+        for name,phone in contacts:
+            row=by_phone.get(phone)
+            if row:
+                self.conn.execute('UPDATE contacts SET name=? WHERE id=? AND user_id=?',(name,row['id'],user_id))
+            else:
+                self.conn.execute('INSERT INTO contacts(user_id,name,phone) VALUES(?,?,?)',(user_id,name,phone))
 
-    def get_for_user(self, user_id: int) -> List[dict]:
-        rows = self.conn.execute(
-            "SELECT id, name, phone FROM contacts WHERE user_id = ? ORDER BY id",
-            (user_id,),
-        ).fetchall()
-        return [{"id": r["id"], "name": r["name"], "phone": r["phone"]} for r in rows]
+    def add_contact(self,user_id,name,phone):
+        cursor=self.conn.execute('INSERT INTO contacts(user_id,name,phone) VALUES(?,?,?)',
+            (user_id,name,phone))
+        return cursor.lastrowid
 
-    def replace_contacts(self, user_id: int, contacts: List[Tuple[str, str]]) -> None:
-        self.conn.execute("DELETE FROM contacts WHERE user_id = ?", (user_id,))
-        for name, phone in contacts:
-            self.conn.execute(
-                "INSERT OR IGNORE INTO contacts (user_id, name, phone) VALUES (?, ?, ?)",
-                (user_id, name, phone),
-            )
+    def delete_contact(self,user_id,contact_id):
+        cursor=self.conn.execute('DELETE FROM contacts WHERE id=? AND user_id=?',
+            (contact_id,user_id))
+        return cursor.rowcount==1

@@ -12,7 +12,7 @@ class SheltersController:
         self.shelter_service = shelter_service or ShelterService()
 
     def api_shelters(self):
-        # Used by both survivor PWA and partner dashboard
+        # Used by both survivor PWA and partner dashboard.js
         if current_user() is None and device_user() is None:
             return jsonify({"error": "unauthorized"}), 401
         return jsonify({"shelters": self.shelter_service.list_shelters()})
@@ -23,3 +23,14 @@ class SheltersController:
         data = request.get_json(silent=True) or {}
         res, status = self.shelter_service.update_capacity(shelter_id, user, data)
         return jsonify(res), status
+
+    @require_role("responder", "admin")
+    def nearby_services(self, alert_id: int):
+        body, status = self.shelter_service.nearby_for_alert(
+            alert_id,
+            current_user(),
+            request.args.getlist("radius_km"),
+        )
+        response = jsonify(body)
+        response.headers["Cache-Control"] = "no-store"
+        return response, status

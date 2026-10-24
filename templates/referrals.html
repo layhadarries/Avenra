@@ -1,9 +1,57 @@
 {% extends "base.html" %}
 {% block title %}Referrals{% endblock %}
+
 {% block content %}
-<div class="page-heading"><p class="eyebrow">Support handovers</p><h1>Referrals</h1><p class="muted">Only referrals within your authorised scope appear here.</p></div>
-<div class="card table-scroll"><table><thead><tr><th scope="col">Reference</th><th scope="col">Case</th><th scope="col">Organisation</th><th scope="col">Status</th></tr></thead><tbody>
-{% for referral in referrals %}<tr><th scope="row">#{{ referral.id }}</th><td>{{ referral.case_code or 'Not available' }}</td><td>{{ referral.shelter_name or 'Not available' }}</td><td>{{ referral.status|replace('_',' ')|capitalize }}</td></tr>
-{% else %}<tr><td colspan="4">No referrals are available in your scope.</td></tr>{% endfor %}
-</tbody></table></div>
+<div data-referrals-view data-case-view="true">
+  <div class="page-heading">
+    <p class="eyebrow">Support handovers</p>
+    <h1>Referrals</h1>
+    <p class="muted">
+      Only referrals within your authorised scope appear here.
+      Accepting a referral does not confirm placement.
+      Record placement only after confirming the actual handover.
+    </p>
+  </div>
+
+  <p id="referral-action-status" role="status" aria-live="polite"></p>
+
+  <div class="card table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Reference</th>
+          <th scope="col">Case</th>
+          <th scope="col">Organisation</th>
+          <th scope="col">Status</th>
+          <th scope="col">Decline reason</th>
+          <th scope="col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for referral in referrals %}
+        <tr data-referral-id="{{ referral.id }}"
+            data-status="{{ referral.status }}">
+          <th scope="row">#{{ referral.id }}</th>
+          <td>{{ referral.case_code or "Not available" }}</td>
+          <td>{{ referral.shelter_name or "Not available" }}</td>
+          <td data-referral-reason>{{ referral.decline_reason or "" }}</td>
+          <td data-referral-status>
+            {{ referral.status|replace("_", " ")|capitalize }}
+          </td>
+          <td data-referral-actions></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">No referrals are available in your scope.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <noscript>Enable JavaScript to update referral status.</noscript>
+</div>
+
+<script src="{{ url_for('static', filename='js/referrals.js') }}"
+        defer></script>
 {% endblock %}

@@ -70,14 +70,30 @@ def migrate(conn):
     additions = {
         'contacts': [('channel', "TEXT NOT NULL DEFAULT 'sms'"), ('chat_id', 'TEXT')],
         'shelters': [('updated_at', 'TEXT')],
-        'alerts': [('notify_status', "TEXT NOT NULL DEFAULT 'pending'"), ('notify_detail', 'TEXT')],
+        'alerts': [
+            ('notify_status', "TEXT NOT NULL DEFAULT 'pending'"),
+            ('notify_detail', 'TEXT'),
+            ('location_accuracy', 'REAL'),
+            ('location_recorded_at', 'TEXT'),
+        ],
         'diary_entries': [('captured_at', 'TEXT')],
     }
+    additions["notification_outbox"] = [("claim_token", "TEXT"), ("claimed_at", "TEXT")]
+    # Stage 2 completion migration: existing databases retain all records.
+    additions["notification_outbox"] = [
+        ("claim_token", "TEXT"), ("claimed_at", "TEXT"),
+        ("provider_message_id", "TEXT"), ("reason_code", "TEXT"),
+        ("completed_at", "TEXT"),
+    ]
     for table, columns in additions.items():
         present = {row['name'] for row in conn.execute(f'PRAGMA table_info({table})')}
         for column, definition in columns:
             if column not in present:
                 conn.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+    from avenra.repositories.push_repository import SCHEMA
+    # Fixed additive statements, without executescript committing the caller transaction.
+    for statement in SCHEMA.split(';'):
+        if statement.strip(): conn.execute(statement)
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (2)')
     conn.execute('''CREATE TABLE IF NOT EXISTS app_metadata (
         key TEXT PRIMARY KEY, value TEXT NOT NULL

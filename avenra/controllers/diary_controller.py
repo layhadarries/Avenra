@@ -48,9 +48,15 @@ class DiaryController:
         if owner is None or not CaseAccessRepository().allows(user.id, owner.id):
             return jsonify({"error": "not_found"}), 404
         entries, consent_ok = self.diary_service.list_for_staff(case_code)
-        self.diary_service.audit_repo.log(f'user:{user.id}', 'diary_viewed', case_code)
         if not consent_ok:
             return jsonify({"entries": [], "consent_active": False})
+
+        if entries:
+            self.diary_service.audit_repo.log(
+                f"user:{user.id}",
+                "diary_viewed",
+                owner.case_code,
+            )
 
         out = [
             {
@@ -67,9 +73,18 @@ class DiaryController:
 
     @require_role(*Config.ALERT_ROLES)
     def diary_photo(self, entry_id: int):
+        user = current_user()
         entry = self.diary_service.diary_repo.get_by_id(entry_id)
-        if entry is None or not CaseAccessRepository().allows(current_user().id, entry.user_id):
+
+        if entry is None or not CaseAccessRepository().allows(
+                user.id, entry.user_id
+        ):
             abort(404)
+
+        owner = self.diary_service.user_repo.get_by_id(entry.user_id)
+        if owner is None:
+            abort(404)
+
         try:
             filename = self.diary_service.get_photo_path(entry_id)
         except PermissionError:
@@ -77,5 +92,16 @@ class DiaryController:
 
         if not filename:
             abort(404)
-        self.diary_service.audit_repo.log(f'user:{current_user().id}', 'diary_photo_viewed', detail=f'entry {entry_id}')
-        return send_from_directory(get_uploads_dir(), filename)
+
+        # Check that the file can actually be served before recording a view.
+        response = send_from_directory(get_uploads_dir(), filename)
+
+        if request.method == "GET" and response.status_code == 200:
+            self.diary_service.audit_repo.log(
+                f"user:{user.id}",
+                "diary_photo_viewed",
+                owner.case_code,
+                detail=f"entry {entry_id}",
+            )
+
+        return response

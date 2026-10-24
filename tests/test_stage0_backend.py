@@ -83,10 +83,10 @@ class FoundationTests(unittest.TestCase):
             os.umask(old_mask)
         backups = list((Path(db.DB_PATH).parent / 'private-backups').glob('*.sqlite3'))
         self.assertEqual(len(backups), 1)
-        with sqlite3.connect(backups[0]) as backup:
+        with contextlib.closing(sqlite3.connect(backups[0])) as backup:
             self.assertEqual(backup.execute('SELECT name FROM users').fetchone()[0], 'Existing')
             self.assertNotIn('is_active', {row[1] for row in backup.execute('PRAGMA table_info(users)')})
-        with db.connect() as upgraded:
+        with contextlib.closing(db.connect()) as upgraded:
             self.assertEqual(upgraded.execute('SELECT is_active FROM users').fetchone()[0], 0)
 
     def test_seed_is_idempotent_and_does_not_reactivate_staff(self):

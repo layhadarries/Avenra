@@ -1,8 +1,9 @@
-/* Public shell only: no credentials, private storage, geolocation or alert requests. */
+/* Public connection/cache status only. No identity, alerts or private storage. */
 (function () {
   'use strict';
-  var connection = document.getElementById('connection-state');
-  var offline = document.getElementById('offline-state');
+  const connection = document.getElementById('connection-state');
+  const offline = document.getElementById('offline-state');
+  if (!connection || !offline) return;
   function updateConnection() {
     connection.textContent = navigator.onLine ? 'Device appears online' : 'Device appears offline';
   }
@@ -14,7 +15,11 @@
     return;
   }
   navigator.serviceWorker.register('/survivor/service-worker.js', {scope:'/survivor/'})
-    .then(function () { return navigator.serviceWorker.ready; })
-    .then(function () { offline.textContent = 'This page is ready to open offline after your first visit.'; })
-    .catch(function () { offline.textContent = 'Offline opening could not be enabled. Try reloading when connected.'; });
+    .then(() => navigator.serviceWorker.ready)
+    .then(() => {
+      offline.textContent = 'This page is ready to open offline after your first visit.';
+    })
+    .catch(() => {
+      offline.textContent = 'Offline opening could not be enabled. Try reloading when connected.';
+    });
 })();

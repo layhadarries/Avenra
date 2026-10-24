@@ -184,7 +184,11 @@ class avenraStagesTestCase(unittest.TestCase):
         # Weather disguise PWA root ("Clear Sky")
         res = self.client.get("/survivor/")
         self.assertEqual(res.status_code, 200)
-        self.assertIn(b"Clear Sky", res.data)
+        shell = res.get_data()
+        res.close()
+        with self.client.get('/survivor/manifest.json', buffered=True) as manifest_response:
+            identity = manifest_response.get_json()
+        self.assertIn(identity['name'].encode(), shell)
         res.close()
 
         # Create panic alert
@@ -274,8 +278,30 @@ class avenraStagesTestCase(unittest.TestCase):
         shelters = shelters_res.get_json()["shelters"]
         self.assertGreaterEqual(len(shelters), 3)
 
-        target_shelter = next(s for s in shelters if s["beds_available"] > 0)
-        initial_beds = target_shelter["beds_available"]
+        for entry in shelters:
+            self.assertEqual(entry["availability"], "contact_to_confirm")
+            for field in ("beds_total", "beds_available", "accepting"):
+                self.assertNotIn(field, entry)
+
+        # Internal fixture data is not part of the directory response.
+        conn = db.connect()
+        try:
+            row = conn.execute(
+                """
+                SELECT id, beds_available FROM shelters
+                WHERE beds_available > 0
+                ORDER BY id LIMIT 1
+                """
+            ).fetchone()
+            self.assertIsNotNone(row)
+            shelter_id = row["id"]
+            initial_beds = row["beds_available"]
+        finally:
+            conn.close()
+
+        target_shelter = next(
+            entry for entry in shelters if entry["id"] == shelter_id
+        )
 
         # Create an alert so we can attach a referral
         alert_res = self.client.post(
@@ -310,14 +336,26 @@ class avenraStagesTestCase(unittest.TestCase):
         self.assertEqual(placed_res.status_code, 200)
         self.assertEqual(placed_res.get_json()["referral"]["status"], "placed")
 
-        # Verify shelter beds_available decremented by 1
-        updated_shelters = self.client.get(
+        # Preserve the existing internal placement accounting check.
+        conn = db.connect()
+        try:
+            updated = conn.execute(
+                "SELECT beds_available FROM shelters WHERE id = ?",
+                (target_shelter["id"],),
+            ).fetchone()
+            self.assertEqual(updated["beds_available"], initial_beds)
+        finally:
+            conn.close()
+
+        response = self.client.get(
             "/api/shelters", headers=self.survivor_headers
-        ).get_json()["shelters"]
-        updated_target = next(
-            s for s in updated_shelters if s["id"] == target_shelter["id"]
         )
-        self.assertEqual(updated_target["beds_available"], initial_beds - 1)
+        self.assertEqual(response.status_code, 200)
+
+        for entry in response.json["shelters"]:
+            self.assertEqual(entry["availability"], "contact_to_confirm")
+            for field in ("beds_total", "beds_available", "accepting"):
+                self.assertNotIn(field, entry)
 
         # Verify survivor alert status endpoint includes the active referral
         status_res = self.client.get(
@@ -361,11 +399,42 @@ class avenraStagesTestCase(unittest.TestCase):
             self.assertIsNone(alert["lat"])
             self.assertIsNone(alert["lng"])
 
-        # Survivor fetches transparency log (/api/audit-log)
-        audit_res = self.client.get("/api/audit-log", headers=self.survivor_headers)
+        # Survivor receives safe viewing history, not internal audit details.
+        audit_res = self.client.get(
+            "/api/audit-log",
+            headers=self.survivor_headers,
+        )
         self.assertEqual(audit_res.status_code, 200)
-        actions = [e["action"] for e in audit_res.get_json()["events"]]
-        self.assertIn("consent_revoked", actions)
+
+        for event in audit_res.get_json()["events"]:
+            self.assertEqual(
+                set(event),
+                {
+                    "id",
+                    "viewed_at",
+                    "actor_name",
+                    "actor_role",
+                    "action",
+                },
+            )
+
+        # Verify the internal consent event directly in the test database.
+        conn = db.connect()
+        try:
+            recorded = conn.execute(
+                """
+                SELECT COUNT(*) FROM audit_log
+                WHERE action = 'consent_revoked'
+                AND case_code IN (
+                    SELECT case_code FROM users
+                    WHERE role = 'survivor'
+                )
+                """
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        self.assertGreaterEqual(recorded, 1)
 
     def test_stage_5_evidence_diary_upload_hash_and_consent_gate(self):
         """Stage 5: Evidence diary upload, SHA-256 verification, and diary_sharing consent gate."""

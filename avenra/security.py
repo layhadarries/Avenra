@@ -68,7 +68,7 @@ def require_role(*roles):
 
 def validate_json_body():
     """Request validator for JSON API endpoints."""
-    if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH"):
+    if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
         if not isinstance(request.get_json(silent=True), dict) and request.content_length:
             return jsonify({"error": "json_object_required"}), 400
         origin = request.headers.get("Origin")

@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS alerts (
     case_code        TEXT NOT NULL,
     lat              REAL,
     lng              REAL,
+    location_accuracy REAL,
+    location_recorded_at TEXT,
     status           TEXT NOT NULL DEFAULT 'new'
                      CHECK (status IN ('new','acknowledged','in_progress','resolved')),
     acknowledged_by  TEXT,
@@ -117,3 +119,44 @@ CREATE TABLE IF NOT EXISTS alert_history (
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_alert_history ON alert_history(alert_id, id);
+
+CREATE TABLE IF NOT EXISTS notification_outbox (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    alert_id INTEGER NOT NULL REFERENCES alerts(id) ON DELETE CASCADE,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending'
+        CHECK (status IN (
+            'pending', 'processing', 'accepted', 'delivered',
+            'failed', 'unknown', 'cancelled'
+        )),
+    claim_token TEXT,
+    claimed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    UNIQUE (alert_id, contact_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_outbox_pending
+    ON notification_outbox(status, id);
+
+-- Stage 2 notification persistence. Additive only; no survivor data reset.
+CREATE TABLE IF NOT EXISTS notification_outbox (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    alert_id INTEGER NOT NULL REFERENCES alerts(id) ON DELETE CASCADE,
+    contact_id INTEGER NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN (
+        'pending','processing','accepted','delivered','failed','unknown','cancelled')),
+    claim_token TEXT,
+    claimed_at TEXT,
+    provider_message_id TEXT,
+    reason_code TEXT,
+    completed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now')),
+    UNIQUE(alert_id,contact_id)
+);
+CREATE INDEX IF NOT EXISTS idx_notification_outbox_pending ON notification_outbox(status,id);
+CREATE TABLE IF NOT EXISTS notification_batches (
+    alert_id INTEGER PRIMARY KEY REFERENCES alerts(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    attempted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_notification_batches_user ON notification_batches(user_id,attempted_at);
