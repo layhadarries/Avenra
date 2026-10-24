@@ -7,7 +7,7 @@ set-up:
         $(VENV_PYTHON) -m pip install -r requirements-lock.txt
 
 test:
-        $(VENV_PYTHON) z-m unittest discover -s tests -p 'test_*.py' -v
+        $(VENV_PYTHON) -m unittest discover -s tests -p 'test_*.py' -v
 
 run:
         $(VENV_PYTHON) -m flask --app app run --port 5050

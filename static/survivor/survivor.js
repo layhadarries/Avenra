@@ -1,5 +1,5 @@
 
-/* Cape Weather: survivor panic flow (Stage 2).
+/* Clear Sky: survivor panic flow (Stage 2).
    States: ready -> holding -> countdown -> sending -> sent | queued.
    Write first, send second: every alert is saved to CWQueue before the network attempt. */
 (function () {

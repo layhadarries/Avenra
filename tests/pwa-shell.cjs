@@ -10,7 +10,7 @@ function worker() {
     skipWaiting:()=>skipped.push(true), addEventListener:(name,fn)=>{handlers[name]=fn;}};
   const cache = {addAll:async urls=>assets.push(...urls), match:async()=>new Response('shell')};
   const caches = {open:async()=>cache, match:async()=>new Response('shell'),
-    keys:async()=>['avenra-pwa-shell-v0','cape-weather-shell-v1','other-app-cache','avenra-private-cache'],
+    keys:async()=>['avenra-pwa-shell-v0','clear-sky-shell-v1','other-app-cache','avenra-private-cache'],
     delete:async key=>{deleted.push(key);return true;}};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../static/survivor/service-worker.js'),'utf8'),
     {self,caches,URL,Promise,fetch:async()=>new Response('network')});
@@ -38,7 +38,7 @@ test('only public shell requests without Authorization use cache',async()=>{
 test('activation deletes only owned old shell caches',async()=>{
   const w=worker(); let pending;
   w.handlers.activate({waitUntil:p=>{pending=p;}}); await pending;
-  assert.deepEqual(w.deleted.sort(),['avenra-pwa-shell-v0','cape-weather-shell-v1'].sort());
+  assert.deepEqual(w.deleted.sort(),['avenra-pwa-shell-v0','clear-sky-shell-v1'].sort());
 });
 test('installation includes both icons, direct entry and offline script without forcing updates',async()=>{
   const w=worker();let pending;

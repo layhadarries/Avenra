@@ -1,7 +1,7 @@
 # Stage 0 Checklist (Gate Verification)
 - [X] Run `python tools/make_icons.py` to generate `icon-192.png` and `icon-512.png`
 - [ ] `/login` renders the role buttons and footer line `"Access is logged. Verified organisations only."`
-- [X] `/survivor/` displays `"Cape Weather"` with zero mention of SafePath
+- [X] `/survivor/` displays `"Clear Sky"` with zero mention of SafePath
 - [ ] Chrome on Android offers `"Install app"` and opens full-screen <- ISSUE
 - [ ] Turning on Airplane Mode and reopening the installed app loads the shell from the service worker cache
 
@@ -17,10 +17,10 @@ Test on a real Android phone on mobile data, then on the live Render URL:
 - [ ] Turn off location permission, send an alert. It still sends, and the dashboard shows "Location not shared".
 - [ ] Turn on Slow 3G in DevTools. The alert still sends.
 - [ ] In DevTools, the alert request is under 1 KB, and its body holds only `client_id`, `lat`, `lng`, and `client_ts`
-- [ ] Quick exit lands on the Cape Weather cover. Pressing Back does not return to the panic screen.
+- [ ] Quick exit lands on the Clear Sky cover. Pressing Back does not return to the panic screen.
 - [ ] Long-press the temperature on the cover returns to the panic screen
 - [ ] Airplane mode, then reopen the installed app: the panic screen and cover still load
-- [ ] Chrome offers "Install app", and the installed app opens full-screen with the name "Cape Weather"
+- [ ] Chrome offers "Install app", and the installed app opens full-screen with the name "Clear Sky"
 - [ ] Git tag `stage-1` exists once Me's checklist passes
 
 
@@ -32,17 +32,19 @@ Test on a real Android phone, both online and in airplane mode:
 - [ ] Removing a contact removes it from the list immediately
 - [ ] Adding a 4th contact shows "You can save up to 3 trusted contacts."
 - [ ] Turn on airplane mode. Hold and wait out the countdown: the screen shows "Saved on this phone. It will send automatically when you have signal." Never "sent" or "on its way."
-- [ ] In DevTools → Application → IndexedDB, confirm exactly one entry in `cape-weather-queue`
+- [ ] In DevTools → Application → IndexedDB, confirm exactly one entry in `clear-sky-queue`
 - [ ] Turn airplane mode off. Within about 30 seconds, the screen moves to "Your alert is on its way" on its own, with no tap needed. The IndexedDB entry is gone.
 - [ ] Swipe the app away while queued, reconnect, reopen the app: the alert still delivers and the dashboard shows it
 - [ ] Undo during the countdown creates no IndexedDB entry
 - [ ] Quick exit while queued lands on the weather page. The alert still delivers in the background, because `queue.js` is loaded there too.
-- [ ] PWA still installs and opens offline with the updated cache (check the service worker shows `cape-weather-shell-v3` in DevTools)
+- [ ] PWA still installs and opens offline with the updated cache (check the service worker shows `clear-sky-shell-v3` in DevTools)
 - [ ] Everything from the Stage 1 checklist still passes
 - [ ] Git tag `stage-2` exists once checklist passes
 
-## Stage 3 Checklist (Gate Verification)
-- [ ] Tapping "Find help" opens `help.html` and renders shelter cards without sending coordinates to any remote server.
+## Stage 3 Verification Checklist
+
+- [ ] Run test suite: `./venv/bin/python -m unittest discover -s tests -p 'test_*.py'` (all tests pass).
+- [ ] Tapping "Find help" opens `/survivor/help.html` and renders shelter cards without sending coordinates to any remote server.
 - [ ] Shelters display local distance in kilometers (e.g. `1.8 km away`) when location is permitted.
 - [ ] Shelters display a "Last updated" freshness timestamp based on `updated_at`.
 - [ ] Turn on **Airplane Mode** and reload `/survivor/help.html`: the shell loads from cache, and the shelter list loads via the network-first `/api/shelters` cache fallback.

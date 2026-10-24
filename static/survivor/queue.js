@@ -1,10 +1,10 @@
-/* Cape Weather: offline alert queue (Stage 2)
+/* Clear Sky: offline alert queue (Stage 2)
         - IndexedDB only, no libraries.
    Write first, send second: queueAlert() must resolve before survivor.js attempts to send. */
 (function (global) {
   "use strict";
 
-  var DB_NAME = "cape-weather-queue";
+  var DB_NAME = "clear-sky-queue";
   var STORE = "alerts";
   var DEVICE_TOKEN = "demo-device";
   var SEND_TIMEOUT_MS = 15000;   // generous: survives a Render cold start

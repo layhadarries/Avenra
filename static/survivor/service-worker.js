@@ -1,5 +1,5 @@
-const CACHE_NAME = 'cape-weather-shell-v6';
-const DATA_CACHE_NAME = 'cape-weather-data-v1';
+const CACHE_NAME = 'clear-sky-shell-v6';
+const DATA_CACHE_NAME = 'clear-sky-data-v1';
 
 const SHELL_ASSETS = [
   '/survivor/',
@@ -28,7 +28,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys
     .filter(key => key !== CACHE_NAME && key !== DATA_CACHE_NAME && (
-      key.startsWith('cape-weather-shell-') || key.startsWith('clear-sky-shell-')))
+      key.startsWith('clear-sky-shell-') || key.startsWith('clear-sky-shell-')))
     .map(key => caches.delete(key))))
     .then(() => self.clients.claim()));
 });

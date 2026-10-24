@@ -1,4 +1,4 @@
-/* SafePath / Cape Weather: Client-side Haversine shelter sorter (Stage 3).
+/* SafePath / Clear Sky: Client-side Haversine shelter sorter (Stage 3).
    Privacy guarantee: coordinates remain in local memory and are never uploaded. */
 (function () {
   "use strict";
