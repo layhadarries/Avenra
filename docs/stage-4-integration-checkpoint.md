@@ -8,7 +8,7 @@ Stage 3/4 PWA screens. It does not add individual survivor enrolment or staff MF
 - Panic alerts wait for a committed IndexedDB write before claiming local storage.
 - Only a matching server receipt moves an alert to the received state.
 - Storage failures, rejected credentials and mismatched receipts preserve truthful states.
-- The canonical cape-weather-queue is retained. Records from clear-sky-queue are
+- The canonical clear-sky-queue is retained. Records from clear-sky-queue are
   copied before legacy removal. Interrupted migration can replay an idempotent ID;
   conflicting payloads under the same ID stop migration rather than silently overwrite.
 - Quick exit preserves committed alerts and cancels unsaved preparation.

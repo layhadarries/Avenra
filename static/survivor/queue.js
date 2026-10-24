@@ -3,7 +3,7 @@
    protection remain release requirements. No closed-app delivery guarantee. */
 (function (global) {
   'use strict';
-  var DB_NAME = 'cape-weather-queue', STORE = 'alerts';
+  var DB_NAME = 'clear-sky-queue', STORE = 'alerts';
   var DEVICE_TOKEN = 'demo-device'; // Evaluation only; never a production credential.
   var dbPromise = null, flushPromise = null, flushAgain = false, retryTimer = null, retryIndex = 0;
   var listeners = [], BACKOFF = [5000, 15000, 30000];

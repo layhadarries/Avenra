@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1d6f72">
+    <title>Clear Sky</title>
+    <link rel="manifest" href="/survivor/manifest.json">
+    <link rel="icon" href="/survivor/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body {
+            background-color: var(--warm-bg);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .diary-wrap {
+            max-width: 480px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 1rem 1.25rem 5rem;
+            flex: 1;
+        }
+        .pwa-header {
+            padding: 1rem 1.25rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pwa-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: var(--navy);
+        }
+        .quick-exit-pill {
+            background: var(--navy);
+            color: #ffffff;
+            border: none;
+            padding: 0.35rem 0.85rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .back-link {
+            display: inline-block;
+            color: var(--teal);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+        .diary-title {
+            font-size: 1.25rem;
+            color: var(--navy);
+            margin: 0 0 0.35rem;
+            font-weight: 700;
+        }
+        .diary-subtitle {
+            font-size: 0.85rem;
+            color: var(--dusty-blue);
+            margin: 0 0 1rem;
+            line-height: 1.4;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.15rem;
+            margin-bottom: 1rem;
+            box-shadow: var(--shadow);
+        }
+        .form-label {
+            display: block;
+            font-weight: 600;
+            font-size: 0.92rem;
+            color: var(--navy);
+            margin-bottom: 0.35rem;
+        }
+        .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.92rem;
+            color: var(--navy);
+            resize: vertical;
+            background: var(--surface);
+            box-sizing: border-box;
+        }
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--teal);
+        }
+        .form-help-row {
+            display: flex;
+            justify-content: flex-end;
+            font-size: 0.75rem;
+            color: var(--dusty-blue);
+            margin-top: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .photo-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.85rem;
+        }
+        .photo-helper {
+            font-size: 0.78rem;
+            color: var(--dusty-blue);
+            line-height: 1.3;
+            flex: 1;
+            min-width: 160px;
+        }
+        .preview-wrap {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: var(--warm-bg);
+            border-radius: 6px;
+            border: 1px dashed var(--border);
+        }
+        .photo-preview-img {
+            max-width: 100%;
+            max-height: 220px;
+            display: block;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            object-fit: contain;
+        }
+        .preview-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .meta-tag {
+            font-size: 0.75rem;
+            color: var(--dusty-blue);
+            font-weight: 500;
+        }
+        .btn-danger-outline {
+            background: transparent;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+            padding: 0.3rem 0.65rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .share-card {
+            background: #f1f5f9;
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .share-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            cursor: pointer;
+        }
+        .share-toggle-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--teal);
+            cursor: pointer;
+        }
+        .share-label-title {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--navy);
+        }
+        .share-caption {
+            font-size: 0.78rem;
+            color: var(--dusty-blue);
+            margin: 0.35rem 0 0 1.8rem;
+            line-height: 1.35;
+        }
+        .consent-status-note {
+            font-size: 0.78rem;
+            margin-top: 0.4rem;
+            margin-left: 1.8rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .consent-active {
+            background: var(--green-bg);
+            color: var(--green);
+            font-weight: 600;
+        }
+        .consent-revoked {
+            background: #fee2e2;
+            color: #b91c1c;
+            font-weight: 600;
+        }
+        .status-banner {
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.75rem;
+            text-align: center;
+        }
+        .status-saving {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+        .status-local {
+            background: var(--amber-bg);
+            color: var(--amber);
+        }
+        .status-server {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        .status-error {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .section-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 1.5rem 0 0.5rem;
+        }
+        .entries-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .entry-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 0.85rem 1rem;
+            box-shadow: var(--shadow);
+        }
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.35rem;
+        }
+        .entry-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+        .badge-queued {
+            background: var(--amber-bg);
+            color: var(--amber);
+        }
+        .badge-stored {
+            background: var(--green-bg);
+            color: var(--green);
+        }
+        .entry-time {
+            font-size: 0.75rem;
+            color: var(--dusty-blue);
+        }
+        .entry-note-preview {
+            font-size: 0.86rem;
+            color: var(--navy);
+            margin-bottom: 0.35rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .entry-meta-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            font-size: 0.72rem;
+            color: var(--dusty-blue);
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 0.65rem 0.5rem;
+            z-index: 100;
+        }
+        .bottom-nav button {
+            background: none;
+            border: none;
+            text-align: center;
+            font-size: 0.82rem;
+            color: var(--dusty-blue);
+            font-weight: 600;
+            padding: 0.35rem 0;
+            cursor: pointer;
+        }
+        .bottom-nav button.active {
+            color: var(--teal);
+        }
+    </style>
+</head>
+<body>
+    <header class="pwa-header">
+        <span class="pwa-title">Clear Sky</span>
+        <button type="button" id="quick-exit-btn" class="quick-exit-pill">Quick exit</button>
+    </header>
+
+    <main class="diary-wrap">
+        <a href="/survivor/" class="back-link">&larr; Home</a>
+        <h1 class="diary-title">Incident Diary</h1>
+        <p class="diary-subtitle">
+            Securely record notes and attach evidence photos. Entries are saved on this phone when offline and uploaded to your account vault when connected.
+        </p>
+
+        <section class="card" aria-label="New diary entry">
+            <label for="diary-note" class="form-label">Note / Incident details</label>
+            <textarea id="diary-note" maxlength="4000" rows="5" class="form-textarea" placeholder="Describe the incident, date, time, location, or details…"></textarea>
+            <div class="form-help-row">
+                <span id="char-count">0 / 4000</span>
+            </div>
+
+            <input type="file" id="diary-photo-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+            
+            <div class="photo-controls">
+                <button type="button" id="add-photo-btn" class="btn btn-outline">📷 Attach photo</button>
+                <span class="photo-helper">Selecting an image keeps the original safe in your gallery. Metadata is stripped before save.</span>
+            </div>
+
+            <div id="photo-preview-wrap" class="preview-wrap" hidden>
+                <img id="photo-preview" src="" alt="Selected photo preview" class="photo-preview-img">
+                <div class="preview-meta">
+                    <span id="photo-size-info" class="meta-tag"></span>
+                    <button type="button" id="remove-photo-btn" class="btn btn-danger-outline">Remove photo</button>
+                </div>
+            </div>
+
+            <div class="share-card">
+                <label class="share-toggle-row">
+                    <input type="checkbox" id="diary-share-toggle">
+                    <span class="share-label-title">Share this entry with assigned responder</span>
+                </label>
+                <p class="share-caption">
+                    Private by default. Unshared entries are stored only in your private vault and cannot be seen by caseworkers.
+                </p>
+                <div id="consent-status-badge" class="consent-status-note consent-active" hidden>
+                    Diary sharing consent is active
+                </div>
+            </div>
+
+            <button type="button" id="diary-save-btn" class="btn btn-primary" style="width: 100%;">Save to Diary</button>
+
+            <div id="diary-status" class="status-banner" role="status" aria-live="polite" hidden></div>
+        </section>
+
+        <section aria-label="Entries list">
+            <h2 class="section-title">Saved Entries &amp; Vault Receipts</h2>
+            <p style="font-size: 0.8rem; color: var(--dusty-blue); margin-bottom: 0.75rem;">
+                Server receipts confirm your entries are stored. Items saved while offline are queued and will upload automatically.
+            </p>
+            <div id="diary-entries-list" class="entries-list">
+                <p style="font-size: 0.85rem; color: var(--dusty-blue);">Loading entries…</p>
+            </div>
+            <button type="button" id="sync-refresh-btn" class="btn btn-outline" style="width: 100%; margin-top: 1rem;">Refresh &amp; retry uploads</button>
+        </section>
+    </main>
+
+    <nav class="bottom-nav">
+        <button type="button" onclick="location.href='/survivor/'">Home</button>
+        <button type="button" onclick="location.href='/survivor/help.html'">Find help</button>
+        <button type="button" class="active">Diary</button>
+        <button type="button" onclick="location.href='/survivor/#more'">More</button>
+    </nav>
+
+    <script src="/survivor/shell.js" defer></script>
+    <script src="/survivor/diary.js" defer></script>
+</body>
+</html>

@@ -14,7 +14,7 @@ const context = {
     skipWaiting:()=>Promise.resolve(),clients:{claim:()=>Promise.resolve()}},
   caches: {
     open:async()=>({addAll:async()=>{}, match:async()=>{matches++;return 'public shell';}}),
-    keys:async()=>['cape-weather-shell-v3','clear-sky-shell-v1','unrelated-app-cache'],
+    keys:async()=>['clear-sky-shell-v3','clear-sky-shell-v1','unrelated-app-cache'],
     delete:async key=>{deleted.push(key);return true;}
   },
   fetch:async()=>{network++;return 'network';}
@@ -37,6 +37,6 @@ async function fetchCase(pathname,method='GET') {
   let activation;
   handlers.activate({waitUntil:promise=>activation=promise});
   await activation;
-  assert.deepEqual(deleted.sort(),['cape-weather-shell-v3','clear-sky-shell-v1'].sort());
+  assert.deepEqual(deleted.sort(),['clear-sky-shell-v3','clear-sky-shell-v1'].sort());
   console.log('PASS: public shell served; APIs, staff routes, writes, query URLs and external URLs excluded; unrelated caches preserved.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

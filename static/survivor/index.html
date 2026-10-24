@@ -206,6 +206,10 @@
                         location.href = "/survivor/help.html";
                         return;
                     }
+                    if (tab === "diary") {
+                        location.href = "/survivor/diary.html";
+                        return;
+                    }
                     navButtons.forEach(function (b) { b.classList.remove("active"); });
                     btn.classList.add("active");
                     if (tab === "more") {

@@ -1,6 +1,6 @@
 # Stage 2 PWA integration checkpoint
 
-The five-contact limit supersedes the original three-contact handout. The server returns masked numbers with four trailing digits. The public shell cache is `cape-weather-shell-v5`.
+The five-contact limit supersedes the original three-contact handout. The server returns masked numbers with four trailing digits. The public shell cache is `clear-sky-shell-v5`.
 
 ## Behaviour
 

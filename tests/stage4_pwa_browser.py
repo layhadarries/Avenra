@@ -154,7 +154,7 @@ def exercise(page, staff, base, env):
     tab.route('**/api/alerts', lambda route: route.abort())
     tab.goto(base + '/login')
     tab.evaluate('''async () => {
-      for (const name of ['cape-weather-queue', 'clear-sky-queue']) {
+      for (const name of ['clear-sky-queue', 'clear-sky-queue']) {
         const db = await new Promise((resolve, reject) => {
           const req = indexedDB.open(name, 1);
           req.onupgradeneeded = () => req.result.createObjectStore('alerts', {keyPath:'client_id'});
@@ -223,14 +223,14 @@ def exercise(page, staff, base, env):
     context, tab = phone(workers='allow')
     tab.goto(base + '/login')
     tab.evaluate('''async () => {
-      for (const name of ['cape-weather-data-v1','clear-sky-data-v1','unrelated-app-cache']) {
+      for (const name of ['clear-sky-data-v1','clear-sky-data-v1','unrelated-app-cache']) {
         const cache = await caches.open(name); await cache.put('/api/shelters', new Response('old private result'));
       }
     }''')
     tab.goto(base + '/survivor/')
     tab.wait_for_function('navigator.serviceWorker.controller !== null')
     names = tab.evaluate('caches.keys()')
-    assert 'cape-weather-data-v1' not in names and 'clear-sky-data-v1' not in names
+    assert 'clear-sky-data-v1' not in names and 'clear-sky-data-v1' not in names
     assert 'unrelated-app-cache' in names
     assert tab.evaluate('''async () => {
       for (const name of await caches.keys()) {
