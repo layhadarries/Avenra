@@ -126,19 +126,19 @@
 <body>
     <header class="pwa-header">
         <span class="pwa-title">Clear Sky</span>
-        <button type="button" id="quick-exit" class="quick-exit-pill">Quick exit</button>
+        <button type="button" id="quick-exit-btn" class="quick-exit-pill">Quick exit</button>
     </header>
 
-    <main class="pwa-main" id="pwa-main">
+    <main class="pwa-main">
         <section id="view-ready" class="view">
-            <button type="button" id="panic-btn" class="panic-ring" aria-label="Hold to send alert">
-                <span class="panic-ring-inner">Hold to send alert</span>
+            <button type="button" id="panic-btn" class="panic-btn" aria-label="Send emergency alert">
+                <span class="panic-btn-inner">HELP</span>
             </button>
-            <p class="panic-caption">Sends an alert to the support service. Contact notifications depend on availability.</p>
             <label class="location-toggle-row">
-                <input type="checkbox" id="share-alert-location">
-                <span>Include my location for this alert, if sharing consent is enabled.</span>
+                <input type="checkbox" id="share-location-toggle" checked>
+                <span>Share location with responders</span>
             </label>
+            <p class="panic-caption">Tap HELP to notify the responders and your contacts</p>
             <p class="queue-note" id="queue-note" hidden></p>
         </section>
 

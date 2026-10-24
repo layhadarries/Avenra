@@ -99,25 +99,25 @@
             padding: 0.15rem 0.5rem;
             border-radius: 4px;
         }
-        .shelter-detail {
-            font-size: 0.83rem;
+        .shelter-body {
+            font-size: 0.88rem;
             color: var(--dusty-blue);
-            margin: 0.2rem 0;
+            line-height: 1.4;
+            margin-bottom: 0.75rem;
         }
-        .shelter-detail strong {
-            color: var(--navy);
+        .shelter-actions {
+            display: flex;
+            gap: 0.5rem;
         }
-        .directions-btn {
-            display: inline-block;
-            margin-top: 0.65rem;
-            padding: 0.45rem 0.9rem;
-            background: var(--teal);
-            color: #ffffff;
-            font-size: 0.82rem;
-            font-weight: 600;
-            border-radius: 6px;
-            text-decoration: none;
+        .shelter-actions .btn {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.85rem;
+        }
+        .empty-state {
             text-align: center;
+            padding: 2.5rem 1rem;
+            color: var(--dusty-blue);
         }
         .bottom-nav {
             position: fixed;
@@ -129,7 +129,7 @@
             background: var(--surface);
             border-top: 1px solid var(--border);
             padding: 0.65rem 0.5rem;
-            z-index: 50;
+            z-index: 100;
         }
         .bottom-nav button {
             background: none;

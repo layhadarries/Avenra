@@ -118,3 +118,4 @@ class Stage5DiaryIntegrationTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+    
