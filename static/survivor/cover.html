@@ -3,127 +3,440 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#1d6f72">
+    <meta name="theme-color" content="#d6ebf9">
     <title>Clear Sky</title>
     <link rel="manifest" href="/survivor/manifest.json">
     <link rel="icon" href="/survivor/icons/icon-192.png">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
     <style>
+        :root {
+            --sky-top: #d6ebf9;
+            --sky-bottom: #f0f7fb;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --card-bg: rgba(255, 255, 255, 0.6);
+            --navy: #1d6f72;
+            --border: #cbd5e1;
+        }
         body {
-            background: #e6f0f0;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(to bottom, var(--sky-top), var(--sky-bottom));
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
             -webkit-user-select: none;
             user-select: none;
         }
-        .wx {
-            max-width: 480px;
-            margin: 0 auto;
-            padding: 1.75rem 1.25rem 2.5rem;
-        }
-        .wx-top {
-            text-align: center;
-            padding-top: 0.5rem;
-        }
-        .wx-place {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--navy);
-        }
-        .wx-temp {
-            font-size: 5.5rem;
-            font-weight: 300;
-            line-height: 1.05;
-            margin: 0.5rem 0;
-            color: var(--navy);
-            cursor: default;
-            touch-action: manipulation;
-        }
-        .wx-desc {
-            color: var(--dusty-blue);
-            font-size: 0.95rem;
-        }
-        .wx-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.6rem;
-            margin: 1.5rem 0;
-        }
-        .wx-stat {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 0.7rem 0.4rem;
-            text-align: center;
-            font-size: 0.78rem;
-            color: var(--dusty-blue);
-            box-shadow: var(--shadow);
-        }
-        .wx-stat strong {
-            display: block;
-            color: var(--navy);
-            font-size: 0.95rem;
-            margin-top: 0.15rem;
-        }
-        .wx-days {
-            background: var(--surface);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            overflow: hidden;
-        }
-        .wx-day {
+        .header-top {
             display: flex;
             justify-content: space-between;
-            padding: 0.8rem 1rem;
-            border-top: 1px solid var(--border);
+            padding: 1rem;
+        }
+        .header-pill {
+            background: var(--card-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        /* Dynamic Location Navigation */
+        .locations-scroll {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0 1rem 0.5rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            align-items: center;
+        }
+        .locations-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .loc-btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .loc-btn.active {
+            background: #1e293b;
+            color: #ffffff;
+        }
+        .add-loc-btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .date-display {
+            padding: 0 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+        /* Weather Main Display */
+        .weather-main {
+            text-align: center;
+            padding: 1rem;
+        }
+        .weather-icon {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+        }
+        .temp-main {
+            font-size: 4.5rem;
+            font-weight: 300;
+            line-height: 1;
+            margin: 0;
+            letter-spacing: -2px;
+        }
+        .condition {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0.5rem 0;
+        }
+        .high-low {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+        /* Forecast Cards */
+        .forecast-container {
+            padding: 1rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 1rem;
+            backdrop-filter: blur(10px);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            margin-bottom: 1rem;
+        }
+        .hourly-row {
+            display: flex;
+            justify-content: space-between;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .hourly-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .daily-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
             font-size: 0.95rem;
+            font-weight: 500;
         }
-        .wx-day:first-child {
-            border-top: none;
+        .daily-row:last-child {
+            border-bottom: none;
         }
-        .wx-day span:last-child {
-            color: var(--dusty-blue);
+        .bar-container {
+            flex: 1;
+            margin: 0 1rem;
+            height: 4px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 2px;
+            position: relative;
+        }
+        .bar-fill {
+            position: absolute;
+            height: 100%;
+            background: #f59e0b;
+            border-radius: 2px;
+        }
+        /* Secret Trigger */
+        .secret-trigger {
+            cursor: pointer;
+        }
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-card {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 16px;
+            width: 80%;
+            max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .modal-card h3 {
+            margin: 0 0 1rem;
+            font-size: 1.1rem;
+        }
+        .modal-card input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        .modal-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-btn.cancel {
+            background: #f1f5f9;
+            color: var(--text-muted);
+        }
+        .modal-btn.add {
+            background: var(--navy);
+            color: #fff;
         }
     </style>
 </head>
 <body>
-    <script src="/survivor/queue.js" defer></script>
-    <main class="wx">
-        <div class="wx-top">
-            <div class="wx-place">Cape Town</div>
-            <div class="wx-temp" id="wx-temp">19°</div>
-            <div class="wx-desc">Partly cloudy · H:22° L:13°</div>
+
+    <div class="header-top">
+        <div class="header-pill">📍 <span id="header-loc">Cape Town</span></div>
+        <div class="header-pill">⌖ My area</div>
+    </div>
+
+    <!-- Dynamic Location Chips -->
+    <div class="locations-scroll" id="location-chips">
+        <button type="button" class="loc-btn active" data-loc="current">My current location</button>
+        <button type="button" class="loc-btn" data-loc="Cape Town">Cape Town</button>
+        <!-- Custom locations will be appended here -->
+        <button type="button" id="btn-add-location" class="add-loc-btn" aria-label="Add location">+</button>
+    </div>
+
+    <div class="date-display" id="date-text">Saturday, 24 October</div>
+
+    <div class="weather-main">
+        <div class="weather-icon">⛅</div>
+        <h1 class="temp-main">18°</h1>
+        <div class="condition">Partly cloudy</div>
+        <div class="high-low">H 22° · L 15° · Feels like 17°</div>
+    </div>
+
+    <div class="forecast-container">
+        <!-- Hourly -->
+        <div class="card">
+            <div class="card-header">
+                <span>HOURLY FORECAST</span>
+                <span>18 KM/H</span>
+            </div>
+            <div class="hourly-row">
+                <div class="hourly-item"><span>Now</span><span>☁️</span><span>19°</span></div>
+                <div class="hourly-item"><span>19:00</span><span>☁️</span><span>20°</span></div>
+                <div class="hourly-item"><span>20:00</span><span>☀️</span><span>22°</span></div>
+                <div class="hourly-item"><span>21:00</span><span>☁️</span><span>21°</span></div>
+                <div class="hourly-item"><span>22:00</span><span>☁️</span><span>19°</span></div>
+                <div class="hourly-item"><span>23:00</span><span>☁️</span><span>17°</span></div>
+            </div>
         </div>
 
-        <div class="wx-stats">
-            <div class="wx-stat">Wind<strong>SE 24 km/h</strong></div>
-            <div class="wx-stat">Humidity<strong>61%</strong></div>
-            <div class="wx-stat">UV<strong>6 High</strong></div>
+        <!-- 7-Day -->
+        <div class="card">
+            <div class="card-header">
+                <span>7-DAY FORECAST</span>
+                <span class="secret-trigger" id="secret-enter">TAP DAY FOR ALERTS</span>
+            </div>
+            <div class="daily-row">
+                <span style="width: 50px;">Today</span><span>☁️</span>
+                <span style="width: 25px; text-align: right;">15°</span>
+                <div class="bar-container"><div class="bar-fill" style="left: 20%; right: 40%;"></div></div>
+                <span style="width: 25px;">22°</span>
+            </div>
+            <div class="daily-row">
+                <span style="width: 50px;">Sun</span><span>☁️</span>
+                <span style="width: 25px; text-align: right;">15°</span>
+                <div class="bar-container"><div class="bar-fill" style="left: 20%; right: 40%;"></div></div>
+                <span style="width: 25px;">22°</span>
+            </div>
+            <div class="daily-row">
+                <span style="width: 50px;">Mon</span><span>🌧️</span>
+                <span style="width: 25px; text-align: right;">15°</span>
+                <div class="bar-container"><div class="bar-fill" style="left: 20%; right: 40%;"></div></div>
+                <span style="width: 25px;">22°</span>
+            </div>
+            <div class="daily-row">
+                <span style="width: 50px;">Tue</span><span>⛅</span>
+                <span style="width: 25px; text-align: right;">13°</span>
+                <div class="bar-container"><div class="bar-fill" style="left: 10%; right: 30%; background: #fbbf24;"></div></div>
+                <span style="width: 25px;">23°</span>
+            </div>
         </div>
+    </div>
 
-        <section class="wx-days" aria-label="5-day forecast">
-            <div class="wx-day"><span>Sat</span><span>Partly cloudy · 22° / 13°</span></div>
-            <div class="wx-day"><span>Sun</span><span>Sunny · 24° / 14°</span></div>
-            <div class="wx-day"><span>Mon</span><span>Partly cloudy · 23° / 15°</span></div>
-            <div class="wx-day"><span>Tue</span><span>Showers · 18° / 12°</span></div>
-            <div class="wx-day"><span>Wed</span><span>Sunny · 20° / 13°</span></div>
-        </section>
-    </main>
+    <!-- Add Location Modal -->
+    <div class="modal-overlay" id="add-modal">
+        <div class="modal-card">
+            <h3>Add a location</h3>
+            <input type="text" id="new-loc-input" placeholder="e.g. Stellenbosch">
+            <div class="modal-actions">
+                <button type="button" class="modal-btn cancel" id="btn-cancel-loc">Cancel</button>
+                <button type="button" class="modal-btn add" id="btn-save-loc">Add</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // Hidden way back to the panic screen: press and hold the temperature.
-        (function () {
-            var temp = document.getElementById("wx-temp");
-            var timer = null;
-            function start() {
-                timer = setTimeout(function () { location.replace("/survivor/"); }, 900);
-            }
-            function stop() {
-                clearTimeout(timer);
-                timer = null;
-            }
-            temp.addEventListener("pointerdown", start);
-            ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) {
-                temp.addEventListener(ev, stop);
+        (function() {
+            "use strict";
+
+            // Disguise entry point to actual app
+            document.getElementById('secret-enter').addEventListener('click', function() {
+                location.href = '/survivor/index.html';
             });
-            temp.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+            // Set current date
+            const dateOpts = { weekday: 'long', day: 'numeric', month: 'long' };
+            document.getElementById('date-text').textContent = new Date().toLocaleDateString('en-ZA', dateOpts);
+
+            const container = document.getElementById('location-chips');
+            const addBtn = document.getElementById('btn-add-location');
+            const modal = document.getElementById('add-modal');
+            const cancelBtn = document.getElementById('btn-cancel-loc');
+            const saveBtn = document.getElementById('btn-save-loc');
+            const locInput = document.getElementById('new-loc-input');
+            const headerLoc = document.getElementById('header-loc');
+
+            // Load custom locations from local storage
+            let customLocations = JSON.parse(localStorage.getItem('cw_custom_locations') || '[]');
+
+            function createChip(name) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'loc-btn';
+                btn.dataset.loc = name;
+                btn.textContent = name;
+                return btn;
+            }
+
+            function renderCustomChips() {
+                // Remove existing custom chips (everything between Cape Town and the + button)
+                const existing = container.querySelectorAll('.loc-btn[data-custom="true"]');
+                existing.forEach(e => e.remove());
+
+                customLocations.forEach(loc => {
+                    const chip = createChip(loc);
+                    chip.dataset.custom = "true";
+                    container.insertBefore(chip, addBtn);
+                });
+            }
+
+            function setActiveChip(targetBtn) {
+                container.querySelectorAll('.loc-btn').forEach(btn => btn.classList.remove('active'));
+                targetBtn.classList.add('active');
+                
+                const locName = targetBtn.dataset.loc;
+                if (locName === 'current') {
+                    headerLoc.textContent = "Locating...";
+                    // Trigger real geolocation
+                    if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                            function(pos) {
+                                // In a real app, this lat/lng fetches weather data via an API
+                                headerLoc.textContent = "Current Area";
+                            },
+                            function(err) {
+                                headerLoc.textContent = "Location Denied";
+                            }
+                        );
+                    }
+                } else {
+                    headerLoc.textContent = locName;
+                }
+            }
+
+            // Event delegation for chips
+            container.addEventListener('click', function(e) {
+                if (e.target.classList.contains('loc-btn')) {
+                    setActiveChip(e.target);
+                }
+            });
+
+            // Modal Logic
+            addBtn.addEventListener('click', function() {
+                modal.classList.add('active');
+                locInput.value = '';
+                locInput.focus();
+            });
+
+            cancelBtn.addEventListener('click', function() {
+                modal.classList.remove('active');
+            });
+
+            saveBtn.addEventListener('click', function() {
+                const val = locInput.value.trim();
+                if (val && !customLocations.includes(val) && val.toLowerCase() !== 'cape town') {
+                    customLocations.push(val);
+                    localStorage.setItem('cw_custom_locations', JSON.stringify(customLocations));
+                    renderCustomChips();
+                    
+                    // Auto-select the newly added chip
+                    const newBtn = container.querySelector(`.loc-btn[data-loc="${val}"]`);
+                    if (newBtn) setActiveChip(newBtn);
+                }
+                modal.classList.remove('active');
+            });
+
+            // Initialize
+            renderCustomChips();
+            
+            // Default to current location on load
+            const currentLocBtn = container.querySelector('[data-loc="current"]');
+            if (currentLocBtn) setActiveChip(currentLocBtn);
+
         })();
     </script>
 </body>

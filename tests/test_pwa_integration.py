@@ -69,7 +69,7 @@ class PWAIntegrationTests(unittest.TestCase):
     def test_shell_and_manifest_use_same_identity_and_offline_assets(self):
         with self.client.get('/survivor/manifest.json',buffered=True) as response:
             manifest=response.json
-        self.assertEqual(manifest['name'],'Cape Weather')
+        self.assertEqual(manifest['name'],'Clear Sky')
         with self.client.get('/survivor/',buffered=True) as response:
             html=response.get_data(as_text=True)
         self.assertIn('<title>'+manifest['name']+'</title>',html)
