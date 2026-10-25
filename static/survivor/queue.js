@@ -85,9 +85,126 @@
       });
     });
   }
-  function queueAlert(item) {
-    return transaction('readwrite', function (store) { return store.put(item); })
-      .then(function () { emit({type: 'queued', client_id: item.client_id}); });
+    // Non-secret account metadata. The HttpOnly cookie remains the authority.
+  var OWNER_KEY = 'clear-sky-alert-owner-v1';
+  var activeOwner = null;
+
+  function ownershipError(message) {
+    var error = new Error(message);
+    error.status = 409;
+    return error;
+  }
+
+  function validOwner(value) {
+    return Number.isSafeInteger(value) && value > 0;
+  }
+
+  function savedOwner() {
+    try {
+      var value = localStorage.getItem(OWNER_KEY);
+      if (!value || !/^[1-9][0-9]*$/.test(value)) return null;
+      var owner = Number(value);
+      return validOwner(owner) ? owner : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function refreshOwner() {
+    return request('/api/device', {}, 3000).then(function (body) {
+      if (!body || !validOwner(body.account_id)) {
+        throw ownershipError('device_identity_unavailable');
+      }
+
+      var owner = body.account_id;
+      try {
+        localStorage.setItem(OWNER_KEY, String(owner));
+      } catch (_) {}
+
+      // An open page must not silently switch to another person's account.
+      if (activeOwner !== null && activeOwner !== owner) {
+        throw ownershipError('account_changed_reload_required');
+      }
+
+      activeOwner = owner;
+      return owner;
+    }, function (error) {
+      if (error.status === 401 || error.status === 403) {
+        activeOwner = null;
+        try { localStorage.removeItem(OWNER_KEY); } catch (_) {}
+      }
+      throw error;
+    });
+  }
+
+  function captureOwner() {
+    function offlineOwner() {
+      var owner = activeOwner || savedOwner();
+      if (!validOwner(owner)) {
+        throw ownershipError('connect_device_before_offline_capture');
+      }
+      activeOwner = owner;
+      return owner;
+    }
+
+    if (navigator.onLine === false) {
+      return Promise.resolve().then(offlineOwner);
+    }
+
+    return refreshOwner().catch(function (error) {
+      // Never override an authentication failure or identity mismatch.
+      if (error.status && error.status < 500) throw error;
+      return offlineOwner();
+    });
+  }
+    function queueAlert(item) {
+    if (
+      !item ||
+      typeof item.client_id !== 'string' ||
+      !item.client_id.trim()
+    ) {
+      return Promise.reject(ownershipError('client_id_required'));
+    }
+
+    // Copy immediately so later caller mutations cannot alter this capture.
+    var captured = Object.assign({}, item);
+
+    return captureOwner().then(function (owner) {
+      if (
+        Object.prototype.hasOwnProperty.call(captured, 'owner_id') &&
+        captured.owner_id !== owner
+      ) {
+        throw ownershipError('queue_owner_mismatch');
+      }
+
+      var bound = Object.assign({}, captured, {owner_id: owner});
+
+      return openDb().then(function (db) {
+        return new Promise(function (resolve, reject) {
+          var tx = db.transaction(STORE, 'readwrite');
+          var store = tx.objectStore(STORE);
+          var failure = null;
+
+          tx.oncomplete = function () { resolve(); };
+          tx.onerror = tx.onabort = function () {
+            reject(failure || new Error('storage_unavailable'));
+          };
+
+          var existing = store.get(bound.client_id);
+          existing.onsuccess = function () {
+            // Never overwrite or adopt an existing pending record.
+            if (existing.result !== undefined) {
+              failure = ownershipError('queued_record_already_exists');
+              tx.abort();
+              return;
+            }
+            store.put(bound);
+          };
+        });
+      }).then(function () {
+        emit({type: 'queued', client_id: bound.client_id});
+      });
+    });
   }
   function removeAlert(id) {
     return transaction('readwrite', function (store) { return store.delete(id); });
@@ -117,22 +234,52 @@
       });
     }, function () { return false; });
   }
-  function sendOne(item) {
-    return locationPermitted().then(function (allowed) {
+    function sendOne(item) {
+    if (!validOwner(item.owner_id)) {
+      return Promise.reject(
+        ownershipError('legacy_queue_owner_unknown')
+      );
+    }
+
+    return refreshOwner().then(function (owner) {
+      if (owner !== item.owner_id) {
+        throw ownershipError('queue_owner_mismatch');
+      }
+      return locationPermitted();
+    }).then(function (allowed) {
       var payload = Object.assign({}, item);
+      delete payload.owner_id;
+
       if (!allowed) {
         payload.lat = payload.lng = null;
         payload.location_accuracy = payload.location_recorded_at = null;
       }
+
       return request('/api/alerts', {
-        method: 'POST', keepalive: true, headers: {'Content-Type': 'application/json'},
+        method: 'POST',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Queue-Owner': String(item.owner_id)
+        },
         body: JSON.stringify(payload)
       }, 15000);
     }).then(function (receipt) {
-      if (!receipt || !Number.isInteger(receipt.id) || receipt.id < 1 || receipt.client_id !== item.client_id)
+      if (
+        !receipt ||
+        !Number.isInteger(receipt.id) ||
+        receipt.id < 1 ||
+        receipt.client_id !== item.client_id
+      ) {
         throw new Error('invalid_receipt');
+      }
+
       return removeAlert(item.client_id).then(function () {
-        emit({type: 'sent', client_id: item.client_id, receipt: receipt});
+        emit({
+          type: 'sent',
+          client_id: item.client_id,
+          receipt: receipt
+        });
       });
     });
   }
@@ -168,7 +315,11 @@
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible') flushQueue();
   });
+    var ownerReady = refreshOwner().catch(function () {
+    return null;
+  });
   global.CWQueue = {
+    ready: ownerReady,
     queueAlert: queueAlert, flushQueue: flushQueue,
     queueSize: function () { return allAlerts().then(function (items) { return items.length; }); },
     onFlushed: function (fn) { listeners.push(fn); },

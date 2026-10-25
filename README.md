@@ -1,187 +1,156 @@
 # Avenra
 
-A survivor-facing PWA and role-based staff portal under development. Python/Flask
-controllers, services and repositories live in `avenra/`; `app.py` remains the
-Gunicorn compatibility entrypoint. Backend APIs for alerts, consents, diary and
-referrals are present; the Stage 0 staff interface is an initial shell. Live alert
-triage, evidence views and the audit browser are not completed interfaces.
+Avenra — “a new avenue” — connects people experiencing unsafe situations
+with trusted contacts and authorised support staff.
 
-This Stage 0 backend delivery is suitable for synthetic evaluation. It is not a
-production security certification or a live emergency response service. See
-`docs/STAGE0_STATUS.md` for remaining release gates.
+The project combines a discreet survivor PWA, presented as **Clear Sky**,
+with a role-based **Avenra staff dashboard**.
 
-## Start locally in Fish (CachyOS)
+Developed for the FNB hackathon. This is an actively developed prototype,
+not a guaranteed emergency-response service.
 
-From the project directory, install the pinned dependencies:
+## Current status
+
+The staff dashboard is hosted on Vercel:
+https://avenra-delta.vercel.app/login
+
+Hosted staff invitations, password creation, normal login and global
+sign-out are working. The hosted database uses PostgreSQL through Supabase.
+
+Individual PWA device pairing and server-side queue ownership checks are
+implemented. Complete hosted PWA integration is still in progress.
+The current public app URL must not be treated as a completed release.
+
+## Features
+
+### Survivor PWA — Clear Sky
+
+- Discreet weather-style shell and Quick Exit.
+- Persistent offline alert queue with retry and receipt checking.
+- Trusted-contact management and opt-in Web Push invitations.
+- Location-sharing and other consent controls.
+- Private diary notes and JPEG photographs, with integrity hashes.
+- Offline diary capture and verified upload receipts.
+- Access history showing supported staff viewing events.
+- Browser installation manifest, service worker and installation page.
+
+### Staff dashboard
+
+- Email invitations with single-use password-setup links.
+- Role-based access for administrators, responders and shelter staff.
+- Explicit case assignments; administrator status alone grants no case access.
+- Alert triage, acknowledgement and consent-aware location display.
+- Nearby service searches within 25 or 50 kilometres.
+- Referral requests, acceptance, decline reasons and placement recording.
+- Shared diary access subject to assignment and consent.
+- Filtered audit history and access-denial recording.
+
+Service listings do not promise available beds or confirmed placement.
+Availability must be confirmed directly with the service.
+
+## Hosting and installation
+
+- Staff dashboard: `/login`
+- Survivor app: `/survivor/`
+- Installation instructions: `/survivor/install.html`
+- Authorised staff pairing controls: `/devices`
+
+Private pairing links expire after ten minutes and work once.
+The public QR opens the app; it does not grant account access.
+
+QR assets:
+- `static/survivor/clear-sky-app-qr.png`
+- `static/survivor/clear-sky-app-qr.svg`
+
+Installing the PWA does not guarantee background execution while closed.
+Offline capture and online delivery are different states.
+
+Vercel does not automatically run the project's persistent notification
+workers. Hosted notification dispatch needs a separately configured runner.
+
+## Local development — Fish
+
+Use Python, Node.js and a virtual environment.
 
 ```fish
 cd ~/Desktop/Avenra
 python3 -m venv .venv
 source .venv/bin/activate.fish
-python -m pip install -r requirements-lock.txt
-set -gx SECRET_KEY (python -c 'import secrets; print(secrets.token_urlsafe(48))')
-```
+python -m pip install -r requirements.txt
 
-Keep that terminal open: environment variables apply to it and its child processes.
-The application does not load `.env` automatically.
-
-For a **fictional evaluation**, choose a NEW database filename that has never held
-real data. Existing unmarked databases are refused; do not delete an existing
-database to get around that check.
-
-```fish
-set -gx APP_ENV evaluation
+# Keep this local session separate from hosted configuration.
+set -e DATABASE_URL PUBLIC_BASE_URL VERCEL VERCEL_ENV
+set -gx APP_ENV development
 set -gx COOKIE_SECURE 0
-set -gx DATABASE_PATH "$PWD/avenra-evaluation.sqlite3"
-set -gx UPLOADS_DIR "$PWD/evaluation-uploads"
+set -gx DATABASE_PATH "$PWD/avenra-local.sqlite3"
+set -gx UPLOADS_DIR "$PWD/local-uploads"
+set -gx SECRET_KEY (python -c 'import secrets; print(secrets.token_urlsafe(48))')
+
 python -m flask --app app run --port 5050
 ```
 
-Visit http://127.0.0.1:5050/evaluation for the Social worker and Shelter staff
-role buttons. These are deliberately public demo access, restricted to a marked,
-separate fictional database. There is no public admin shortcut or known staff
-password. Both role logins are CSRF protected and audited.
+Normal startup creates the local schema without seeding demonstration
+accounts. Keep the same secret and paths when restarting.
 
-Visit `/health` for the eight core table counts, or `/survivor/` for the existing
-PWA. The first initialization creates 4 fictional profiles, 3 shelters, 2 contacts
-and 3 consent records. Cape Town coordinates and capacity values are illustrative,
-not verified support locations or partners. Notifications are disabled in the
-evaluation app. Do not enter real information.
+The application does not automatically load `.env` files.
+Never commit database files, uploads, secrets or private backups.
 
-Restarting preserves records and deactivated accounts while the database exists.
-A fresh empty evaluation database gets the initial fixtures. There is no startup
-reset. These are different behaviours.
+Staff provisioning and email configuration are documented in
+[Staff invitations](docs/staff-email-invitations.md).
 
-## Normal staff authentication
+## Verification
 
-Use a different database path, set `APP_ENV=development` locally and
-`COOKIE_SECURE=0` only for local HTTP. Normal startup initializes the schema but
-does not seed accounts. Set the same secret and paths every time you restart.
-Changing the secret signs out existing browsers.
-
-For an existing database, stop the server and back it up/migrate before the first
-startup with this version:
-
-```fish
-python migrate_staff_security.py
-```
-
-The migration saves a private SQLite backup. It preserves existing activation and
-session versions; old accounts without activation columns become disabled.
-Normal startup leaves an empty account table. The controlled, one-time web owner
-setup and approved staff invitation workflow are **not implemented yet**. There
-is no `bootstrap_admin.py` in this repository and no public administrator signup.
-Use only the isolated fictional evaluation to review this checkpoint. Do not
-manually insert a real-data administrator as a workaround for missing onboarding.
-
-Use `/login` for email/password authentication. Sessions expire 15 minutes after
-sign-in; polling does not extend them. Logout is a CSRF-protected POST and
-invalidates all sessions for that account. Account disabling also takes effect
-on subsequent requests.
-
-## Test first
-
-Add a failing test for the next behaviour, run it to verify the expected failure,
-implement the smallest change, then run the targeted tests and full suite.
+Work test-first: reproduce the missing behaviour, implement it, then run
+the relevant regression checks.
 
 ```fish
 python -m unittest discover -s tests -p 'test_*.py' -v
-python tools/check_stage0.py
-python -m pip check
+node tests/service-worker-contract.cjs
 ```
 
-The smoke check runs local Gunicorn with temporary data, checks startup guards,
-role login and audit, then restarts to verify account state is preserved.
-It sends no messages. No GitHub Actions workflow is currently configured.
-This checkpoint was verified on Python 3.12. The JavaScript cache boundary tests
-run with Node; the optional browser checks require a separate development install
-of Playwright and its Chromium (not a production dependency):
+Browser checks require the development dependencies and Chromium:
 
 ```fish
-node --test tests/pwa-shell.cjs
-python tests/stage0_browser.py
+python -m pip install -r requirements-dev.txt
+python -m playwright install chromium
+python tests/hosted_pwa_pairing_browser.py
 ```
 
-Browser checks use temporary fictional data and start local Gunicorn. Mobile
-viewport checks do not replace installation testing on a physical Android phone.
+Tests use fictional data. Passing local SQLite tests does not establish
+that the hosted PostgreSQL deployment has passed integration testing.
 
-## Render deployment
+## Remaining release work
 
-No public URL has been deployed or verified for this delivery.
+- Bind queued alerts and diary entries to their original accounts.
+- Block mismatched or unbound legacy records without deleting them.
+- Complete hosted PWA identity and recovery flows.
+- Configure durable, private hosted diary storage.
+- Restore PostgreSQL certificate verification with the correct CA.
+- Verify hosted notification dispatch independently of a developer laptop.
+- Complete installed-phone testing over Wi-Fi, mobile data and reconnects.
+- Validate backup restoration, access controls and operational limits.
 
-For a no-cost fictional hackathon preview, create a Render Blueprint from your
-Git repository and set its Blueprint Path to `render.evaluation.yaml`.
-Review its generated service settings, deploy, then record the actual Render URL
-in `docs/STAGE0_STATUS.md`. Share `https://YOUR-ACTUAL-HOST/evaluation` with judges.
-This free service sleeps when idle and uses ephemeral storage: data may disappear
-on redeployment or replacement. It is unsuitable for emergencies or real records.
+Current Vercel diary writes remain blocked until durable private storage
+is configured. Use fictional incident data while release gates remain open.
 
-`render.yaml` is an alternative **paid persistent** profile, with the SQLite
-database and uploads under `/var/data`. Review Render's current compute and disk
-charges before deploying it. It enables HTTPS-only cookies, generates the secret,
-and runs `gunicorn app:app --workers 1 --threads 4`. It does not seed real-data
-accounts. Persistence does not replace tested backups, restore drills, encryption
-requirements, access reviews or the outstanding security work.
+## Architecture
 
-Both profiles install `requirements-lock.txt`. `.python-version` selects the
-latest Render-supported Python 3.12 patch. Keep `requirements.txt` and the lock file
-identical when updating dependencies. Neither file contains package hashes.
+- `avenra/controllers/` — HTTP routes and request handling.
+- `avenra/services/` — application behaviour and transaction boundaries.
+- `avenra/repositories/` — parameterised database access.
+- `avenra/models/` — domain models.
+- `static/survivor/` — Clear Sky PWA.
+- `templates/` and `static/js/` — staff interface.
+- `sql/` — hosted database migrations.
+- `tests/` — API, regression, browser and service-worker checks.
+- `tools/` — provisioning, deployment and verification utilities.
 
-References: [Blueprint specification](https://render.com/docs/blueprint-spec),
-[Python versions](https://render.com/docs/python-version),
-[free service limits](https://render.com/docs/free),
-[persistent disks](https://render.com/docs/disks).
+## Further documentation
 
-## Verify one SMS separately
-
-Twilio is a provisional verification channel, not a confirmed production supplier.
-The application webhook dispatcher is separate from this CLI; this test does not
-enable Twilio delivery from dashboard alerts.
-
-Default invocation is safe and offline:
-
-```fish
-python tools/sms_test.py
-```
-
-For an intentional, potentially billable test, configure your Twilio account,
-a sender authorized for the destination and your own consenting South African
-recipient. Enter values at prompts rather than pasting secrets into chat or
-committing them:
-
-```fish
-read --prompt-str 'Twilio Account SID: ' --export TWILIO_ACCOUNT_SID
-read --silent --prompt-str 'Twilio Auth Token: ' --export TWILIO_AUTH_TOKEN
-read --prompt-str 'Sender (+countrycode): ' --export TWILIO_FROM_NUMBER
-read --prompt-str 'Consenting recipient (+27...): ' --export TEST_RECIPIENT_PHONE
-python tools/sms_test.py --send
-```
-
-This sends one fixed, neutral test message. It does not include names, locations,
-case details or the product name. Do not repeat `--send` to check status: use
-`python tools/sms_test.py --status SM...` with the returned Message SID.
-An accepted, queued or sent status is not delivery. A provider `delivered` status
-is not proof of reading; confirm actual receipt with your recipient.
-Record the result without phone numbers, tokens or sensitive content in
-`docs/STAGE0_STATUS.md`. Clear credentials afterward:
-
-```fish
-set -e TWILIO_ACCOUNT_SID TWILIO_AUTH_TOKEN TWILIO_FROM_NUMBER TEST_RECIPIENT_PHONE
-```
-
-The tool restricts the provider URL to Twilio HTTPS, refuses redirects,
-validates identifiers, limits response size, sanitizes errors and does not retry
-a message creation request automatically. See
-[Twilio message status documentation](https://www.twilio.com/docs/messaging/api/message-resource).
-
-## Data handling limits
-
-Do not commit databases, their WAL/journal files, evidence uploads, environment
-files, credentials or private backups. SQLite file permissions are restricted on
-POSIX systems; filesystem permissions alone are not encryption.
-The public PWA shell contains no device credential and does not submit alerts.
-Legacy backend device authentication still has a shared demonstration identity.
-Individual enrolment, revocation, per-case API authorization and safe evidence
-handling remain release blockers. See [Stage 0 status](docs/STAGE0_STATUS.md) and
-[security requirements](docs/SECURITY_REQUIREMENTS.md) before working with real
-survivor information.
+- [Governance](docs/GOVERNANCE.md)
+- [Security requirements](docs/SECURITY_REQUIREMENTS.md)
+- [Hosted dashboard](docs/vercel-dashboard.md)
+- [Device pairing checkpoint](docs/hosted-pwa-pairing-checkpoint.md)
+- [Web Push](docs/web-push.md)
+- [Deployment runbook](docs/stage-6-deployment-runbook.md)
+- [Data lifecycle and pilot gate](docs/stage-6-data-lifecycle-and-pilot-gate.md)

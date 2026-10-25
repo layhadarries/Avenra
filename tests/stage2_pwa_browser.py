@@ -24,6 +24,7 @@ def exercise(page, staff_context, base, env):
         phone = context.new_page()
         phone.on('pageerror', lambda error: errors.append(str(error)))
         phone.goto(base + '/survivor/')
+        phone.evaluate("() => CWQueue.ready")
         if offline_shell:
             phone.wait_for_function('navigator.serviceWorker.controller !== null')
         return context, phone
