@@ -255,7 +255,9 @@ def main():
                 import datetime
                 since=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
                 scheduler(conn,values,disable=args.disable_scheduler)
-                if args.schedule:verify_scheduler(conn,since)
+                if args.schedule:
+                    conn.raw.commit()
+                    verify_scheduler(conn, since)
 
 if __name__=='__main__':
     try:main()
