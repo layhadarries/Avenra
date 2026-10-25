@@ -30,7 +30,8 @@
       if (verified !== owner || await CWQueue.refreshOwner() !== owner) throw new Error('account_changed');
       await CWQueue.queueSize();
       if (revision !== operation || !checkbox.checked) return;
-      var value = JSON.stringify({version:1,setup_version:1,enabled:true,owner_id:owner});
+      var value = JSON.stringify({version:1,setup_version:1,enabled:true,owner_id:owner,
+        location_enabled:document.getElementById('tap-location').checked});
       localStorage.setItem(KEY,value);
       if (localStorage.getItem(KEY) !== value) throw new Error('storage_unavailable');
       status.textContent = 'Four-tap alerts are ON for this connected account. Open the weather page to use them. Experimental; not field-proven.';
@@ -59,6 +60,7 @@
       if (await CWQueue.refreshOwner() !== owner) throw new Error('account_changed');
       checkbox.disabled = false;
       var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+      document.getElementById('tap-location').checked = !!(saved && saved.owner_id === owner && saved.location_enabled === true);
       status.textContent = saved && saved.enabled === true && saved.setup_version === 1 && saved.owner_id === owner ?
         'Four-tap alerts are currently ON for this connected account.' : 'Four-tap alerts are OFF. Read the explanation and explicitly opt in to enable them.';
       controls();

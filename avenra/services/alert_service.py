@@ -25,7 +25,7 @@ def parse_coord(value: Any, limit: float) -> Optional[float]:
         return None
     try:
         f = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return None
     if f != f or abs(f) > limit:
         return None
@@ -85,6 +85,7 @@ class AlertService:
         raw_client_ts: Any,
         raw_location_accuracy: Any = None,
         raw_location_recorded_at: Any = None,
+        raw_location_token: Any = None,
     ) -> Tuple[Dict[str, Any], int]:
         if not isinstance(client_id, str) or not client_id.strip() or len(client_id) > 64:
             return {"error": "client_id_required"}, 400
@@ -104,11 +105,22 @@ class AlertService:
                 lat = parse_coord(raw_lat, 90)
                 lng = parse_coord(raw_lng, 180)
                 allowed = self.consent_repo.is_active(survivor.id, "location_sharing")
+                tap_fix = None
+                if client_id.startswith('tap-') and lat is not None and lng is not None:
+                    from avenra.services.alert_location_service import LocationPermission,validate_fix
+                    try:
+                        tap_fix = validate_fix({'lat':raw_lat,'lng':raw_lng,'location_accuracy':raw_location_accuracy,
+                            'location_recorded_at':raw_location_recorded_at,'location_consent_token':raw_location_token})
+                        allowed = allowed and LocationPermission(conn).valid(survivor,raw_location_token)
+                    except ValueError:
+                        allowed = False
                 if lat is None or lng is None or not allowed:
                     lat = lng = None
 
                 accuracy = parse_location_accuracy(raw_location_accuracy) if lat is not None else None
                 recorded_at = parse_location_recorded_at(raw_location_recorded_at) if lat is not None else None
+                if tap_fix and lat is not None:
+                    recorded_at = tap_fix['location_recorded_at']
                 client_ts = parse_client_ts(raw_client_ts)
 
                 alert = self.alert_repo.create(

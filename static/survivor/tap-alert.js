@@ -1,4 +1,4 @@
-/* Experimental opt-in weather gesture. Uses CWQueue unchanged; never collects GPS. */
+/* Experimental opt-in weather gesture. Durable capture never waits for GPS. */
 (function () {
   'use strict';
   if (!document.body.classList.contains('cover') || !window.CWQueue || !window.CWTapDetector || typeof window.PointerEvent !== 'function') return;
@@ -38,6 +38,7 @@
     if (pollController) pollController.abort(); pollController = null;
   }
   function disarm(clearPreference) {
+    if (window.CWEmergencyLocation) window.CWEmergencyLocation.clear();
     armed = false; owner = null; current = null; bufferedReceipt = null;
     detector.reset(); stopPoll(); document.body.classList.remove('weather-tap-enabled'); show('');
     if (clearPreference) { try { localStorage.removeItem(PREF); localStorage.removeItem(STATUS); } catch (_) {} }
@@ -86,6 +87,7 @@
     if (!armed) { bufferedReceipt = receipt; return; }
     if (!pairedPreference() || current.owner_id !== owner) return;
     current.alert_id = receipt.id; current.phase = serverState(receipt.status);
+    if (window.CWEmergencyLocation) window.CWEmergencyLocation.received(receipt.client_id);
     remember(); describe(); poll();
   }
   async function trigger() {
@@ -97,10 +99,10 @@
     };
     current = attempt; submitting = true; stopPoll(); show('Saving alert on this phone…');
     try {
-      // No GPS lookup, consent request, weather-coordinate reuse or pre-send dialog.
-      // CWQueue binds/revalidates ownership and strips unconsented location itself.
-      await queue.queueAlert({client_id:attempt.client_id,client_ts:attempt.client_ts,owner_id:attempt.owner_id,
-        lat:null,lng:null,location_accuracy:null,location_recorded_at:null});
+      var fix = window.CWEmergencyLocation ? window.CWEmergencyLocation.start(attempt.owner_id,attempt.client_id) : null;
+      // Synchronous snapshot only; CWQueue starts saving before any GPS request.
+      await queue.queueAlert(Object.assign({client_id:attempt.client_id,client_ts:attempt.client_ts,owner_id:attempt.owner_id,
+        lat:null,lng:null,location_accuracy:null,location_recorded_at:null},fix));
       if (current === attempt && !['received','acknowledged','resolved'].includes(attempt.phase)) {
         attempt.phase = 'queued'; remember(); describe();
       }

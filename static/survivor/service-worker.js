@@ -1,11 +1,11 @@
 /* Only public static shell assets are cached. */
-const CACHE_NAME = 'clear-sky-shell-v20';
+const CACHE_NAME = 'clear-sky-shell-v21';
 const SHELL_ASSETS = [
   '/survivor/device.html', '/survivor/device.js', '/survivor/identity.js',
   '/survivor/theme.js',
   '/survivor/unlock.js', '/survivor/onboarding.js',
   '/survivor/weather.js', '/survivor/weather.css',
-  '/survivor/tap-gesture.js', '/survivor/tap-alert.js',
+  '/survivor/tap-gesture.js', '/survivor/emergency-location.js', '/survivor/tap-alert.js',
   '/survivor/tap-setup.html', '/survivor/tap-alert-settings.js',
   '/survivor/install.html', '/survivor/install.css', '/survivor/install.js',
   '/survivor/', '/survivor/index.html', '/survivor/cover.html',

@@ -16,6 +16,13 @@
 
 Built for the FNB hackathon GBV track. The hosted demo is working, but Avenra is **not an emergency-response guarantee and is not approved for real survivor data or operational case management**. Use fictional names, contacts, incidents, notes and photographs in demos and testing.
 
+The experimental weather four-tap alert saves without waiting for GPS. Optional
+one-shot emergency GPS requires a separate setup opt-in and active sharing consent;
+it never uses a selected weather place. Late fixes are best-effort authenticated
+updates, not new alerts or repeat notifications. See
+[release boundaries](docs/stage-6-release.md#weather-tap-location-follow-up-local-verification-no-deployment)
+for limits and local test evidence; this follow-up has not been deployed.
+
 <details>
   <summary>Table of contents</summary>
   <ol>

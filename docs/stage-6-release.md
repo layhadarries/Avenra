@@ -9,6 +9,48 @@ Do not label the entire project "100% secure" or pilot-ready because tests pass.
 
 ## Included engineering
 
+### Weather tap location follow-up (local verification, no deployment)
+
+Tap alerts start the existing durable queue without awaiting GPS or a dialog.
+The setup has a separate, default-off emergency-GPS option; existing opt-ins do
+not silently gain it. Active server location consent is also required. Weather
+search/cache coordinates are never used. One-shot GPS runs only after a gesture,
+with a 10-second acquisition timeout; there is no watcher or continuous tracking.
+
+A genuine in-memory fix may accompany the next alert if it is at most 120 seconds
+old, at most 10 seconds ahead and accurate within 1,000 metres. Accuracy and capture
+time are retained. Initial tap coordinates require a 120-second signed permission
+bound to owner, paired device cookie and current consent audit epoch. Withdrawal
+and regrant invalidate the earlier permission, including within one second.
+Consent audit epoch evidence must be preserved by any future retention tooling.
+
+After a matching durable receipt, an optional memory-only fix uses
+`POST /api/alerts/by-client/<client_id>/location`. The server rechecks active device,
+owner, consent, permission, exact fields and fix bounds under the write transaction.
+The update window is ten minutes from server creation. Exact replay is a no-op;
+older/conflicting timestamps are rejected. Only location columns and a
+coordinate-free audit event change: no second alert, workflow change or notification.
+The durable queue payload is never rewritten to add a late fix.
+
+Backgrounding, local preference changes, account changes, denial and offline use
+discard optional in-flight work. Late location is best-effort, not a durable second
+queue: closing/backgrounding the page or losing connectivity can lose the update,
+without losing the emergency alert. A fix already disclosed cannot be recalled.
+Already-queued initial fixes are stripped or rejected if consent/permission is no
+longer valid; the alert itself still saves without coordinates.
+
+Evidence: `tests/test_alert_location_update.py`, `tests/emergency-location.cjs`,
+`tests/weather_tap_browser.py`, and existing Stage 2 HELP and Stage 5 diary browser
+checks. Chromium 156 mobile/touch emulation used injected GPS and fictional local
+accounts, not real GPS, physical phones or external notification delivery.
+WebKit remains blocked by missing host libraries. Stages 7–12 are not covered by
+this follow-up and no stage completion is implied.
+
+Local verification on 2026-10-25 passed 398 Python tests, 30 Node checks and
+the weather-tap, Stage 2 HELP and Stage 5 diary Chromium acceptance scripts.
+The Python suite still emits resource-cleanup warnings from test fixtures;
+these are not presented as warning-free results. No deployment was performed.
+
 Individual one-use device pairing, case recovery with explicit assignment checks, credential revocation, exact-origin writes, owner-bound offline queues, durable-receipt cleanup, a neutral installation page, stable public QR, private hosted diary photos, verified database TLS, bounded authenticated Web Push processing, hosted scheduler setup, encrypted row snapshots, and local/live acceptance tooling.
 
 Private photo bytes are stored in `avenra.diary_objects` in the SAME database transaction as diary metadata and its audit event. No public bucket or evidence URL is created. Default object-byte budget is 80 MiB, maximum configured budget 100 MiB. Database overhead and other records count toward provider quotas too; monitor the actual project usage. This bounded demo choice is not an unlimited media storage architecture. Existing local photo files are not silently imported or discarded.

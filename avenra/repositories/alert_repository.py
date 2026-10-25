@@ -37,6 +37,11 @@ class AlertRepository(BaseRepository):
         row = self.conn.execute("SELECT * FROM alerts WHERE client_id = ?", (client_id,)).fetchone()
         return Alert.from_row(row)
 
+    def update_location(self, alert_id, user_id, fix):
+        self.conn.execute('''UPDATE alerts SET lat=?,lng=?,location_accuracy=?,location_recorded_at=?
+            WHERE id=? AND user_id=?''',
+            (fix['lat'],fix['lng'],fix['location_accuracy'],fix['location_recorded_at'],alert_id,user_id))
+
     def create(
             self,
             user_id: int,

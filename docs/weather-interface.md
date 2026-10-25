@@ -1,5 +1,10 @@
 # Clear Sky weather interface
 
+**Follow-up:** the historical entry-only gesture description below predates the
+experimental, paired, explicit-opt-in four-tap alert. Its optional one-shot GPS
+path is separate from all weather locations and never delays queue capture; see
+[current limits and evidence](stage-6-release.md#weather-tap-location-follow-up-local-verification-no-deployment).
+
 The start page is `/survivor/cover.html`. It uses a single location, system fonts,
 inline SVG symbols and restrained day/cloud/rain/night sky colours. There are no
 background videos, map widgets, external fonts, icon libraries or build dependencies.

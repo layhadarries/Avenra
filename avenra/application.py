@@ -39,6 +39,8 @@ class AvenraApplication:
         register_devices(app)
         from avenra.controllers.onboarding_controller import register_onboarding
         register_onboarding(app)
+        from avenra.controllers.alert_location_controller import register_alert_locations
+        register_alert_locations(app)
         from avenra.controllers.worker_controller import register_worker
         register_worker(app)
 
@@ -81,6 +83,7 @@ class AvenraApplication:
         'complete_survivor_onboarding',
         'api_update_consent',
         'create_alert',
+        'update_alert_location',
         'create_diary_entry',
         'update_diary_entry_sharing',
         'delete_contact',

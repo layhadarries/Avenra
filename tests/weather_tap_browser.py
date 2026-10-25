@@ -217,6 +217,47 @@ def exercise(page, staff, base, env):
     finally:
         ctx.close()
 
+    gps, phone, gps_owner = new_phone(extra_script="navigator.geolocation.getCurrentPosition = ok => { window.finishGPS = () => ok({coords:{latitude:-33.9249,longitude:18.4241,accuracy:22},timestamp:Date.now()}); };")
+    try:
+        assert gps.request.post(base + '/api/consents',headers={'Origin':base},data={'item':'location_sharing','active':True}).ok
+        phone.goto(base + '/survivor/tap-setup.html')
+        expect(phone.locator('#tap-understood')).to_be_enabled()
+        phone.locator('#tap-understood').check(); phone.locator('#tap-location').check()
+        phone.locator('#tap-enable').click()
+        expect(phone.locator('#tap-setup-status')).to_contain_text('are ON')
+        cover(phone); taps(phone)
+        expect(phone.locator('#weather-tap-status')).to_contain_text('Received by Avenra')
+        phone.wait_for_function("typeof finishGPS === 'function'")
+        client_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).client_id")
+        def row():
+            with sqlite3.connect(env['DATABASE_PATH']) as conn:
+                return conn.execute('SELECT id,lat,lng,location_accuracy,location_recorded_at FROM alerts WHERE client_id=?',(client_id,)).fetchone()
+        original = row(); assert original[1] is None
+        before = count(gps_owner)
+        phone.evaluate('finishGPS()')
+        until(phone,lambda:row()[1] is not None)
+        updated = row()
+        assert updated[0] == original[0] and updated[1:4] == (-33.9249,18.4241,22.0) and updated[4]
+        assert count(gps_owner) == before
+        # A subsequent gesture may use that recent genuine fix immediately.
+        phone.wait_for_timeout(1600); taps(phone)
+        until(phone,lambda:count(gps_owner)==before+1)
+        with sqlite3.connect(env['DATABASE_PATH']) as conn:
+            assert conn.execute('SELECT lat FROM alerts WHERE user_id=? ORDER BY id DESC LIMIT 1',(gps_owner,)).fetchone()[0] == -33.9249
+        # Reload removes all in-memory fixes. Withdrawal and regrant must defeat
+        # a pending callback, even though both happen in the same second.
+        cover(phone); phone.wait_for_timeout(1600); taps(phone)
+        phone.wait_for_function("typeof finishGPS === 'function'")
+        until(phone,lambda:count(gps_owner)==before+2)
+        client_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).client_id")
+        for active in (False,True):
+            assert gps.request.post(base+'/api/consents',headers={'Origin':base},data={'item':'location_sharing','active':active}).ok
+        phone.evaluate('finishGPS()'); phone.wait_for_timeout(500)
+        assert row()[1] is None
+        passed.append('GPS-free durable receipt precedes delayed authorised real-fix update; same alert ID, recent fix reuse, and withdrawal/regrant defeats delayed callback')
+    finally:
+        gps.close()
+
     offline, phone, first_owner = new_phone(offline_shell=True)
     try:
         enable(phone); cover(phone)
