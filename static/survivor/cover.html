@@ -252,8 +252,8 @@
 
     <!-- Dynamic Location Chips -->
     <div class="locations-scroll" id="location-chips">
-        <button type="button" class="loc-btn active" data-loc="current">My current location</button>
-        <button type="button" class="loc-btn" data-loc="Cape Town">Cape Town</button>
+        <button type="button" class="loc-btn" data-loc="current">My current location</button>
+        <button type="button" class="loc-btn active" data-loc="Cape Town">Cape Town</button>
         <!-- Custom locations will be appended here -->
         <button type="button" id="btn-add-location" class="add-loc-btn" aria-label="Add location">+</button>
     </div>
@@ -335,6 +335,8 @@
         <p id="offline-state">Preparing offline opening…</p>
     </div>
 
+    <script src="/survivor/shell.js" defer></script>
+    <script src="/survivor/queue.js" defer></script>
     <script>
         (function() {
             "use strict";
@@ -356,8 +358,7 @@
             const locInput = document.getElementById('new-loc-input');
             const headerLoc = document.getElementById('header-loc');
 
-            // Load custom locations from local storage
-            let customLocations = JSON.parse(localStorage.getItem('cw_custom_locations') || '[]');
+            let customLocations = [];
 
             function createChip(name) {
                 const btn = document.createElement('button');
@@ -369,7 +370,6 @@
             }
 
             function renderCustomChips() {
-                // Remove existing custom chips (everything between Cape Town and the + button)
                 const existing = container.querySelectorAll('.loc-btn[data-custom="true"]');
                 existing.forEach(e => e.remove());
 
@@ -387,14 +387,12 @@
                 const locName = targetBtn.dataset.loc;
                 if (locName === 'current') {
                     headerLoc.textContent = "Locating...";
-                    // Trigger real geolocation
                     if (navigator.geolocation) {
                         navigator.geolocation.getCurrentPosition(
-                            function(pos) {
-                                // In a real app, this lat/lng fetches weather data via an API
+                            function() {
                                 headerLoc.textContent = "Current Area";
                             },
-                            function(err) {
+                            function() {
                                 headerLoc.textContent = "Location Denied";
                             }
                         );
@@ -404,14 +402,12 @@
                 }
             }
 
-            // Event delegation for chips
             container.addEventListener('click', function(e) {
                 if (e.target.classList.contains('loc-btn')) {
                     setActiveChip(e.target);
                 }
             });
 
-            // Modal Logic
             addBtn.addEventListener('click', function() {
                 modal.classList.add('active');
                 locInput.value = '';
@@ -426,23 +422,16 @@
                 const val = locInput.value.trim();
                 if (val && !customLocations.includes(val) && val.toLowerCase() !== 'cape town') {
                     customLocations.push(val);
-                    localStorage.setItem('cw_custom_locations', JSON.stringify(customLocations));
                     renderCustomChips();
-                    
-                    // Auto-select the newly added chip
                     const newBtn = container.querySelector(`.loc-btn[data-loc="${val}"]`);
                     if (newBtn) setActiveChip(newBtn);
                 }
                 modal.classList.remove('active');
             });
 
-            // Initialize
             renderCustomChips();
-            
-            // Default to current location on load
-            const currentLocBtn = container.querySelector('[data-loc="current"]');
-            if (currentLocBtn) setActiveChip(currentLocBtn);
-
+            const defaultLocBtn = container.querySelector('[data-loc="Cape Town"]');
+            if (defaultLocBtn) setActiveChip(defaultLocBtn);
         })();
     </script>
 </body>

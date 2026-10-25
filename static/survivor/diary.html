@@ -267,6 +267,39 @@
             background: var(--green-bg);
             color: var(--green);
         }
+        .badge-error {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .entry-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.6rem;
+        }
+        .entry-actions button {
+            font-size: 0.78rem;
+            padding: 0.3rem 0.65rem;
+        }
+        .detail-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.25rem;
+            font-size: 0.78rem;
+            color: var(--dusty-blue);
+            margin-bottom: 0.75rem;
+        }
+        .detail-note-box {
+            background: var(--warm-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+            color: var(--navy);
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin-bottom: 0.75rem;
+        }
         .entry-time {
             font-size: 0.75rem;
             color: var(--dusty-blue);
@@ -363,6 +396,28 @@
             <button type="button" id="diary-save-btn" class="btn btn-primary" style="width: 100%;">Save to Diary</button>
 
             <div id="diary-status" class="status-banner" role="status" aria-live="polite" hidden></div>
+        </section>
+
+        <section id="diary-entry-detail" class="card" aria-label="Saved entry detail" hidden>
+            <div class="entry-header">
+                <strong id="detail-title" style="color: var(--navy); font-size: 0.95rem;">Saved Entry</strong>
+                <button type="button" id="detail-close-btn" class="btn btn-outline" style="padding: 0.25rem 0.6rem; font-size: 0.78rem;">Close</button>
+            </div>
+            <div class="detail-meta-grid">
+                <span id="detail-captured-at"></span>
+                <span id="detail-received-at"></span>
+                <span id="detail-share-status"></span>
+                <span id="detail-consent-note"></span>
+                <span id="detail-hash"></span>
+            </div>
+            <div id="detail-note" class="detail-note-box"></div>
+            <div id="detail-photo-wrap" class="preview-wrap" hidden>
+                <img id="detail-photo-img" src="" alt="Saved diary evidence photo" class="photo-preview-img">
+            </div>
+            <div class="entry-actions">
+                <button type="button" id="detail-share-btn" class="btn btn-outline">Share with responder</button>
+            </div>
+            <div id="detail-status" class="status-banner" role="status" aria-live="polite" hidden></div>
         </section>
 
         <section aria-label="Entries list">

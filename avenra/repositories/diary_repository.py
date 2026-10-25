@@ -15,6 +15,13 @@ class DiaryRepository(BaseRepository):
         row = self.conn.execute("SELECT * FROM diary_entries WHERE client_id = ?", (client_id,)).fetchone()
         return DiaryEntry.from_row(row)
 
+    def get_by_owner_and_client_id(self, user_id: int, client_id: str) -> Optional[DiaryEntry]:
+        row = self.conn.execute(
+            "SELECT * FROM diary_entries WHERE user_id = ? AND client_id = ?",
+            (user_id, client_id),
+        ).fetchone()
+        return DiaryEntry.from_row(row)
+
     def create(
             self,
             user_id: int,

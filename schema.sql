@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS diary_entries (
     created_at        TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_diary_user_client ON diary_entries(user_id, client_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_diary_user_client ON diary_entries(user_id, client_id) WHERE client_id IS NOT NULL;
 
 -- Unused until Stage 4 (consent records).
 CREATE TABLE IF NOT EXISTS consents (

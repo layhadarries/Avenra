@@ -33,7 +33,7 @@
   // Copy commits before legacy removal; crashes can replay an ID, never lose it.
   function migrateLegacy(target) {
     return new Promise(function (resolve, reject) {
-      var req = indexedDB.open('clear-sky-queue', 1);
+      var req = indexedDB.open('cape-weather-queue', 1);
       req.onupgradeneeded = function () {
         if (!req.result.objectStoreNames.contains(STORE))
           req.result.createObjectStore(STORE, {keyPath: 'client_id'});

@@ -92,12 +92,14 @@ def migrate(conn):
             if column not in present:
                 conn.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
     conn.execute('CREATE INDEX IF NOT EXISTS idx_diary_user_client ON diary_entries(user_id, client_id)')
+    conn.execute('CREATE UNIQUE INDEX IF NOT EXISTS uq_diary_user_client ON diary_entries(user_id, client_id) WHERE client_id IS NOT NULL')
     from avenra.repositories.push_repository import SCHEMA
     # Fixed additive statements, without executescript committing the caller transaction.
     for statement in SCHEMA.split(';'):
         if statement.strip(): conn.execute(statement)
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (2)')
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (3)')
+    conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (4)')
     conn.execute('''CREATE TABLE IF NOT EXISTS app_metadata (
         key TEXT PRIMARY KEY, value TEXT NOT NULL
     )''')

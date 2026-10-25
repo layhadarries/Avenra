@@ -648,6 +648,15 @@ class DiaryService:
 
             conn.commit()
 
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            if created_object is not None:
+                storage.delete_object(created_object)
+            existing = self.diary_repo.get_by_client_id(client_id)
+            if existing is not None:
+                return replay_response(existing)
+            return {"error": "diary_storage_unavailable"}, 503
+
         except (OSError, sqlite3.Error):
             conn.rollback()
             if created_object is not None:
