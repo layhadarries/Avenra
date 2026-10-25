@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Device pairing{% endblock %}
+{% block content %}
+<div class="page-heading"><p class="eyebrow">Individual access</p><h1>Connect a device</h1></div>
+<section class="card"><p>Create a private link for one new account. The new case will be assigned to you. The link expires after ten minutes and works once.</p>
+<p>Send it privately. Use fictional details while the hosted PWA acceptance checks are in progress.</p>
+<button class="btn" id="create-device-invite" type="button">Create private pairing link</button>
+<p id="device-invite-status" role="status"></p>
+<p><a id="device-invite-link" hidden rel="noreferrer">Open private pairing link</a></p>
+<p>The public app QR opens Clear Sky. It never grants access to an account.</p>
+<a href="/survivor/install.html" target="_blank" rel="noopener noreferrer">Public installation page</a>
+</section>
+<script src="{{ url_for('static',filename='js/devices.js') }}" defer></script>
+{% endblock %}

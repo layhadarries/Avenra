@@ -6,7 +6,7 @@ Only application-owned SQL is translated; parameter values are never interpolate
 import re
 import sqlite3
 
-TABLES = frozenset(('schema_migrations','app_metadata','staff_activation_attempts','case_access','alert_workflow','notification_batches','push_acknowledgements'))
+TABLES = frozenset(('device_pairing_attempts','device_enrollments','survivor_devices','schema_migrations','app_metadata','staff_activation_attempts','case_access','alert_workflow','notification_batches','push_acknowledgements'))
 IDENTITY_TABLES = frozenset(('users','shelters','contacts','alerts','referrals','diary_entries',
     'consents','audit_log','alert_history','notification_outbox','push_invites','push_subscriptions','staff_invitations'))
 NOW = "to_char(CURRENT_TIMESTAMP AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
@@ -85,7 +85,7 @@ class Connection:
             mutation=re.match(r'\s*(INSERT|UPDATE|DELETE)\b',translated,re.I)
             if mutation and not self.in_transaction:
                 self.execute('BEGIN IMMEDIATE')
-            match=re.match(r'\s*INSERT\s+INTO\s+([a-z_]+)\b',translated,re.I)
+            match=re.match(r'\s*INSERT\s+INTO\s+(?:avenra\.)?([a-z_]+)\b',translated,re.I)
             return_id=match and match[1].lower() in IDENTITY_TABLES and not re.search(r'\bRETURNING\b',translated,re.I)
             if return_id: translated += ' RETURNING id'
             # Psycopg processes percent markers only when parameters are supplied.

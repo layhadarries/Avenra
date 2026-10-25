@@ -35,6 +35,9 @@ class AvenraApplication:
         from avenra.controllers.staff_invitation_controller import register_staff_invitations
         register_staff_invitations(app)
 
+        from avenra.controllers.device_controller import register_devices
+        register_devices(app)
+
         # All entrypoints, including gunicorn app:app, initialise the same schema.
         db.init_db()
         if not os.environ.get("VERCEL"):
@@ -68,6 +71,7 @@ class AvenraApplication:
         app.teardown_appcontext(db.close_db)
 
     DEVICE_WRITE_ENDPOINTS = frozenset((
+        'device_enroll',
         'api_update_consent',
         'create_alert',
         'create_diary_entry',

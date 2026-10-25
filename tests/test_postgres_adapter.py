@@ -24,3 +24,21 @@ class PostgresAdapterTests(unittest.TestCase):
         self.assertNotIn('strftime',result)
         self.assertIn('UPDATE avenra.push_invites',result)
         self.assertIn('avenra.instr(',translate('SELECT instr(name,?) FROM users'))
+
+    def test_schema_qualified_insert_preserves_generated_id(self):
+        from unittest.mock import Mock, patch, PropertyMock
+        from avenra.postgres import Connection
+        connection=object.__new__(Connection)
+        connection.raw=Mock()
+        connection.raw.execute.return_value.fetchone.return_value=(42,)
+        with patch.object(Connection,'in_transaction',new_callable=PropertyMock,return_value=True):
+            result=connection.execute('INSERT INTO alerts(user_id,case_code,client_id) VALUES(?,?,?)',(1,'Synthetic','unique'))
+        self.assertEqual(result.lastrowid,42)
+        sql,params=connection.raw.execute.call_args.args
+        self.assertIn('INSERT INTO avenra.alerts',sql)
+        self.assertTrue(sql.endswith('RETURNING id'))
+        self.assertEqual(params,(1,'Synthetic','unique'))
+
+    def test_device_tables_use_private_schema(self):
+        for table in ('device_enrollments','survivor_devices','device_pairing_attempts'):
+            self.assertIn('FROM avenra.'+table,translate('SELECT * FROM '+table+' WHERE token_hash=?'))

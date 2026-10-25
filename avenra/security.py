@@ -1,5 +1,9 @@
 """Security middleware, authentication helpers, and route guards."""
 import hmac
+import os
+import time
+import hashlib
+import db
 from functools import wraps
 from typing import Optional
 from flask import request, redirect, url_for, jsonify, abort, g
@@ -20,6 +24,20 @@ def current_user() -> Optional[User]:
 def device_user() -> Optional[User]:
     """DEMO ONLY. Check the X-Device-Token header and return the seeded survivor,
     or None if the token is missing or wrong."""
+    cookie = request.cookies.get('avenra_device')
+    if cookie:
+        if len(cookie) > 128:
+            return None
+        row = db.get_db().execute(
+            "SELECT user_id FROM survivor_devices WHERE token_hash=? AND expires_at>? AND revoked_at IS NULL",
+            (hashlib.sha256(cookie.encode()).hexdigest(), int(time.time())),
+        ).fetchone()
+        if row is None:
+            return None
+        owner = _user_repo.get_by_id(row['user_id'])
+        return owner if owner and owner.is_active and owner.role == 'survivor' else None
+    if Config.APP_ENV == 'production' or os.environ.get('VERCEL') or os.environ.get('DATABASE_URL'):
+        return None
     token = request.headers.get("X-Device-Token", "")
     if not token or not hmac.compare_digest(token.encode(), Config.DEVICE_TOKEN.encode()):
         return None
@@ -77,7 +95,7 @@ def validate_json_body():
         if not is_diary_multipart and not isinstance(request.get_json(silent=True), dict) and request.content_length:
             return jsonify({"error": "json_object_required"}), 400
         origin = request.headers.get("Origin")
-        if origin and origin != request.host_url.rstrip("/"):
+        if (origin or request.cookies.get("avenra_device")) and origin != os.environ.get("PUBLIC_BASE_URL", request.host_url.rstrip("/")).rstrip("/"):
             return jsonify({"error": "cross_origin_write_forbidden"}), 403
 
 
@@ -88,6 +106,8 @@ def apply_security_headers(resp):
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=()")
     if request.path.startswith((
+        "/survivor/enroll.html",
+        "/devices",
         "/activate",
         "/api/",
         "/cases",

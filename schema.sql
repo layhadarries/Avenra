@@ -168,3 +168,16 @@ CREATE TABLE IF NOT EXISTS notification_batches (
     attempted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_notification_batches_user ON notification_batches(user_id,attempted_at);
+
+CREATE TABLE IF NOT EXISTS device_enrollments (
+ token_hash TEXT PRIMARY KEY, staff_id INTEGER NOT NULL REFERENCES users(id),
+ expires_at INTEGER NOT NULL, consumed_at INTEGER
+);
+CREATE TABLE IF NOT EXISTS survivor_devices (
+ token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id),
+ expires_at INTEGER NOT NULL, revoked_at INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS device_pairing_attempts (
+ bucket TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL
+);
