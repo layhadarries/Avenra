@@ -373,8 +373,19 @@ class DiaryService:
         return LocalDiaryStorage(uploads_dir)
 
     def reconcile_orphans(self, uploads_dir: str) -> List[str]:
-        referenced = self.diary_repo.list_all_photo_paths()
-        return self._storage_for(uploads_dir).reconcile_orphans(referenced)
+        conn = self.diary_repo.conn
+        if conn.in_transaction:
+            raise RuntimeError("Reconciliation requires its own transaction")
+        # Share the upload writer lock: never quarantine an in-flight object.
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            referenced = self.diary_repo.list_all_photo_paths()
+            result = self._storage_for(uploads_dir).reconcile_orphans(referenced)
+            conn.commit()
+            return result
+        except Exception:
+            conn.rollback()
+            raise
 
     def create_entry(
         self,
@@ -564,7 +575,9 @@ class DiaryService:
                 and existing.photo_sha256 == photo_sha256
                 and existing.file_hash == final_hash
                 and bool(existing.photo_path) == bool(raw_bytes)
-                and existing.shared == bool(shared)
+                and (existing.entry_fingerprint == entry_fingerprint
+                     if existing.received_at is not None
+                     else existing.shared == bool(shared))
                 and existing.contract_version == contract_version
             )
 
@@ -813,6 +826,12 @@ class DiaryService:
             if existing is None or existing.user_id != survivor.id:
                 conn.rollback()
                 return {"error": "not_found"}, 404
+
+            if existing.shared == shared:
+                conn.rollback()
+                return {"entry": existing.stored_body(),
+                        "global_diary_consent_active": self.consent_repo.is_active(
+                            survivor.id, "diary_sharing")}, 200
 
             updated = self.diary_repo.update_shared(
                 entry_id, survivor.id, int(shared)

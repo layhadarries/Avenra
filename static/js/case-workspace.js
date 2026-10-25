@@ -125,7 +125,7 @@
               : "Not reported by device";
           const receivedText =
             (typeof entry.received_at === "string" && entry.received_at) ||
-            (typeof entry.created_at === "string" && entry.created_at) ||
+
             "Time unavailable";
           meta.textContent =
             "Device-reported capture time: " +

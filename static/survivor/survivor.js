@@ -5,8 +5,9 @@
   var state = 'ready', pending = null, exited = false, statusTimer = null;
   var holdTimer = null, tickTimer = null, countdownTimer = null;
   var views = ['ready', 'countdown', 'sending', 'sent', 'queued', 'error'];
-  function setState(next) {
+  function setState(next, force) {
     state = next;
+    if (!force && $('view-more') && !$('view-more').hidden) return;
     var view = next === 'holding' ? 'ready' : next;
     views.forEach(function (name) { $('view-' + name).hidden = name !== view; });
     if ($('view-more')) $('view-more').hidden = true;
@@ -141,6 +142,6 @@
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape') quickExit(event); });
   window.addEventListener('pagehide', function () { exited = true; clearTimers(); pending = null; });
   window.addEventListener('pageshow', function (event) { if (event.persisted && exited) location.replace('/survivor/cover.html'); });
-  window.CWPanic = {showHome: function () { if (!exited) setState(state); }};
+  window.CWPanic = {showHome: function () { if (!exited) setState(state, true); }};
   setState('ready');
 })();

@@ -1,5 +1,5 @@
 /* Only public static shell assets are cached. */
-const CACHE_NAME = 'clear-sky-shell-v8';
+const CACHE_NAME = 'clear-sky-shell-v9';
 const SHELL_ASSETS = [
   '/survivor/', '/survivor/index.html', '/survivor/cover.html',
   '/survivor/setup.html', '/survivor/shell.js', '/survivor/survivor.js',

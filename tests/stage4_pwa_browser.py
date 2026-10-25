@@ -170,7 +170,7 @@ def exercise(page, staff, base, env):
     tab.goto(base + '/survivor/')
     tab.wait_for_function('CWQueue.queueSize().then(n => n === 2)')
     assert tab.evaluate('''async () => {
-      const db = await new Promise(resolve => {const req=indexedDB.open('clear-sky-queue',1);req.onsuccess=()=>resolve(req.result);});
+      const db = await new Promise(resolve => {const req=indexedDB.open('cape-weather-queue',1);req.onsuccess=()=>resolve(req.result);});
       const count = await new Promise(resolve => {const req=db.transaction('alerts').objectStore('alerts').count();req.onsuccess=()=>resolve(req.result);});
       db.close();return count;
     }''') == 0

@@ -39,6 +39,27 @@ def exercise(page, staff, base, env):
     )
     assert res.ok, res.text()
 
+    # Real offline shell acceptance is separate from network-interception tests.
+    offline_context, offline_tab = phone(workers='allow')
+    offline_tab.goto(base + '/survivor/diary.html')
+    offline_tab.wait_for_function('navigator.serviceWorker.controller !== null')
+    offline_tab.wait_for_function("caches.match('/survivor/diary.html').then(Boolean)")
+    offline_context.set_offline(True)
+    offline_tab.fill('#diary-note', 'Fictional airplane mode entry')
+    offline_tab.click('#diary-save-btn')
+    offline_tab.wait_for_function('window.CWDiary.getQueuedItems().then(q => q.length === 1)')
+    offline_tab.close()
+    offline_tab = offline_context.new_page()
+    offline_tab.goto(base + '/survivor/diary.html')
+    expect(offline_tab.locator('#diary-entries-list')).to_contain_text('Fictional airplane mode entry')
+    offline_context.set_offline(False)
+    offline_tab.click('#sync-refresh-btn')
+    offline_tab.wait_for_function('window.CWDiary.getQueuedItems().then(q => q.length === 0)')
+    offline_context.close()
+    with sqlite3.connect(env['DATABASE_PATH']) as conn:
+        conn.execute("DELETE FROM diary_entries WHERE note = ?", ('Fictional airplane mode entry',))
+        conn.commit()
+
     context, tab = phone()
     tab.goto(base + '/survivor/diary.html', wait_until='networkidle')
     assert tab.title() == 'Clear Sky'

@@ -17,6 +17,8 @@
   var activeDetailEntryId = null;
   var globalDiaryConsentActive = null;
   var isUploading = false;
+  var retryTimer = null, retryDelay = 5000;
+  var detailGeneration = 0;
   var cleanupPendingIds = new Set();
 
   // DOM elements
@@ -189,6 +191,7 @@
   }
 
   function closeEntryDetail() {
+    detailGeneration += 1;
     activeDetailEntryId = null;
     if (detailObjectUrl) {
       URL.revokeObjectURL(detailObjectUrl);
@@ -411,7 +414,7 @@
     if (!Number.isInteger(receipt.id) || receipt.id < 1) return false;
     if (receipt.client_id !== item.client_id) return false;
     if (receipt.file_hash !== item.file_hash) return false;
-    if (typeof receipt.shared !== 'boolean' || receipt.shared !== Boolean(item.shared)) return false;
+    if (typeof receipt.shared !== 'boolean') return false;
     if (typeof receipt.has_photo !== 'boolean' || receipt.has_photo !== Boolean(item.has_photo)) return false;
     if (typeof receipt.received_at !== 'string' || !receipt.received_at.length) return false;
     if (item.contract_version === 2) {
@@ -479,6 +482,11 @@
       status: status,
       last_error: errorMsg || null
     });
+    if (status === 'upload_failed') {
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(function () { flushQueue(false); }, retryDelay);
+      retryDelay = Math.min(retryDelay * 2, 60000);
+    }
     return queueItem(updated).catch(function () {});
   }
 
@@ -490,12 +498,16 @@
     }
 
     var reqInit = buildUploadRequest(item);
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 20000);
     return fetch('/api/diary', {
+      signal: controller.signal,
       method: 'POST',
       headers: reqInit.headers,
       body: reqInit.body,
       cache: 'no-store'
     })
+    .finally(function () { clearTimeout(timeout); })
     .then(function (res) {
       if (res.status === 201 || res.status === 200) {
         return res.json().then(function (receipt) {
@@ -641,8 +653,8 @@
     activeDetailEntryId = entry.id;
     detailSection.hidden = false;
     if (detailTitle) detailTitle.textContent = 'Saved Entry (Receipt #' + entry.id + ')';
-    if (detailCapturedAt) detailCapturedAt.textContent = 'Captured: ' + (entry.captured_at || entry.created_at || '');
-    if (detailReceivedAt) detailReceivedAt.textContent = 'Received by vault: ' + (entry.received_at || entry.created_at || '');
+    if (detailCapturedAt) detailCapturedAt.textContent = 'Captured: ' + (entry.captured_at || 'Unknown');
+    if (detailReceivedAt) detailReceivedAt.textContent = 'Received by vault: ' + (entry.received_at || 'Unknown');
     if (detailShareStatus) {
       detailShareStatus.textContent = 'Entry visibility: ' + (entry.shared ? 'Shared with responder' : 'Private (Only you)');
     }
@@ -695,6 +707,7 @@
   }
 
   function openEntryDetail(entryId) {
+    var generation = ++detailGeneration;
     showDetailStatus('Loading entry…', 'saving');
     return fetch('/api/diary/' + encodeURIComponent(entryId), {
       headers: { 'X-Device-Token': DEVICE_TOKEN },
@@ -706,7 +719,7 @@
     })
     .then(function (data) {
       showDetailStatus('', 'saving');
-      if (data && data.entry) {
+      if (generation === detailGeneration && !document.hidden && data && data.entry) {
         populateDetailSection(data.entry);
       }
     })
