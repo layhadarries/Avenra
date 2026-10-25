@@ -100,6 +100,9 @@
         };
         req.onsuccess = function () {
           var db = req.result;
+          if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(function () {});
+          }
           db.onversionchange = function () {
             db.close();
             dbPromise = null;

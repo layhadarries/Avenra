@@ -24,7 +24,8 @@
   }
   function getLocation() {
     // Explicit per-alert choice plus current server consent; unknown/offline means no GPS.
-    if (!$('share-alert-location').checked || !navigator.geolocation) return Promise.resolve(null);
+    var shareBox = $('share-alert-location') || $('share-location-toggle');
+    if (!shareBox || !shareBox.checked || !navigator.geolocation) return Promise.resolve(null);
     return window.CWQueue.locationPermitted().then(function (allowed) {
       if (!allowed || exited) return null;
       return new Promise(function (resolve) {
@@ -137,7 +138,8 @@
   $('panic-btn').addEventListener('blur', cancelHold);
   $('undo-btn').addEventListener('click', function () { if (state === 'countdown') reset(); });
   ['done-btn', 'queued-done-btn', 'error-done-btn'].forEach(function (id) { $(id).addEventListener('click', reset); });
-  $('quick-exit').addEventListener('click', quickExit);
+  var qeBtn = $('quick-exit') || $('quick-exit-btn');
+  if (qeBtn) qeBtn.addEventListener('click', quickExit);
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape') quickExit(event); });
   window.addEventListener('pagehide', function () { exited = true; clearTimers(); pending = null; });
   window.addEventListener('pageshow', function (event) { if (event.persisted && exited) location.replace('/survivor/cover.html'); });
