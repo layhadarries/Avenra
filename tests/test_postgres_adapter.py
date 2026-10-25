@@ -42,3 +42,11 @@ class PostgresAdapterTests(unittest.TestCase):
     def test_device_tables_use_private_schema(self):
         for table in ('device_enrollments','survivor_devices','device_pairing_attempts'):
             self.assertIn('FROM avenra.'+table,translate('SELECT * FROM '+table+' WHERE token_hash=?'))
+
+    def test_hosted_connections_require_verified_tls(self):
+        from unittest.mock import patch,Mock
+        from avenra.postgres import Connection
+        with patch('psycopg.connect',return_value=Mock()) as connect:
+            Connection('postgresql://synthetic.invalid/example')
+        self.assertEqual(connect.call_args.kwargs['sslmode'],'verify-full')
+        self.assertTrue(connect.call_args.kwargs['sslrootcert'])

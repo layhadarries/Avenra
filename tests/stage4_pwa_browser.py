@@ -5,7 +5,7 @@ import sqlite3
 
 from PIL import Image
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, wait_for_async
 from stage2_pwa_browser import FAST
 
 
@@ -149,7 +149,7 @@ def exercise(page, staff, base, env):
     context.close()
     print('PASS: history pagination, text-safe rendering, uncertain saves and failed-refresh clearing.')
 
-    # The queue name changed in the broken merge. Migrate both sets before sending.
+    # Migrate legacy records without inventing ownership or sending them.
     context, tab = phone()
     tab.route('**/api/alerts', lambda route: route.abort())
     tab.goto(base + '/login')
@@ -168,17 +168,21 @@ def exercise(page, staff, base, env):
       }
     }''')
     tab.goto(base + '/survivor/')
-    tab.wait_for_function('CWQueue.queueSize().then(n => n === 2)')
+    wait_for_async(tab, 'CWQueue.queueSize().then(n => n === 2)')
     assert tab.evaluate('''async () => {
       const db = await new Promise(resolve => {const req=indexedDB.open('cape-weather-queue',1);req.onsuccess=()=>resolve(req.result);});
       const count = await new Promise(resolve => {const req=db.transaction('alerts').objectStore('alerts').count();req.onsuccess=()=>resolve(req.result);});
       db.close();return count;
     }''') == 0
+    attempted_legacy_uploads = []
+    tab.on('request', lambda request: attempted_legacy_uploads.append(request.url)
+           if request.method == 'POST' and request.url == base + '/api/alerts' else None)
     tab.unroute('**/api/alerts')
     tab.evaluate('CWQueue.flushQueue()')
-    tab.wait_for_function('CWQueue.queueSize().then(n => n === 0)')
+    assert tab.evaluate('CWQueue.queueSize()') == 2
+    assert attempted_legacy_uploads == []
     context.close()
-    print('PASS: pending records from both database names survive migration and can send.')
+    print('PASS: pending legacy records survive migration and remain blocked without an established owner.')
 
     # Nearby services use an explicit local fix and an actual 25/50 km filter.
     gps = "navigator.geolocation.getCurrentPosition = ok => ok({coords:{latitude:-33.9249,longitude:18.4241}});"

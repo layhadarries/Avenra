@@ -370,6 +370,9 @@ class DiaryService:
     def _storage_for(self, uploads_dir: str) -> DiaryStorageBackend:
         if self.storage is not None:
             return self.storage
+        if os.environ.get('DATABASE_URL') or os.environ.get('DIARY_STORAGE_BACKEND') == 'database':
+            from avenra.services.database_diary_storage import DatabaseDiaryStorage
+            return DatabaseDiaryStorage(self.diary_repo.conn)
         return LocalDiaryStorage(uploads_dir)
 
     def reconcile_orphans(self, uploads_dir: str) -> List[str]:

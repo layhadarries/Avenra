@@ -19,6 +19,21 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def wait_for_async(page, expression, *, arg=None, timeout=30000):
+    """Poll resolved values: wait_for_function can treat a Promise as truthy.
+
+    Page.evaluate awaits each Promise. Pump Playwright events between attempts.
+    Never infer successful storage from an unresolved/false predicate handle.
+    """
+    deadline = time.monotonic() + timeout / 1000
+    while True:
+        if page.evaluate(expression, arg):
+            return
+        if time.monotonic() >= deadline:
+            raise AssertionError('Timed out waiting for resolved async browser condition')
+        page.wait_for_timeout(50)
+
+
 def main(staff_check=None):
     with tempfile.TemporaryDirectory() as directory:
         env = os.environ.copy()

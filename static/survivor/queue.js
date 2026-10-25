@@ -4,7 +4,7 @@
 (function (global) {
   'use strict';
   var DB_NAME = 'clear-sky-queue', STORE = 'alerts';
-  var DEVICE_TOKEN = 'demo-device'; // Evaluation only; never a production credential.
+  var DEVICE_TOKEN = ((typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) ? 'demo-device' : ''); // Evaluation only; never a production credential.
   var dbPromise = null, flushPromise = null, flushAgain = false, retryTimer = null, retryIndex = 0;
   var listeners = [], BACKOFF = [5000, 15000, 30000];
   function emit(event) {
@@ -320,6 +320,8 @@
   });
   global.CWQueue = {
     ready: ownerReady,
+    captureOwner: captureOwner,
+    refreshOwner: refreshOwner,
     queueAlert: queueAlert, flushQueue: flushQueue,
     queueSize: function () { return allAlerts().then(function (items) { return items.length; }); },
     onFlushed: function (fn) { listeners.push(fn); },

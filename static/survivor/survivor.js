@@ -110,7 +110,7 @@
       busy = true;
       var ctrl = new AbortController(), timer = setTimeout(function () { ctrl.abort(); }, 10000);
       fetch('/api/alerts/' + receipt.id + '/status', {cache: 'no-store', credentials: 'same-origin',
-        headers: {'X-Device-Token': 'demo-device'}, signal: ctrl.signal})
+        headers: {'X-Device-Token': ((typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) ? 'demo-device' : '')}, signal: ctrl.signal})
         .then(function (response) { if (!response.ok) throw new Error('unavailable'); return response.json(); })
         .then(function (body) {
           if (!exited && pending === attempt && state === 'sent' && body && typeof body.status === 'string') showStatus(body);

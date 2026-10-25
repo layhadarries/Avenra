@@ -51,7 +51,7 @@
       finished = true; clearTimeout(timer); fix = {lat: position.coords.latitude, lng: position.coords.longitude};
       controller = new AbortController(); var current = controller;
       var timeout = setTimeout(function () { current.abort(); }, 10000);
-      fetch('/api/shelters', {headers: {'X-Device-Token': 'demo-device'}, credentials: 'same-origin', cache: 'no-store', signal: current.signal})
+      fetch('/api/shelters', {headers: {'X-Device-Token': ((typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) ? 'demo-device' : '')}, credentials: 'same-origin', cache: 'no-store', signal: current.signal})
         .then(function (response) { if (!response.ok) throw new Error('unavailable'); return response.json(); })
         .then(function (body) {
           if (token !== generation) return;

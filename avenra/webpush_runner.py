@@ -14,7 +14,7 @@ def main(argv=None):
     if os.environ.get('APP_ENV') not in {'development','production'}:
         print('Push worker requires development or production mode; evaluation alerts cannot dispatch.');return 2
     path=os.environ.get('DATABASE_PATH')
-    if not path or not Path(path).is_file():print('Push worker requires an explicit existing DATABASE_PATH.');return 2
+    if not os.environ.get('DATABASE_URL') and (not path or not Path(path).is_file()):print('Push worker requires an explicit existing DATABASE_PATH.');return 2
     from avenra.services.push_service import PushSettings,PushError
     try:settings=PushSettings()
     except PushError:print('Push configuration unavailable.');return 2

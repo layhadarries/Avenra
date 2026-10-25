@@ -13,3 +13,7 @@ __pycache__
 uploads
 backups
 tests
+
+# Unrelated local npm experiment; Flask has no npm runtime dependency.
+package.json
+package-lock.json

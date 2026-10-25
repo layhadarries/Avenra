@@ -4,9 +4,11 @@ Preserves SQLite's explicit transaction/row contract while local tests use SQLit
 Only application-owned SQL is translated; parameter values are never interpolated.
 """
 import re
+import os
+from avenra.database_ca import root_certificate_path
 import sqlite3
 
-TABLES = frozenset(('device_pairing_attempts','device_enrollments','survivor_devices','schema_migrations','app_metadata','staff_activation_attempts','case_access','alert_workflow','notification_batches','push_acknowledgements'))
+TABLES = frozenset(('worker_state','diary_objects','device_pairing_attempts','device_enrollments','survivor_devices','schema_migrations','app_metadata','staff_activation_attempts','case_access','alert_workflow','notification_batches','push_acknowledgements'))
 IDENTITY_TABLES = frozenset(('users','shelters','contacts','alerts','referrals','diary_entries',
     'consents','audit_log','alert_history','notification_outbox','push_invites','push_subscriptions','staff_invitations'))
 NOW = "to_char(CURRENT_TIMESTAMP AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
@@ -60,7 +62,7 @@ class Connection:
         import psycopg
         try:
             self.raw=psycopg.connect(url,autocommit=True,prepare_threshold=None,connect_timeout=10,
-                sslmode='require')
+                sslmode='verify-full', sslrootcert=os.environ.get('PGSSLROOTCERT') or root_certificate_path())
             self.raw.execute("SET statement_timeout = '15s'")
             self.raw.execute("SET lock_timeout = '10s'")
         except psycopg.Error:

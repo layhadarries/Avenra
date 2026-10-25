@@ -5,7 +5,7 @@
 
   var DB_NAME = 'clear-sky-diary-queue';
   var STORE_NAME = 'diary_entries';
-  var DEVICE_TOKEN = 'demo-device';
+  var DEVICE_TOKEN = ((typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) ? 'demo-device' : '');
   var V2_MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 
   var dbPromise = null;
@@ -17,6 +17,8 @@
   var activeDetailEntryId = null;
   var globalDiaryConsentActive = null;
   var isUploading = false;
+  var diaryFlushPromise = null;
+  var entryUploads = new Map();
   var retryTimer = null, retryDelay = 5000;
   var detailGeneration = 0;
   var cleanupPendingIds = new Set();
@@ -116,15 +118,27 @@
     return dbPromise;
   }
 
-  function queueItem(item) {
+  function queueItem(item, requireNew) {
     return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
         var tx = db.transaction(STORE_NAME, 'readwrite');
         var store = tx.objectStore(STORE_NAME);
-        store.put(item);
+        if (requireNew) {
+          var existing = store.get(item.client_id);
+          existing.onsuccess = function () {
+            if (existing.result !== undefined) { tx.abort(); return; }
+            store.put(item);
+          };
+        } else { store.put(item); }
         tx.oncomplete = function () { resolve(item); };
         tx.onerror = tx.onabort = function () { reject(new Error('Local storage unavailable')); };
       });
+    });
+  }
+
+  function queueNewEntry(item) {
+    return global.CWQueue.captureOwner().then(function (owner) {
+      return queueItem(Object.assign({}, item, {owner_id: owner}), true);
     });
   }
 
@@ -140,17 +154,37 @@
     });
   }
 
-  function removeQueuedItem(clientId) {
-    return openDb().then(function (db) {
+  function removeQueuedItem(item, receipt) {
+    if (!verifyReceipt(item, receipt)) {
+      return Promise.reject(new Error('Unverified receipt; local entry retained'));
+    }
+    // Confirm durable ownership-scoped server metadata before deleting anything.
+    return fetch('/api/diary/' + encodeURIComponent(receipt.id), {
+      credentials: 'same-origin', cache: 'no-store',
+      headers: {'X-Device-Token': DEVICE_TOKEN}
+    }).then(function (response) {
+      if (!response.ok) throw new Error('Server confirmation unavailable');
+      return response.json();
+    }).then(function (body) {
+      if (!body || !verifyReceipt(item, body.entry)) {
+        throw new Error('Server confirmation mismatch; local entry retained');
+      }
+      return openDb();
+    }).then(function (db) {
       return new Promise(function (resolve, reject) {
         var tx = db.transaction(STORE_NAME, 'readwrite');
         var store = tx.objectStore(STORE_NAME);
-        store.delete(clientId);
-        tx.oncomplete = function () {
-          cleanupPendingIds.delete(clientId);
-          resolve();
+        tx.oncomplete = function () { cleanupPendingIds.delete(item.client_id); resolve(); };
+        tx.onerror = tx.onabort = function () { reject(new Error('Queue cleanup failed; local entry retained')); };
+        var read = store.get(item.client_id);
+        read.onsuccess = function () {
+          var current = read.result;
+          if (current === undefined) return;
+          if (current.owner_id !== item.owner_id || !verifyReceipt(current, receipt)) {
+            tx.abort(); return;
+          }
+          store.delete(item.client_id);
         };
-        tx.onerror = function () { reject(new Error('Queue delete failed')); };
       });
     });
   }
@@ -493,14 +527,34 @@
     return queueItem(updated).catch(function () {});
   }
 
+  function blockDiaryUpload(item, status, message, originalError) {
+    var error = originalError || new Error(message);
+    if (!originalError) error.status = 409;
+    return markQueuedItemStatus(item, status, message).then(function () { throw error; });
+  }
+
   function uploadSingleEntry(item) {
-    if (item.status === 'cleanup_pending' || cleanupPendingIds.has(item.client_id)) {
-      return removeQueuedItem(item.client_id).then(function () {
-        return { success: true, receipt: item.verified_receipt || { id: 0 } };
+    if (entryUploads.has(item.client_id)) return entryUploads.get(item.client_id);
+    var task;
+    if (!Number.isSafeInteger(item.owner_id) || item.owner_id < 1) {
+      task = blockDiaryUpload(item, 'needs_attention', 'Original account unknown. Entry retained on this phone.');
+    } else {
+      task = global.CWQueue.refreshOwner().then(function (owner) {
+        if (owner !== item.owner_id) return blockDiaryUpload(item, 'needs_attention', 'Entry belongs to another account. It has not been uploaded.');
+        return uploadOwnedEntry(item);
+      }, function (error) {
+        var status = [401,403].indexOf(error.status) !== -1 ? 'auth_expired' : error.status === 409 ? 'needs_attention' : 'upload_failed';
+        return blockDiaryUpload(item, status, 'Account or connection unavailable. Entry retained on this phone.', error);
       });
     }
+    var pending = task.finally(function () { entryUploads.delete(item.client_id); });
+    entryUploads.set(item.client_id, pending);
+    return pending;
+  }
 
+  function uploadOwnedEntry(item) {
     var reqInit = buildUploadRequest(item);
+    reqInit.headers['X-Queue-Owner'] = String(item.owner_id);
     var controller = new AbortController();
     var timeout = setTimeout(function () { controller.abort(); }, 20000);
     return fetch('/api/diary', {
@@ -519,16 +573,11 @@
               throw new Error('Receipt verification failed');
             });
           }
-          return removeQueuedItem(item.client_id).then(function () {
+          return removeQueuedItem(item, receipt).then(function () {
             return { success: true, receipt: receipt };
-          }, function () {
-            cleanupPendingIds.add(item.client_id);
-            return markQueuedItemStatus(
-              Object.assign({}, item, { verified_receipt: receipt }),
-              'cleanup_pending',
-              null
-            ).then(function () {
-              return { success: true, receipt: receipt };
+          }, function (error) {
+            return markQueuedItemStatus(item, 'upload_failed', 'Server confirmation or local cleanup unavailable; entry retained').then(function () {
+              throw error;
             });
           });
         });
@@ -558,10 +607,10 @@
   }
 
   function flushQueue(forcePermanent) {
-    if (isUploading) return Promise.resolve();
+    if (diaryFlushPromise) return diaryFlushPromise;
     isUploading = true;
 
-    return getQueuedItems().then(function (items) {
+    diaryFlushPromise = getQueuedItems().then(function (items) {
       if (!items.length) {
         isUploading = false;
         return;
@@ -583,7 +632,11 @@
       });
     }).catch(function () {
       isUploading = false;
+    }).finally(function () {
+      isUploading = false;
+      diaryFlushPromise = null;
     });
+    return diaryFlushPromise;
   }
 
   function saveEntry() {
@@ -623,7 +676,8 @@
           status: 'queued'
         };
 
-        return queueItem(entryRecord).then(function () {
+        return queueNewEntry(entryRecord).then(function (bound) {
+          entryRecord = bound;
           showStatus('Saved on phone (Pending upload)', 'local');
 
           if (noteInput) noteInput.value = '';
@@ -638,8 +692,8 @@
               setTimeout(hideStatus, 4000);
               return renderEntries();
             }
-          }).catch(function () {
-            showStatus('Upload failed — will retry when connected.', 'local');
+          }).catch(function (error) {
+            showStatus(error && [401,403,409].indexOf(error.status) !== -1 ? 'Saved on this phone. Account access needs attention before upload.' : 'Upload failed — will retry when connected.', 'local');
             return renderEntries();
           });
         });
@@ -797,12 +851,17 @@
       getQueuedItems().catch(function () { return []; }),
       fetch('/api/diary', { headers: { 'X-Device-Token': DEVICE_TOKEN }, cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : { entries: [] }; })
-        .catch(function () { return { entries: [] }; })
+        .catch(function () { return { entries: [] }; }),
+      global.CWQueue.captureOwner().catch(function () { return null; })
     ]).then(function (results) {
-      var queued = (results[0] || []).filter(function (q) {
-        return q.status !== 'cleanup_pending' && !cleanupPendingIds.has(q.client_id);
+      var owner = results[2];
+      var protectedEntries = (results[0] || []).some(function (q) {
+        return !owner || q.owner_id !== owner;
       });
-      var serverEntries = (results[1] && results[1].entries) || [];
+      var queued = (results[0] || []).filter(function (q) {
+        return owner && q.owner_id === owner && q.status !== 'cleanup_pending' && !cleanupPendingIds.has(q.client_id);
+      });
+      var serverEntries = owner ? ((results[1] && results[1].entries) || []) : [];
 
       entriesList.replaceChildren();
 
@@ -812,7 +871,7 @@
         empty.style.color = 'var(--dusty-blue)';
         empty.style.textAlign = 'center';
         empty.style.padding = '1rem 0';
-        empty.textContent = 'No diary entries saved yet.';
+        empty.textContent = protectedEntries ? 'Saved entries remain on this phone. Restore their original account connection to display them.' : 'No diary entries saved yet.';
         entriesList.appendChild(empty);
         return;
       }

@@ -5,7 +5,7 @@ function clearLink(){link.hidden=true;link.removeAttribute('href');clearTimeout(
 button.addEventListener('click',async()=>{
  clearLink();button.disabled=true;status.textContent='Creating private link…';
  try{
-  const response=await fetch('/api/device-invites',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('meta[name="csrf-token"]').content},body:'{}'});
+  const response=await fetch('/api/device-invites',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-CSRFToken':document.querySelector('meta[name="csrf-token"]').content},body:JSON.stringify(document.getElementById('device-case').value ? {case_code:document.getElementById('device-case').value} : {})});
   if(!response.ok)throw new Error('unavailable');
   const result=await response.json(),url=new URL(result.enrollment_url);
   if(url.origin!==location.origin||url.pathname!=='/survivor/enroll.html'||!url.hash)throw new Error('invalid');

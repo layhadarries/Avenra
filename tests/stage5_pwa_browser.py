@@ -3,7 +3,7 @@ import io
 import sqlite3
 from PIL import Image
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, wait_for_async
 from stage2_pwa_browser import FAST
 
 
@@ -42,26 +42,29 @@ def exercise(page, staff, base, env):
     # Real offline shell acceptance is separate from network-interception tests.
     offline_context, offline_tab = phone(workers='allow')
     offline_tab.goto(base + '/survivor/diary.html')
+    offline_tab.evaluate('() => CWQueue.ready')
     offline_tab.wait_for_function('navigator.serviceWorker.controller !== null')
-    offline_tab.wait_for_function("caches.match('/survivor/diary.html').then(Boolean)")
+    wait_for_async(offline_tab, "caches.match('/survivor/diary.html').then(Boolean)")
     offline_context.set_offline(True)
     offline_tab.fill('#diary-note', 'Fictional airplane mode entry')
     offline_tab.click('#diary-save-btn')
-    offline_tab.wait_for_function('window.CWDiary.getQueuedItems().then(q => q.length === 1)')
+    wait_for_async(offline_tab, 'window.CWDiary.getQueuedItems().then(q => q.length === 1)')
     offline_tab.close()
     offline_tab = offline_context.new_page()
     offline_tab.goto(base + '/survivor/diary.html')
     expect(offline_tab.locator('#diary-entries-list')).to_contain_text('Fictional airplane mode entry')
     offline_context.set_offline(False)
     offline_tab.click('#sync-refresh-btn')
-    offline_tab.wait_for_function('window.CWDiary.getQueuedItems().then(q => q.length === 0)')
+    wait_for_async(offline_tab, 'window.CWDiary.getQueuedItems().then(q => q.length === 0)')
     offline_context.close()
     with sqlite3.connect(env['DATABASE_PATH']) as conn:
         conn.execute("DELETE FROM diary_entries WHERE note = ?", ('Fictional airplane mode entry',))
         conn.commit()
 
     context, tab = phone()
-    tab.goto(base + '/survivor/diary.html', wait_until='networkidle')
+    tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
+    tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
+    tab.evaluate('() => CWQueue.ready')
     assert tab.title() == 'Clear Sky'
     assert tab.evaluate('Boolean(window.CWDiary && window.CWDiary.canonicalNote)')
 
@@ -123,7 +126,9 @@ def exercise(page, staff, base, env):
     tab.close()
     tab = context.new_page()
     tab.on('pageerror', lambda error: errors.append(str(error)))
-    tab.goto(base + '/survivor/diary.html', wait_until='networkidle')
+    tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
+    tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
+    tab.evaluate('() => CWQueue.ready')
     expect(tab.locator('#diary-entries-list')).to_contain_text('Café — naïve façade 🌍')
 
     # 3. Mismatched receipt must NOT delete local queued item
@@ -187,7 +192,7 @@ def exercise(page, staff, base, env):
     fail_uploads['mode'] = '503'
     alert_tab = context.new_page()
     alert_tab.on('pageerror', lambda error: errors.append(str(error)))
-    alert_tab.goto(base + '/survivor/', wait_until='networkidle')
+    alert_tab.goto(base + '/survivor/', wait_until='domcontentloaded')
     alert_tab.locator('#panic-btn').dispatch_event('pointerdown')
     expect(alert_tab.locator('#view-sent')).to_be_visible()
     alert_tab.close()
@@ -195,12 +200,14 @@ def exercise(page, staff, base, env):
     # 9. Quick Exit clears unsaved state, revokes blob URLs, and preserves offline queues
     tab.fill('#diary-note', 'Queued sensitive note before exit')
     tab.click('#diary-save-btn')
-    tab.wait_for_function('window.CWDiary.getQueuedItems().then(q => q.length === 1)')
+    wait_for_async(tab, 'window.CWDiary.getQueuedItems().then(q => q.length === 1)')
     tab.fill('#diary-note', 'Unsaved draft in textarea')
     tab.click('#quick-exit-btn')
     tab.wait_for_url('**/survivor/cover.html')
 
-    tab.goto(base + '/survivor/diary.html', wait_until='networkidle')
+    tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
+    tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
+    tab.evaluate('() => CWQueue.ready')
     surviving_queue = tab.evaluate('window.CWDiary.getQueuedItems()')
     assert len(surviving_queue) == 1
     assert surviving_queue[0]['note'] == 'Queued sensitive note before exit'

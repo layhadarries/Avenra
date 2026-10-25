@@ -2,7 +2,7 @@
 Run: python tests/stage2_pwa_browser.py (requires Playwright Chromium).
 """
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, wait_for_async
 
 FAST = """(() => {
   const timeout = window.setTimeout.bind(window), interval = window.setInterval.bind(window);
@@ -78,8 +78,8 @@ def exercise(page, staff_context, base, env):
     context.set_offline(False)
     phone = context.new_page()
     phone.goto(base + '/survivor/')
-    phone.wait_for_function('CWQueue.queueSize().then(n => n === 0)')
-    page.wait_for_function("n => fetch('/api/alerts?per_page=100').then(r => r.json()).then(b => b.total === n)", arg=before + 1)
+    wait_for_async(phone, 'CWQueue.queueSize().then(n => n === 0)')
+    wait_for_async(page, "n => fetch('/api/alerts?per_page=100').then(r => r.json()).then(b => b.total === n)", arg=before + 1)
     assert alert_count() == before + 1
     context.close(); passed.append('offline queue survives page close and sends once after reopening')
 
@@ -159,7 +159,7 @@ def exercise(page, staff_context, base, env):
     assert queued(phone) == 1
     context.set_offline(False)
     phone.evaluate('CWQueue.flushQueue()')
-    phone.wait_for_function('CWQueue.queueSize().then(n => n === 0)')
+    wait_for_async(phone, 'CWQueue.queueSize().then(n => n === 0)')
     assert phone.url.endswith('/survivor/cover.html')
     context.close(); passed.append('quick exit preserves committed alert and cover page flushes it')
 
@@ -217,7 +217,7 @@ def exercise(page, staff_context, base, env):
     phone.on('request', lambda req: sent.append(req.post_data_json) if req.method == 'POST' and req.url.endswith('/api/alerts') else None)
     context.set_offline(False)
     phone.evaluate('CWQueue.flushQueue()')
-    phone.wait_for_function('CWQueue.queueSize().then(n => n === 0)')
+    wait_for_async(phone, 'CWQueue.queueSize().then(n => n === 0)')
     assert sent and sent[0]['lat'] is None and sent[0]['location_recorded_at'] is None
     context.close(); passed.append('revoked consent strips GPS from an older queued alert before transmission')
 

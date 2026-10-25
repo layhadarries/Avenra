@@ -1,7 +1,8 @@
 """Diary API controller."""
 from typing import Optional
 import sys
-from flask import request, jsonify, abort, url_for, send_from_directory
+import io
+from flask import request, jsonify, abort, url_for, send_from_directory, send_file
 from avenra.services.diary_service import DiaryService, LEGACY_MAX_PHOTO_BYTES
 from avenra.security import device_user, current_user, require_role
 from avenra.config import Config
@@ -13,6 +14,21 @@ def get_uploads_dir() -> str:
     if app_mod and hasattr(app_mod, "UPLOADS_DIR"):
         return app_mod.UPLOADS_DIR
     return Config.UPLOADS_DIR
+
+
+def serve_private_photo(service, uploads_dir, filename):
+    storage = service._storage_for(uploads_dir)
+    if getattr(storage, 'database_backed', False):
+        try:
+            raw = storage.get_object(filename)
+        except OSError:
+            abort(404)
+        response = send_file(io.BytesIO(raw), mimetype='image/jpeg',
+                             download_name='evidence.jpg', conditional=False,
+                             etag=False, max_age=0)
+        response.headers['Cache-Control'] = 'private, no-store'
+        return response
+    return send_from_directory(uploads_dir, filename)
 
 
 class DiaryController:
@@ -172,7 +188,7 @@ class DiaryController:
         if not filename:
             abort(404)
 
-        response = send_from_directory(uploads_dir, filename)
+        response = serve_private_photo(self.diary_service, uploads_dir, filename)
         if request.method == "GET" and response.status_code == 200:
             self.diary_service.audit_repo.log(
                 f"survivor {survivor.case_code}",
@@ -219,7 +235,7 @@ class DiaryController:
             abort(404)
 
         # Check that the file can actually be served before recording a view.
-        response = send_from_directory(uploads_dir, filename)
+        response = serve_private_photo(self.diary_service, uploads_dir, filename)
 
         if request.method == "GET" and response.status_code == 200:
             self.diary_service.audit_repo.log(

@@ -86,10 +86,18 @@ class PushSettings:
         from cryptography.fernet import Fernet
         from cryptography.hazmat.primitives import serialization
         try:
-            self.fernet=Fernet((directory/'subscription-storage.key').read_bytes())
-            self.key=serialization.load_pem_private_key(self.private.read_bytes(),password=None)
+            pem=environ.get('WEBPUSH_PRIVATE_KEY_PEM')
+            storage=environ.get('WEBPUSH_STORAGE_KEY')
+            if pem is not None or storage is not None:
+                if not pem or not storage:raise ValueError()
+                self.fernet=Fernet(storage.encode())
+                self.key=serialization.load_pem_private_key(pem.encode(),password=None)
+            else:
+                self.fernet=Fernet((directory/'subscription-storage.key').read_bytes())
+                self.key=serialization.load_pem_private_key(self.private.read_bytes(),password=None)
             from cryptography.hazmat.primitives.asymmetric import ec
             if not isinstance(self.key,ec.EllipticCurvePrivateKey) or not isinstance(self.key.curve,ec.SECP256R1):raise ValueError()
+            if pem is not None:self.private=b64(self.key.private_numbers().private_value.to_bytes(32,'big'))
             raw=self.key.public_key().public_bytes(serialization.Encoding.X962,serialization.PublicFormat.UncompressedPoint)
         except (OSError,ValueError,TypeError):raise PushError('push_configuration_unavailable',503) from None
         self.public=b64(raw)

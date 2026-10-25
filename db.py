@@ -96,6 +96,7 @@ def migrate(conn):
             ("completed_at", "TEXT"),
         ]}
     # Stage 2 completion migration: existing databases retain all records.
+    additions['device_enrollments'] = [('user_id', 'INTEGER REFERENCES users(id)'), ('staff_auth_version', 'INTEGER')]
     for table, columns in additions.items():
         present = {row['name'] for row in conn.execute(f'PRAGMA table_info({table})')}
         for column, definition in columns:

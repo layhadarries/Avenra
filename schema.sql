@@ -171,6 +171,7 @@ CREATE INDEX IF NOT EXISTS idx_notification_batches_user ON notification_batches
 
 CREATE TABLE IF NOT EXISTS device_enrollments (
  token_hash TEXT PRIMARY KEY, staff_id INTEGER NOT NULL REFERENCES users(id),
+ user_id INTEGER REFERENCES users(id), staff_auth_version INTEGER,
  expires_at INTEGER NOT NULL, consumed_at INTEGER
 );
 CREATE TABLE IF NOT EXISTS survivor_devices (
@@ -180,4 +181,14 @@ CREATE TABLE IF NOT EXISTS survivor_devices (
 
 CREATE TABLE IF NOT EXISTS device_pairing_attempts (
  bucket TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS diary_objects (
+ object_name TEXT PRIMARY KEY, data BLOB NOT NULL, sha256 TEXT NOT NULL,
+ byte_count INTEGER NOT NULL CHECK(byte_count>0)
+);
+
+CREATE TABLE IF NOT EXISTS worker_state (
+ key TEXT PRIMARY KEY, last_seen_at TEXT NOT NULL, processed INTEGER NOT NULL,
+ release TEXT NOT NULL
 );

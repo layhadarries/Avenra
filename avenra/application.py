@@ -37,6 +37,8 @@ class AvenraApplication:
 
         from avenra.controllers.device_controller import register_devices
         register_devices(app)
+        from avenra.controllers.worker_controller import register_worker
+        register_worker(app)
 
         # All entrypoints, including gunicorn app:app, initialise the same schema.
         db.init_db()
@@ -71,6 +73,8 @@ class AvenraApplication:
         app.teardown_appcontext(db.close_db)
 
     DEVICE_WRITE_ENDPOINTS = frozenset((
+        'worker_tick',
+        'device_disconnect',
         'device_enroll',
         'api_update_consent',
         'create_alert',
@@ -117,7 +121,7 @@ class AvenraApplication:
 
         @app.before_request
         def check_json_body():
-            if os.environ.get('VERCEL') and request.path.startswith('/api/diary') and request.method not in {'GET','HEAD','OPTIONS'}:
+            if os.environ.get('VERCEL') and not os.environ.get('DATABASE_URL') and request.path.startswith('/api/diary') and request.method not in {'GET','HEAD','OPTIONS'}:
                 return jsonify({'error':'diary_storage_not_configured'}),503
             if request.path.startswith('/api/contact-push/') and request.content_length and request.content_length>4096:
                 return jsonify({'error':'request_too_large'}),413

@@ -4,6 +4,9 @@
 <div class="page-heading"><p class="eyebrow">Individual access</p><h1>Connect a device</h1></div>
 <section class="card"><p>Create a private link for one new account. The new case will be assigned to you. The link expires after ten minutes and works once.</p>
 <p>Send it privately. Use fictional details while the hosted PWA acceptance checks are in progress.</p>
+<label for="device-case">Account</label>
+<select id="device-case"><option value="">Create a new account</option>{% for case in device_cases %}<option value="{{ case.case_code }}">Recover {{ case.case_code }}</option>{% endfor %}</select>
+<p>Recovery keeps the original case and revokes its previous devices when the private link is used. Verify the person through your agreed support process before sending a recovery link.</p>
 <button class="btn" id="create-device-invite" type="button">Create private pairing link</button>
 <p id="device-invite-status" role="status"></p>
 <p><a id="device-invite-link" hidden rel="noreferrer">Open private pairing link</a></p>

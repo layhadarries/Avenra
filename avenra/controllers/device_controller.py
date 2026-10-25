@@ -30,7 +30,9 @@ def register_devices(app):
     @app.get('/devices')
     @require_role('admin', 'responder')
     def devices_page():
-        return render_template('devices.html')
+        user = current_user()
+        cases = db.get_db().execute("SELECT u.case_code FROM users u JOIN case_access c ON c.survivor_id=u.id WHERE c.staff_id=? AND u.role='survivor' AND u.is_active=1 ORDER BY u.case_code", (user.id,)).fetchall()
+        return render_template('devices.html', device_cases=cases)
 
     @app.cli.command('device-revoke')
     @click.option('--case-code', required=True)
@@ -57,9 +59,20 @@ def register_devices(app):
         conn = db.get_db()
         if not rate_allowed(conn, 'staff:' + str(staff.id), 10):
             return jsonify(error='too_many_attempts'), 429
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or set(data) - {'case_code'}:
+            return jsonify(error='invalid_invitation_fields'), 400
+        selected = data.get('case_code')
+        owner_id = None
+        if selected is not None:
+            if not isinstance(selected, str) or not 1 <= len(selected) <= 64:
+                return jsonify(error='invalid_case'), 400
+            row = conn.execute("SELECT u.id FROM users u JOIN case_access c ON c.survivor_id=u.id WHERE c.staff_id=? AND u.case_code=? AND u.role='survivor' AND u.is_active=1", (staff.id, selected)).fetchone()
+            if row is None: return jsonify(error='not_found'), 404
+            owner_id = row['id']
         token = secrets.token_urlsafe(32)
-        conn.execute('INSERT INTO device_enrollments(token_hash,staff_id,expires_at) VALUES(?,?,?)',
-                     (digest(token), staff.id, int(time.time()) + 600))
+        conn.execute('INSERT INTO device_enrollments(token_hash,staff_id,user_id,staff_auth_version,expires_at) VALUES(?,?,?,?,?)',
+                     (digest(token), staff.id, owner_id, staff.auth_version, int(time.time()) + 600))
         conn.execute("INSERT INTO audit_log(actor,action,detail) VALUES(?,'device_invitation_created','Ten minute individual pairing invitation')", ('user:' + str(staff.id),))
         conn.commit()
         origin = os.environ.get('PUBLIC_BASE_URL', request.host_url.rstrip('/')).rstrip('/')
@@ -86,15 +99,23 @@ def register_devices(app):
         now = int(time.time())
         try:
             conn.execute('BEGIN IMMEDIATE')
-            invite = conn.execute("SELECT d.staff_id FROM device_enrollments d JOIN users u ON u.id=d.staff_id WHERE d.token_hash=? AND d.expires_at>? AND d.consumed_at IS NULL AND u.is_active=1 AND u.role IN ('admin','responder')", (digest(token), now)).fetchone()
+            invite = conn.execute("SELECT d.staff_id,d.user_id FROM device_enrollments d JOIN users u ON u.id=d.staff_id WHERE d.token_hash=? AND d.expires_at>? AND d.consumed_at IS NULL AND u.is_active=1 AND u.auth_version=d.staff_auth_version AND u.role IN ('admin','responder')", (digest(token), now)).fetchone()
             if invite is None:
                 conn.rollback()
                 return jsonify(error='invalid_invitation'), 400
-            case = 'AV-' + secrets.token_hex(8).upper()
-            conn.execute("INSERT INTO users(name,role,email,case_code,is_active) VALUES(?,'survivor',?,?,1)",
-                         ('Private account', secrets.token_hex(24) + '@device.invalid', case))
-            owner = conn.execute('SELECT id FROM users WHERE case_code=?', (case,)).fetchone()['id']
-            conn.execute('INSERT INTO case_access(staff_id,survivor_id) VALUES(?,?)', (invite['staff_id'], owner))
+            if invite['user_id'] is None:
+                case = 'AV-' + secrets.token_hex(8).upper()
+                conn.execute("INSERT INTO users(name,role,email,case_code,is_active) VALUES(?,'survivor',?,?,1)",
+                             ('Private account', secrets.token_hex(24) + '@device.invalid', case))
+                owner = conn.execute('SELECT id FROM users WHERE case_code=?', (case,)).fetchone()['id']
+                conn.execute('INSERT INTO case_access(staff_id,survivor_id) VALUES(?,?)', (invite['staff_id'], owner))
+            else:
+                row = conn.execute("SELECT u.id,u.case_code FROM users u JOIN case_access c ON c.survivor_id=u.id WHERE u.id=? AND c.staff_id=? AND u.role='survivor' AND u.is_active=1", (invite['user_id'], invite['staff_id'])).fetchone()
+                if row is None:
+                    conn.rollback()
+                    return jsonify(error='invalid_invitation'), 400
+                owner,case = row['id'],row['case_code']
+                conn.execute('UPDATE survivor_devices SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL', (now, owner))
             credential = secrets.token_urlsafe(32)
             conn.execute('INSERT INTO survivor_devices(token_hash,user_id,expires_at) VALUES(?,?,?)',
                          (digest(credential), owner, now + 2592000))
@@ -108,6 +129,20 @@ def register_devices(app):
         response.status_code = 201
         response.set_cookie(COOKIE, credential, max_age=2592000, httponly=True,
                             secure=current_app.config['SESSION_COOKIE_SECURE'], samesite='Strict', path='/')
+        return response
+
+    @app.post('/api/device/disconnect')
+    def device_disconnect():
+        origin = os.environ.get('PUBLIC_BASE_URL', request.host_url.rstrip('/')).rstrip('/')
+        if request.headers.get('Origin') != origin:
+            return jsonify(error='cross_origin_write_forbidden'),403
+        credential = request.cookies.get(COOKIE)
+        if credential and len(credential) <= 128:
+            conn = db.get_db()
+            with conn:
+                conn.execute('UPDATE survivor_devices SET revoked_at=? WHERE token_hash=? AND revoked_at IS NULL', (int(time.time()),digest(credential)))
+        response = jsonify(disconnected=True)
+        response.delete_cookie(COOKIE, path='/', secure=current_app.config['SESSION_COOKIE_SECURE'], httponly=True, samesite='Strict')
         return response
 
     @app.get('/api/device')

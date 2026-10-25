@@ -19,7 +19,7 @@
     var ctrl = new AbortController(), timer = setTimeout(function () { ctrl.abort(); }, 10000);
     controllers.push(ctrl);
     options = Object.assign({credentials: 'same-origin', cache: 'no-store'}, options || {});
-    options.headers = Object.assign({'X-Device-Token': 'demo-device'}, options.headers || {}); options.signal = ctrl.signal;
+    options.headers = Object.assign({'X-Device-Token': ((typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) ? 'demo-device' : '')}, options.headers || {}); options.signal = ctrl.signal;
     function clean() { clearTimeout(timer); controllers = controllers.filter(function (x) { return x !== ctrl; }); }
     return fetch(url, options).then(function (response) {
       if (!response.ok) throw new Error('unavailable'); return response.json();

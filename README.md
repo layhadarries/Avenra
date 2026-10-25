@@ -17,9 +17,11 @@ https://avenra-delta.vercel.app/login
 Hosted staff invitations, password creation, normal login and global
 sign-out are working. The hosted database uses PostgreSQL through Supabase.
 
-Individual PWA device pairing and server-side queue ownership checks are
-implemented. Complete hosted PWA integration is still in progress.
-The current public app URL must not be treated as a completed release.
+Individual PWA pairing, case recovery and account-bound alert/diary queues are
+implemented. The Stage 6 hosted-demo delivery includes private transactional photo
+storage, verified database TLS and hosted Web Push scheduling tools. Deployment,
+scheduler heartbeat and physical phone acceptance must pass before release.
+See [Stage 6 release runbook](docs/stage-6-release.md).
 
 ## Features
 
@@ -65,8 +67,9 @@ QR assets:
 Installing the PWA does not guarantee background execution while closed.
 Offline capture and online delivery are different states.
 
-Vercel does not automatically run the project's persistent notification
-workers. Hosted notification dispatch needs a separately configured runner.
+Vercel does not automatically run persistent worker loops. The Stage 6 setup uses
+a secret-authenticated bounded worker endpoint invoked by Supabase Cron. It is
+operational only after its hosted heartbeat and phone notification tests pass.
 
 ## Local development — Fish
 
@@ -121,17 +124,15 @@ that the hosted PostgreSQL deployment has passed integration testing.
 
 ## Remaining release work
 
-- Bind queued alerts and diary entries to their original accounts.
-- Block mismatched or unbound legacy records without deleting them.
+- Complete the live account-switch, revocation and recovery acceptance matrix.
 - Complete hosted PWA identity and recovery flows.
-- Configure durable, private hosted diary storage.
-- Restore PostgreSQL certificate verification with the correct CA.
-- Verify hosted notification dispatch independently of a developer laptop.
+- Apply and verify the private hosted diary schema and verified TLS connection.
+- Enable and confirm hosted notification dispatch independently of a developer laptop.
 - Complete installed-phone testing over Wi-Fi, mobile data and reconnects.
 - Validate backup restoration, access controls and operational limits.
 
-Current Vercel diary writes remain blocked until durable private storage
-is configured. Use fictional incident data while release gates remain open.
+Hosted diary writes use private transactional database storage after the Stage 6
+schema is applied. Existing local photographs are not silently imported. Use fictional incident data while release gates remain open.
 
 ## Architecture
 
