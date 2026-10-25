@@ -96,15 +96,16 @@
       }).then(function () { if (token === generation) { saving = false; refresh.disabled = false; } });
     });
   });
-
+  if (more) more.addEventListener('click', function () { if (cursor && !departed) history(false, generation); });
+  if (refresh) refresh.addEventListener('click', reload);
   function clearPrivate() {
-    controllers.forEach(function (ctrl) { ctrl.abort(); }); controllers = []; historyBusy = false;
-    unknown(); clearHistory(''); message('');
+    generation++; saving = false; historyBusy = false;
+    controllers.forEach(function (ctrl) { ctrl.abort(); }); controllers = [];
+    unknown(); clearHistory(''); message(''); if (refresh) refresh.disabled = false;
   }
-  more.addEventListener('click', function () { history(false, generation); });
-  refresh.addEventListener('click', reload);
   function quickExit(event) { if (event) event.preventDefault(); departed = true; clearPrivate(); location.replace('/survivor/cover.html'); }
-  document.getElementById('quick-exit').addEventListener('click', quickExit);
+  var qeBtn = document.getElementById('quick-exit') || document.getElementById('quick-exit-btn');
+  if (qeBtn) qeBtn.addEventListener('click', quickExit);
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape') quickExit(event); });
   window.addEventListener('pagehide', function () { departed = true; clearPrivate(); });
   window.addEventListener('pageshow', function (event) { if (event.persisted) { departed = false; reload(); } });

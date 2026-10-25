@@ -14,8 +14,8 @@ self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS)));
 });
 self.addEventListener('activate', event => {
-  const prefixes = ['clear-sky-shell-', 'clear-sky-shell-', 'avenra-pwa-shell-',
-    'clear-sky-data-', 'clear-sky-data-'];
+  const prefixes = ['cape-weather-shell-', 'clear-sky-shell-', 'avenra-pwa-shell-',
+    'cape-weather-data-', 'clear-sky-data-'];
   event.waitUntil(caches.keys().then(keys => Promise.all(keys
     .filter(key => key !== CACHE_NAME && prefixes.some(prefix => key.startsWith(prefix)))
     .map(key => caches.delete(key)))).then(() => self.clients.claim()));
