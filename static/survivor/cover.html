@@ -95,6 +95,7 @@
       </div>
     </section>
     <p class="cv-weather-status" id="cv-weather-status" role="status" aria-live="polite"></p>
+    <p class="tap-alert-status" id="weather-tap-status" role="status" aria-live="polite" hidden></p>
     <section class="cv-card" aria-label="Hourly forecast">
       <h2 class="cv-h2">Hourly forecast <span>Next 24 hours</span></h2>
       <div class="cv-hourly" id="cv-hourly"><p class="cv-empty">Your hourly forecast will appear here.</p></div>
@@ -222,6 +223,8 @@
   </div>
 
   <script src="/survivor/queue.js"></script>
+  <script src="/survivor/tap-gesture.js"></script>
+  <script src="/survivor/tap-alert.js"></script>
   <script src="/survivor/unlock.js"></script>
   <script src="/survivor/onboarding.js"></script>
   <script>

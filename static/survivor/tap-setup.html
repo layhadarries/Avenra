@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Clear Sky</title>
+  <script src="/survivor/theme.js"></script>
+  <link rel="stylesheet" href="/survivor/install.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Clear Sky · optional setup</p>
+    <h1>Weather tap alert</h1>
+    <p><strong>Experimental. Off by default.</strong> After you enable this, four quick taps on a non-interactive weather area within 1.5 seconds save an emergency alert. There is no PIN or confirmation before sending.</p>
+    <p>Buttons, links, forms, search and PIN/setup dialogs do not count. Scrolling, dragging and long presses do not count. After an activation, leave 1.5 seconds without taps before another attempt.</p>
+    <p>It works only while the weather page is open, visible and focused. It does not work with your phone locked or the app closed. Accidental activations remain possible; this gesture has not been evaluated with users.</p>
+    <p>Tap alerts do not collect or share GPS, including weather location. This keeps GPS from delaying the alert. The normal HELP button and its consent-based location option stay available.</p>
+    <p>“Saved on this phone” means it is waiting to send. “Received by Avenra” is not a promise of help. “Acknowledged by a responder” only confirms acknowledgement. Offline alerts retry through the existing queue when a connection returns and the app is open.</p>
+    <p id="tap-setup-status" role="status" aria-live="polite">Checking private device connection…</p>
+    <label><input id="tap-understood" type="checkbox" disabled> I understand the gesture, its limitations and the risk of accidental alerts, and want to enable it for this connected account.</label>
+    <p><button id="tap-enable" type="button" disabled>Enable four-tap alerts</button></p>
+    <p><button id="tap-disable" type="button">Disable weather tap alerts</button></p>
+    <p><a href="/survivor/cover.html">Return to weather</a></p>
+    <a href="/survivor/device.html">Device connection</a>
+  </main>
+  <script src="/survivor/queue.js"></script>
+  <script src="/survivor/tap-alert-settings.js"></script>
+</body>
+</html>

@@ -110,6 +110,9 @@ button.cv-day-row { cursor: pointer; }
 .cv-text-button { min-height: 44px; padding: 8px 0; background: none; border: 0; color: inherit; font: inherit; font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
 .cv-weather-status { font-size: 12px; line-height: 1.5; color: #fff; text-align: center; }
 .cv-weather-status:empty { display: none; }
+.tap-alert-status { color: #fff; font-size: 12px; line-height: 1.5; text-align: center; }
+body.weather-tap-enabled { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+body.weather-tap-enabled input, body.weather-tap-enabled textarea, body.weather-tap-enabled [contenteditable] { -webkit-user-select: text; user-select: text; }
 .cv-empty { padding: 7px 0; color: var(--weather-muted); font-size: 13px; }
 .cv-footer { padding: 4px 8px 0; text-align: center; color: var(--weather-muted); font-size: 11px; line-height: 1.8; }
 .cv-footer a { color: #fff; text-underline-offset: 3px; }

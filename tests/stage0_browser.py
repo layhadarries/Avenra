@@ -34,7 +34,7 @@ def wait_for_async(page, expression, *, arg=None, timeout=30000):
         page.wait_for_timeout(50)
 
 
-def main(staff_check=None):
+def main(staff_check=None, browser_name='chromium'):
     with tempfile.TemporaryDirectory() as directory:
         env = os.environ.copy()
         # Never pass hosted database, origin or mail credentials to a fixture server.
@@ -69,7 +69,7 @@ def main(staff_check=None):
             else:
                 raise RuntimeError('Gunicorn startup timed out')
             with sync_playwright() as playwright:
-                browser = playwright.chromium.launch()
+                browser = getattr(playwright, browser_name).launch()
                 context = browser.new_context(viewport={'width': 1440, 'height': 1000})
                 page = context.new_page()
                 errors = []
