@@ -75,7 +75,7 @@ class Stage6PWAReadinessTests(unittest.TestCase):
             '/survivor/survivor.js',
             '/survivor/queue.js',
             '/survivor/diary.js',
-            '/static/css/style.css',
+            '/survivor/pwa.css',
         ]
         for req in required_assets:
             self.assertIn(req, assets, f"Missing required asset in service worker: {req}")
@@ -88,7 +88,7 @@ class Stage6PWAReadinessTests(unittest.TestCase):
 
     def test_accessibility_and_calm_design_rules(self):
         """CSS includes reduced-motion media query and focus visibility rules."""
-        with self.client.get('/static/css/style.css') as res:
+        with self.client.get('/survivor/pwa.css') as res:
             self.assertEqual(res.status_code, 200)
             css = res.get_data(as_text=True)
 
