@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer"><title>Avenra · staff verification</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head><body><div class="login-wrap"><main class="card login-card">
+  <h1>{{ 'Set up staff verification' if enrolling else 'Verify staff sign-in' }}</h1>
+  {% if error %}<p role="alert">{{ error }}</p>{% endif %}
+  {% if enrolling %}
+    <p>In your authenticator app, add a time-based account named Avenra with this secret. Keep it private; do not share it with support staff.</p>
+    <p><code id="mfa-secret">{{ secret }}</code></p>
+    <p>Enter the six-digit code to confirm setup. You will then receive ten single-use recovery codes.</p>
+  {% else %}<p>Enter your authenticator code or one unused recovery code. Your password alone does not grant access.</p>{% endif %}
+  <form method="post" action="{{ url_for('staff_mfa') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="mfa-code">Verification code</label>
+    <input id="mfa-code" name="code" autocomplete="one-time-code" maxlength="128" required autofocus>
+    <button class="btn" type="submit">Verify</button>
+  </form>
+  <p><a href="{{ url_for('login') }}">Return to sign-in</a></p>
+</main></div></body></html>

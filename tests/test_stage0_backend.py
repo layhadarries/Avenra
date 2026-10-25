@@ -154,6 +154,9 @@ class EvaluationRoutesTests(unittest.TestCase):
             with patch.dict(test_avenra.avenra_app.app.config, {'EVALUATION_MODE': True}):
                 self.assertEqual(self.client.post('/evaluation/login/responder').status_code, 400)
                 self.assertEqual(self.client.post('/evaluation/login/responder', data={'csrf_token': self.token()}).status_code, 302)
+                self.assertEqual(self.client.get('/api/alerts').status_code, 401)
+                from mfa_fixture import complete_mfa
+                complete_mfa(self)
                 self.assertEqual(self.client.get('/api/alerts').status_code, 200)
                 self.client = test_avenra.avenra_app.app.test_client()
                 self.assertEqual(self.client.post('/evaluation/login/admin', data={'csrf_token': self.token()}).status_code, 404)

@@ -6,6 +6,10 @@ from avenra.repositories.user_repository import UserRepository
 from avenra.repositories.audit_repository import AuditRepository
 from avenra.models.user import User
 from avenra.config import Config
+from werkzeug.security import check_password_hash, generate_password_hash
+import secrets
+
+_DUMMY_PASSWORD_HASH = generate_password_hash(secrets.token_urlsafe(32))
 
 
 class AuthService:
@@ -22,24 +26,27 @@ class AuthService:
         self.session_timeout = session_timeout
 
     def authenticate(self, email: str, password: str) -> Optional[User]:
+        if not isinstance(email, str) or not isinstance(password, str) or len(email)>254 or len(password)>128:
+            return None
         user = self.user_repo.get_by_email(email)
-        if user and user.can_sign_in() and user.verify_password(password):
+        valid = user.verify_password(password) if user and user.password_hash else check_password_hash(_DUMMY_PASSWORD_HASH, password)
+        if user and user.can_sign_in() and valid:
             return user
-        self.audit_repo.log("anonymous", "login_failed", detail=email[:120])
+        self.audit_repo.log("anonymous", "login_failed", detail='Credentials rejected')
         return None
 
-    def start_session(self, user: User) -> str:
+    def start_session(self, user: User, *, mfa_verified=False) -> str:
         """Initialize a new authenticated session for a staff user. Returns redirect URL."""
-        if not user.is_active or not user.password_hash:
+        if not user.is_active or not user.password_hash or not mfa_verified:
             raise PermissionError("Account inactive or cannot sign in")
 
         session.clear()
+        self.audit_repo.log(f'user:{user.id}', "login", detail=user.role)
         session["user_id"] = user.id
         session["auth_version"] = user.auth_version
         session["issued_at"] = int(time.time())
+        session['mfa_verified'] = True
         g.pop("user", None)
-
-        self.audit_repo.log(user.name, "login", detail=user.role)
 
         destination = "shelters_page" if user.role == "shelter" else "dashboard"
         return destination
@@ -65,10 +72,17 @@ class AuthService:
         version = session.get("auth_version")
         issued_at = session.get("issued_at")
 
+        # A password-bound MFA challenge is still anonymous. Template context
+        # inspection must not destroy it (or treat it as a staff session).
+        if uid is None and isinstance(session.get('mfa_challenge'), str):
+            g.user = None
+            return None
+
         if (
             type(uid) is not int
             or type(version) is not int
             or type(issued_at) is not int
+            or session.get('mfa_verified') is not True
         ):
             session.clear()
             g.user = None

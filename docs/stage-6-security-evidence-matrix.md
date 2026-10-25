@@ -1,6 +1,27 @@
-# Stage 6 Security Evidence Matrix (OWASP Top 10 & ASVS)
+# Security engineering evidence matrix (OWASP Top 10 & ASVS)
 
 This matrix records implemented controls and automated verification evidence across Stages 5 and 6A. It is engineering verification evidence, not a formal external security certification.
+
+## Stage 8 identity follow-up (2026-10-26)
+
+Baseline: `8c4683d` / `stage-7-complete`. See
+[staff MFA/recovery and rollout boundaries](staff-email-invitations.md#mandatory-staff-mfa-and-recovery-stage-8).
+All records/providers are isolated fixtures; no real email/notification, live DDL,
+provider-setting change or deployment is part of this evidence.
+Full Python regression passed **426 tests**; the 15 new MFA checks, 30 Node checks,
+`pip check` and six Chromium scripts (invitation, weather-tap, Stage 2 HELP,
+Stage 5 diary, Stage 3 case and Stage 4 audit) passed. Fixture resource-cleanup
+warnings remain; this is not a warning-free or hosted acceptance result.
+
+| Requirement | Check | Actual result | Limits |
+|---|---|---|---|
+| Mandatory staff MFA | `test_stage8_mfa.py`; password/activation/evaluation challenge cannot authorize staff until MFA; no legacy password-only session | Focused tests pass after failing-first reproduction | TOTP is not phishing-resistant; evaluation fixture access still requires MFA, and is forbidden on hosted/production runtime |
+| Enrollment, replay and recovery | Five-minute version-bound one-use challenges; PyOTP counter reuse, recovery-code replay/concurrency, audit rollback, confirmed-secret/cookie checks | Focused checks pass; only encrypted secrets/digests retained | Recovery codes shown once; lost response can require operator recovery; clock synchronization required |
+| Reset and revocation | Explicit CLI confirmation + non-sensitive verification reference; auth-version invalidation, suspension/expiry checks, non-staff session rejection | Focused checks pass | Independent identity verification is a required human process, not technically attested by a CLI flag |
+| Invitations and least privilege | Existing expiry/resend/single-use/concurrent activation tests now complete real MFA; assignment/role/device tests retained | Invitation suite and Chromium invitation acceptance passed | No real invitation or external inbox delivery tested |
+| Persistent abuse/privacy | Keyed account/address counters, bounded cardinality/saturation/expiry, generic auth errors, no rejected-email logging, private/no-store MFA HTML | Focused and HTTPS CSRF checks pass | Targeted/shared-IP lockout and upstream DDoS remain possible |
+| Production/key guard | Missing/malformed separate encryption key fails startup; evaluation production mismatch rejected; additive version-7 migration | Local configuration tests pass | No hosted migration/key provisioning or PostgreSQL rollout exercised |
+| Emergency and offline regression | Weather-tap, Stage 2 HELP, Stage 5 diary Chromium scripts; Node contracts | Browser scripts and 30 Node checks pass through real staff MFA | Emulation/injected GPS, no physical phone or independent review |
 
 ## Stage 7 engineering follow-up (2026-10-26)
 

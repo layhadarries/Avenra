@@ -34,3 +34,4 @@ urllib3==2.8.0
 yarl==1.25.1
 
 psycopg[binary]==3.2.13
+PyOTP==2.10.0

@@ -5,6 +5,9 @@ from avenra.services.auth_service import AuthService
 from avenra.security import current_user
 from avenra.config import Config
 from avenra.repositories.portal_repository import PortalRepository
+import db
+from avenra.services.abuse_service import AbuseService
+from avenra.services.mfa_service import MFAService
 
 
 class AuthController:
@@ -27,10 +30,13 @@ class AuthController:
                 return self.evaluation_login(request.form['quick_role'])
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
+            if not AbuseService(db.get_db()).allow('password', email, 10):
+                return render_template('login.html', demo_login=False, error='Too many attempts. Please wait 15 minutes.'), 429
             user = self.auth_service.authenticate(email, password)
             if user:
-                dest = self.auth_service.start_session(user)
-                return redirect(url_for(dest))
+                session.clear()
+                session['mfa_challenge'] = MFAService(db.get_db()).begin(user)
+                return redirect(url_for('staff_mfa'))
 
             # Anonymous-session validation may clear session flashes. Keep this
             # request's generic error in template context instead of the cookie.
@@ -78,6 +84,7 @@ class AuthController:
         user = self.auth_service.user_repo.get_by_email(email)
         if user is None or not user.can_sign_in() or user.role != role:
             abort(403)
-        destination = self.auth_service.start_session(user)
+        session.clear()
+        session['mfa_challenge'] = MFAService(db.get_db()).begin(user)
         self.auth_service.audit_repo.log(f'user:{user.id}', 'evaluation_login', detail=role)
-        return redirect(url_for(destination))
+        return redirect(url_for('staff_mfa'))

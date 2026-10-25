@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer"><title>Avenra · recovery codes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head><body><div class="login-wrap"><main class="card login-card">
+  <h1>Save your recovery codes safely</h1>
+  <p>These codes appear only once. Each replaces one authenticator code, but you still need your password. Keep them separately from this device and do not send them to staff or support.</p>
+  <ul>{% for code in codes %}<li><code data-recovery-code>{{ code }}</code></li>{% endfor %}</ul>
+  <p>Lost both the authenticator and recovery codes? Contact your organisation's authorized recovery operator for independent identity verification. There is no email-only or case-code reset.</p>
+  <a class="btn" href="{{ url_for(destination) }}">Continue to workspace</a>
+</main></div></body></html>

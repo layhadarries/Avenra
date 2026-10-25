@@ -4,7 +4,7 @@ import secrets
 import sqlite3
 import time
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, complete_staff_mfa
 
 
 def exercise(page, context, base, env):
@@ -26,6 +26,7 @@ def exercise(page, context, base, env):
         invited.get_by_label('Create password',exact=True).fill('Q7!fern-River-Cloud-29')
         invited.get_by_label('Confirm password',exact=True).fill('Q7!fern-River-Cloud-29')
         invited.get_by_role('button',name='Activate account',exact=True).click()
+        complete_staff_mfa(invited,env,'browser-invite@example.test')
         invited.wait_for_url('**/dashboard')
         expect(invited.locator('.topbar-user')).to_contain_text('Invited browser colleague')
         invited.get_by_role('button',name='Sign out everywhere').click()
@@ -33,6 +34,7 @@ def exercise(page, context, base, env):
         invited.get_by_label('Work email').fill('browser-invite@example.test')
         invited.get_by_label('Password',exact=True).fill('Q7!fern-River-Cloud-29')
         invited.get_by_role('button',name='Sign in',exact=True).click()
+        complete_staff_mfa(invited,env,'browser-invite@example.test')
         invited.wait_for_url('**/dashboard')
         assert not errors, errors
     finally:

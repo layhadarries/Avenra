@@ -153,6 +153,7 @@ def apply_security_headers(resp):
         "/shelters",
         "/login",
         "/logout",
+        "/mfa",
         "/evaluation",
     )):
         resp.headers["Cache-Control"] = "private, no-store"

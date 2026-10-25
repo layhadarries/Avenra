@@ -91,6 +91,11 @@ The dashboard is deployed on Vercel and uses Supabase PostgreSQL with verified T
 
 ## Developer setup
 
+Local Stage 8 code now requires staff TOTP verification after password sign-in or
+invitation activation. Hosted rollout is **not performed**: it first requires the
+additive MFA migration and a separately provisioned encryption key. See
+[staff identity and recovery operations](docs/staff-email-invitations.md#mandatory-staff-mfa-and-recovery-stage-8).
+
 Requirements: Python, Node.js for service-worker checks, and Fish shell for the commands below. Install the app dependencies and start the local server:
 
 ```fish

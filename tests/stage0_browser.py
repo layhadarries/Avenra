@@ -5,6 +5,9 @@ AVENRA_SERVER_PYTHON can select the interpreter running the pinned Gunicorn app.
 No external messages are sent; all records and browser state are temporary.
 """
 import os
+import base64
+import hashlib
+import sqlite3
 from pathlib import Path
 import secrets
 import socket
@@ -17,6 +20,32 @@ import urllib.request
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def complete_staff_mfa(page, env, email='nomsa@avenra.demo'):
+    """Use actual TOTP/recovery flow against isolated fictional fixture accounts."""
+    import pyotp
+    from cryptography.fernet import Fernet
+    page.wait_for_url('**/mfa')
+    enrolling = page.locator('#mfa-secret').count() == 1
+    saved = getattr(complete_staff_mfa, 'codes', {})
+    key = (env['DATABASE_PATH'], email)
+    if enrolling:
+        code = pyotp.TOTP(page.locator('#mfa-secret').inner_text()).now()
+    else:
+        with sqlite3.connect(env['DATABASE_PATH']) as conn:
+            row = conn.execute('SELECT m.encrypted_secret,m.last_counter FROM staff_mfa m JOIN users u ON u.id=m.user_id WHERE u.email=?', (email,)).fetchone()
+        cipher = Fernet(base64.urlsafe_b64encode(hashlib.sha256(('dev-mfa:'+env['SECRET_KEY']).encode()).digest()))
+        totp = pyotp.TOTP(cipher.decrypt(row[0].encode()).decode())
+        code = totp.now() if int(time.time())//30 > row[1] else saved[key].pop()
+    page.get_by_label('Verification code', exact=True).fill(code)
+    page.get_by_role('button', name='Verify', exact=True).click()
+    if enrolling:
+        page.get_by_role('heading', name='Save your recovery codes safely').wait_for()
+        saved[key] = page.locator('[data-recovery-code]').all_text_contents()
+        assert len(saved[key]) == 10
+        complete_staff_mfa.codes = saved
+        page.get_by_role('link', name='Continue to workspace').click()
 
 
 def wait_for_async(page, expression, *, arg=None, timeout=30000):
@@ -40,7 +69,7 @@ def main(staff_check=None, browser_name='chromium'):
         # Never pass hosted database, origin or mail credentials to a fixture server.
         for key in ('DATABASE_URL', 'PUBLIC_BASE_URL', 'VERCEL', 'VERCEL_ENV',
                     'SMTP_HOST', 'SMTP_PORT', 'SMTP_TLS_MODE', 'SMTP_USERNAME',
-                    'SMTP_PASSWORD', 'SMTP_FROM'):
+                    'SMTP_PASSWORD', 'SMTP_FROM', 'STAFF_MFA_ENCRYPTION_KEY'):
             env.pop(key, None)
 
         for name in ('SMS_WEBHOOK_URL', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'):
@@ -83,6 +112,7 @@ def main(staff_check=None, browser_name='chromium'):
                 assert "don't match" in page.get_by_role('alert').inner_text()
                 page.goto(base + '/evaluation')
                 page.get_by_role('button', name='Sign in as Social worker').click()
+                complete_staff_mfa(page, env)
                 page.wait_for_url('**/dashboard')
                 assert 'Nomsa D' in page.locator('.topbar-user').inner_text()
                 if staff_check is not None:

@@ -52,7 +52,7 @@ def init_db():
     try:
         if os.environ.get("DATABASE_URL"):
             row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
-            if not row or row[0] != 6:
+            if not row or row[0] != 7:
                 raise RuntimeError("Apply the hosted database migration before starting the app")
             return
         with open(SCHEMA_PATH, encoding="utf-8") as f:
@@ -118,3 +118,9 @@ def migrate(conn):
     conn.execute('''CREATE TABLE IF NOT EXISTS app_metadata (
         key TEXT PRIMARY KEY, value TEXT NOT NULL
     )''')
+    from avenra.repositories.mfa_repository import SCHEMA as MFA_SCHEMA
+    from avenra.repositories.abuse_repository import SCHEMA as ABUSE_SCHEMA
+    for statement in (MFA_SCHEMA + ';' + ABUSE_SCHEMA).split(';'):
+        if statement.strip():
+            conn.execute(statement)
+    conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (7)')

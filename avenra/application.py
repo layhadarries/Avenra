@@ -41,6 +41,8 @@ class AvenraApplication:
         register_onboarding(app)
         from avenra.controllers.alert_location_controller import register_alert_locations
         register_alert_locations(app)
+        from avenra.controllers.mfa_controller import register_mfa
+        register_mfa(app)
         from avenra.controllers.worker_controller import register_worker
         register_worker(app)
 
@@ -66,6 +68,17 @@ class AvenraApplication:
             raise RuntimeError('APP_ENV must be development, evaluation or production')
         if app.config['APP_ENV'] == 'production' and not self.config_class.SESSION_COOKIE_SECURE:
             raise RuntimeError('Production requires COOKIE_SECURE=1 and HTTPS')
+        if app.config['EVALUATION_MODE'] and (app.config['APP_ENV'] != 'evaluation' or os.environ.get('VERCEL') or os.environ.get('DATABASE_URL')):
+            raise RuntimeError('Evaluation is limited to isolated fictional local databases')
+        if app.config['APP_ENV'] == 'production' or os.environ.get('VERCEL') or os.environ.get('DATABASE_URL') or os.environ.get('STAFF_MFA_ENCRYPTION_KEY') is not None:
+            from cryptography.fernet import Fernet
+            key = os.environ.get('STAFF_MFA_ENCRYPTION_KEY', '')
+            if key == secret_key:
+                raise RuntimeError('STAFF_MFA_ENCRYPTION_KEY must be separate from SECRET_KEY')
+            try:
+                Fernet(key.encode())
+            except (ValueError, TypeError):
+                raise RuntimeError('Set a separate STAFF_MFA_ENCRYPTION_KEY before starting hosted/production runtime') from None
         app.config["SESSION_COOKIE_HTTPONLY"] = self.config_class.SESSION_COOKIE_HTTPONLY
         app.config["SESSION_COOKIE_SAMESITE"] = self.config_class.SESSION_COOKIE_SAMESITE
         app.config["SESSION_COOKIE_SECURE"] = self.config_class.SESSION_COOKIE_SECURE
@@ -110,14 +123,14 @@ class AvenraApplication:
                 return
             if request.endpoint in self.DEVICE_WRITE_ENDPOINTS:
                 return
-            if request.endpoint.startswith('contact_push.') or request.endpoint in {'staff_invitation.accept', 'login', 'logout'}:
+            if request.endpoint.startswith('contact_push.') or request.endpoint in {'staff_invitation.accept', 'login', 'logout', 'staff_mfa'}:
                 # These pages deliberately suppress Referer. Keep session-bound
                 # CSRF token validation and require HTTPS browser Origin instead
                 # of disabling CSRF or weakening the site's other form checks.
                 from flask_wtf.csrf import validate_csrf
                 from wtforms.validators import ValidationError
                 try:
-                    validate_csrf(request.form.get('csrf_token') if request.endpoint in {'staff_invitation.accept', 'login', 'logout'} else request.headers.get('X-CSRFToken'))
+                    validate_csrf(request.form.get('csrf_token') if request.endpoint in {'staff_invitation.accept', 'login', 'logout', 'staff_mfa'} else request.headers.get('X-CSRFToken'))
                 except ValidationError:
                     raise CSRFError('Invalid contact form token.') from None
                 if request.is_secure and request.headers.get('Origin') != os.environ.get('PUBLIC_BASE_URL', request.host_url.rstrip('/')).rstrip('/'):

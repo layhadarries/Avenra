@@ -17,6 +17,7 @@ os.environ["DATABASE_PATH"] = os.path.join(_BOOT_TMP.name, "boot_avenra.db")
 os.environ.pop("DATABASE_URL", None)
 # Local fixtures use localhost, never an inherited production origin.
 os.environ.pop("PUBLIC_BASE_URL", None)
+os.environ.pop('STAFF_MFA_ENCRYPTION_KEY', None)
 os.environ['APP_ENV'] = 'development'
 os.environ['COOKIE_SECURE'] = '0'
 # Another test may have imported db before this fixture set DATABASE_PATH.
@@ -145,6 +146,9 @@ class avenraStagesTestCase(unittest.TestCase):
             302,
             "Test staff login failed",
         )
+
+        from mfa_fixture import complete_mfa
+        complete_mfa(self)
 
         with self.client.session_transaction() as browser_session:
             self.assertEqual(

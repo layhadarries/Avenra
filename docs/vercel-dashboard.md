@@ -1,5 +1,11 @@
 # Vercel dashboard-only launch
 
+**Stage 8 source update (not deployed):** the version-6 deployment instructions
+below describe the historical launch. New source requires explicit additive
+`sql/004_staff_mfa.sql` (version 7) and a separate `STAFF_MFA_ENCRYPTION_KEY` before
+hosted startup. No live migration, key provisioning or deployment was performed.
+See [MFA rollout/recovery](staff-email-invitations.md#additive-rollout-and-rollback-boundary).
+
 Scope: staff login, empty assigned dashboard/case/referral/audit pages, invitations, activation and access controls. Survivor enrollment, diary file storage and notification dispatch are not part of this deployment checkpoint. No demo records are seeded.
 
 Supabase project: bkurrdbqnmrpzmeqpdla, region eu-west-1. Tables live in the private `avenra` schema, not an exposed Data API schema. All tables have RLS enabled; public/anon/authenticated schema access is revoked. The Flask backend uses its private database credential and applies existing assignment/consent checks.

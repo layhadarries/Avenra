@@ -21,7 +21,10 @@ def rate_allowed(conn, bucket, maximum):
     with conn:
         conn.execute('BEGIN IMMEDIATE')
         conn.execute('DELETE FROM device_pairing_attempts WHERE window_start<?', (now - 600,))
-        conn.execute("INSERT INTO device_pairing_attempts(bucket,window_start,attempts) VALUES(?,?,1) ON CONFLICT(bucket) DO UPDATE SET attempts=device_pairing_attempts.attempts+1", (bucket, now))
+        existing = conn.execute('SELECT 1 FROM device_pairing_attempts WHERE bucket=?', (bucket,)).fetchone()
+        if existing is None and conn.execute('SELECT COUNT(*) FROM device_pairing_attempts').fetchone()[0] >= 10000:
+            return False
+        conn.execute("INSERT INTO device_pairing_attempts(bucket,window_start,attempts) VALUES(?,?,1) ON CONFLICT(bucket) DO UPDATE SET attempts=CASE WHEN device_pairing_attempts.attempts<? THEN device_pairing_attempts.attempts+1 ELSE device_pairing_attempts.attempts END", (bucket, now, maximum+1))
         attempts = conn.execute('SELECT attempts FROM device_pairing_attempts WHERE bucket=?', (bucket,)).fetchone()['attempts']
     return attempts <= maximum
 

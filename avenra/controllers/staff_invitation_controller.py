@@ -1,16 +1,15 @@
 """Public invitation acceptance and operator-only provisioning CLI."""
-import hashlib
-import hmac
 import os
 import sqlite3
 import time
 import click
-from flask import Blueprint, current_app, render_template, request, redirect, url_for, session
+from flask import Blueprint, render_template, request, redirect, url_for, session
 import db
 from avenra.services.staff_invitation_service import activate, issue_invitation
 from avenra.services.staff_email import send_staff_email
-from avenra.services.auth_service import AuthService
 from avenra.repositories.user_repository import UserRepository
+from avenra.services.mfa_service import MFAService
+from avenra.services.abuse_service import AbuseService
 
 
 def register_staff_invitations(app):
@@ -22,13 +21,7 @@ def register_staff_invitations(app):
         status = 200
         if request.method == 'POST':
             conn = db.get_db()
-            bucket = hmac.new(current_app.secret_key.encode(), (request.remote_addr or 'unknown').encode(), hashlib.sha256).hexdigest()
-            now = int(time.time())
-            with conn:
-                conn.execute('DELETE FROM staff_activation_attempts WHERE window_start<?', (now-900,))
-                conn.execute('INSERT INTO staff_activation_attempts(bucket,window_start,attempts) VALUES(?,?,1) ON CONFLICT(bucket) DO UPDATE SET attempts=staff_activation_attempts.attempts+1', (bucket,now))
-                attempts = conn.execute('SELECT attempts FROM staff_activation_attempts WHERE bucket=?',(bucket,)).fetchone()[0]
-            if attempts > 20:
+            if not AbuseService(conn).allow_public('activation', 20):
                 return render_template('activate.html', error='Too many attempts. Please wait 15 minutes.'), 429
             try:
                 uid, error = activate(conn, request.form.get('token',''), request.form.get('password',''), request.form.get('confirm_password',''))
@@ -36,8 +29,9 @@ def register_staff_invitations(app):
                 uid, error, status = None, 'Activation is temporarily unavailable. Please try again.', 503
             if uid:
                 user = UserRepository().get_by_id(uid)
-                destination = AuthService().start_session(user)
-                return redirect(url_for(destination))
+                session.clear()
+                session['mfa_challenge'] = MFAService(conn).begin(user)
+                return redirect(url_for('staff_mfa'))
             status = status if status == 503 else 400
         return render_template('activate.html',error=error), status
 

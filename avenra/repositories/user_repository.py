@@ -32,6 +32,7 @@ class UserRepository(BaseRepository):
             WHERE id = ?
               AND is_active = 1
               AND password_hash IS NOT NULL
+              AND role IN ('responder', 'admin', 'shelter')
               AND auth_version = ?
             """,
             (user_id, auth_version),

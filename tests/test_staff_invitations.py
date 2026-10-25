@@ -27,8 +27,13 @@ class StaffInvitationTests(unittest.TestCase):
         return re.search(r'name="csrf_token"\s+value="([^"]+)"', page.text).group(1)
 
     def activate(self, token, password='Q7!fern-River-Cloud-29'):
-        return self.client.post('/activate', data={'token':token, 'password':password,
+        response=self.client.post('/activate', data={'token':token, 'password':password,
             'confirm_password':password, 'csrf_token':self.csrf()})
+        if response.status_code==302:
+            self.assertEqual(response.location,'/mfa')
+            from mfa_fixture import complete_mfa
+            complete_mfa(self)
+        return response
 
     def test_invitation_is_hashed_and_get_does_not_consume_it(self):
         token = self.invite()
@@ -43,7 +48,7 @@ class StaffInvitationTests(unittest.TestCase):
         token = self.invite()
         response = self.activate(token)
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.location, '/dashboard')
+        self.assertEqual(response.location, '/mfa')
         with self.client.session_transaction() as session:
             self.assertIsInstance(session['user_id'], int)
         self.assertEqual(self.activate(token).status_code, 400)
@@ -88,6 +93,8 @@ class StaffInvitationTests(unittest.TestCase):
         response = self.client.post('/login',data={'email':'invited@example.test',
             'password':'Q7!fern-River-Cloud-29','csrf_token':csrf})
         self.assertEqual(response.status_code,302)
+        from mfa_fixture import complete_mfa
+        complete_mfa(self)
         self.assertEqual(self.client.get('/dashboard').status_code,200)
 
     def test_concurrent_activation_consumes_token_once(self):
@@ -174,7 +181,8 @@ class StaffInvitationTests(unittest.TestCase):
                 token=sender.call_args.args[2].split('#')[1].split()[0]
                 response=self.activate(token)
                 self.assertEqual(response.status_code,302)
-                self.assertEqual(response.location,destination)
+                self.assertEqual(response.location,'/mfa')
+                self.assertEqual(self.client.get(destination).status_code,200)
 
     def test_invitation_does_not_depend_on_sqlite_lastrowid(self):
         from avenra.services.staff_invitation_service import issue_invitation
