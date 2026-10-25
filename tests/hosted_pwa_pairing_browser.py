@@ -22,10 +22,34 @@ def exercise(page, context, base, env):
         assert 'avenra_device' not in phone.evaluate('document.cookie')
         status=phone_context.request.get(base+'/api/device')
         assert status.status==200
-        result=phone.evaluate("""async id => {
-          const r=await fetch('/api/alerts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client_id:id})});
-          return {status:r.status,body:await r.json()};
-        }""",'pairing-browser-'+uuid.uuid4().hex)
+        result = phone.evaluate(
+            """async id => {
+                const deviceResponse = await fetch('/api/device', {
+                    credentials: 'same-origin',
+                    cache: 'no-store'
+                });
+                if (!deviceResponse.ok) {
+                    throw new Error('Device identity unavailable');
+                }
+
+                const device = await deviceResponse.json();
+                const response = await fetch('/api/alerts', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Queue-Owner': String(device.account_id)
+                    },
+                    body: JSON.stringify({client_id: id})
+                });
+
+                return {
+                    status: response.status,
+                    body: await response.json()
+                };
+            }""",
+            "pairing-browser-" + uuid.uuid4().hex,
+        )
         assert result['status']==201,result
         listing=context.request.get(base+'/api/alerts').json()
         assert any(item['id']==result['body']['id'] for item in listing['alerts'])

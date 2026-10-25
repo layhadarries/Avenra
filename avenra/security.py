@@ -85,19 +85,49 @@ def require_role(*roles):
 
 
 def validate_json_body():
-    """Request validator for JSON API endpoints."""
-    if request.path.startswith("/api/") and request.method in ("POST", "PUT", "PATCH", "DELETE"):
-        is_diary_multipart = (
-            request.path == "/api/diary"
-            and request.method == "POST"
-            and request.mimetype == "multipart/form-data"
-        )
-        if not is_diary_multipart and not isinstance(request.get_json(silent=True), dict) and request.content_length:
-            return jsonify({"error": "json_object_required"}), 400
-        origin = request.headers.get("Origin")
-        if (origin or request.cookies.get("avenra_device")) and origin != os.environ.get("PUBLIC_BASE_URL", request.host_url.rstrip("/")).rstrip("/"):
-            return jsonify({"error": "cross_origin_write_forbidden"}), 403
+    """Validate API bodies, write origins and queued-write ownership."""
+    if not (
+        request.path.startswith("/api/")
+        and request.method in ("POST", "PUT", "PATCH", "DELETE")
+    ):
+        return
 
+    is_diary_multipart = (
+        request.path == "/api/diary"
+        and request.method == "POST"
+        and request.mimetype == "multipart/form-data"
+    )
+
+    if (
+        not is_diary_multipart
+        and request.content_length
+        and not isinstance(request.get_json(silent=True), dict)
+    ):
+        return jsonify({"error": "json_object_required"}), 400
+
+    device_cookie = request.cookies.get("avenra_device")
+    origin = request.headers.get("Origin")
+    expected_origin = os.environ.get(
+        "PUBLIC_BASE_URL", request.host_url.rstrip("/")
+    ).rstrip("/")
+
+    if (origin or device_cookie) and origin != expected_origin:
+        return jsonify({"error": "cross_origin_write_forbidden"}), 403
+
+    queued_write = (
+        request.method == "POST"
+        and request.path in {"/api/alerts", "/api/diary"}
+    )
+
+    if device_cookie and queued_write:
+        survivor = device_user()
+        if survivor is None:
+            return jsonify({"error": "device_pairing_required"}), 401
+
+        # This header never grants authority. It must match the cookie's owner.
+        supplied_owner = request.headers.get("X-Queue-Owner")
+        if supplied_owner != str(survivor.id):
+            return jsonify({"error": "queue_owner_mismatch"}), 409
 
 def apply_security_headers(resp):
     """After-request hook to attach hardened HTTP security headers."""

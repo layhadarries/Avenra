@@ -60,12 +60,27 @@ class HostedPWAContractTests(unittest.TestCase):
         self.assertIn('SameSite=Strict',response.headers.get('Set-Cookie',''))
 
     def test_own_alert_reaches_assigned_staff(self):
-        phone,_=self.enroll(self.invite())
-        response=phone.post('/api/alerts',json={'client_id':'hosted-alert-one'},headers={'Origin':'http://localhost'})
-        self.assertEqual(response.status_code,201,response.text)
-        listing=self.client.get('/api/alerts')
-        self.assertEqual(listing.status_code,200)
-        self.assertIn(str(response.json['id']),listing.text)
+        phone, _ = self.enroll(self.invite())
+        owner = phone.get("/api/device").get_json()["account_id"]
+
+        response = phone.post(
+            "/api/alerts",
+            json={"client_id": "hosted-alert-one"},
+            headers={
+                "Origin": "http://localhost",
+                "X-Queue-Owner": str(owner),
+            },
+        )
+        self.assertEqual(response.status_code, 201, response.text)
+
+        listing = self.client.get("/api/alerts")
+        self.assertEqual(listing.status_code, 200)
+        self.assertTrue(
+            any(
+                alert["id"] == response.get_json()["id"]
+                for alert in listing.get_json()["alerts"]
+            )
+        )
 
     def test_two_devices_do_not_share_contacts(self):
         first,_=self.enroll(self.invite())
