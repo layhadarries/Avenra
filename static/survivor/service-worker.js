@@ -7,7 +7,8 @@ const SHELL_ASSETS = [
   '/survivor/help.html', '/survivor/help.js',
   '/survivor/privacy.html', '/survivor/privacy.js',
   '/survivor/diary.html', '/survivor/diary.js',
-  '/survivor/icons/icon-192.png', '/survivor/icons/icon-512.png', '/static/css/style.css'
+  '/survivor/icons/icon-192.png', '/survivor/icons/icon-512.png', '/static/css/style.css',
+  '/survivor/survivor.css'
 ];
 const PUBLIC_PATHS = new Set(SHELL_ASSETS);
 self.addEventListener('install', event => {

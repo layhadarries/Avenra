@@ -1,455 +1,603 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#d6ebf9">
-    <title>Clear Sky</title>
-    <link rel="manifest" href="/survivor/manifest.json">
-    <link rel="icon" href="/survivor/icons/icon-192.png">
-    <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
-    <style>
-        :root {
-            --sky-top: #d6ebf9;
-            --sky-bottom: #f0f7fb;
-            --text-main: #334155;
-            --text-muted: #64748b;
-            --card-bg: rgba(255, 255, 255, 0.6);
-            --navy: #1d6f72;
-            --border: #cbd5e1;
-        }
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(to bottom, var(--sky-top), var(--sky-bottom));
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            padding: 1rem;
-        }
-        .header-pill {
-            background: var(--card-bg);
-            padding: 0.4rem 0.8rem;
-            border-radius: 999px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-        /* Dynamic Location Navigation */
-        .locations-scroll {
-            display: flex;
-            gap: 0.5rem;
-            padding: 0 1rem 0.5rem;
-            overflow-x: auto;
-            scrollbar-width: none;
-            align-items: center;
-        }
-        .locations-scroll::-webkit-scrollbar {
-            display: none;
-        }
-        .loc-btn {
-            background: var(--card-bg);
-            color: var(--text-main);
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 999px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s ease;
-        }
-        .loc-btn.active {
-            background: #1e293b;
-            color: #ffffff;
-        }
-        .add-loc-btn {
-            background: var(--card-bg);
-            color: var(--text-main);
-            border: none;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            font-weight: 600;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-        .date-display {
-            padding: 0 1rem;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 1.5rem;
-        }
-        /* Weather Main Display */
-        .weather-main {
-            text-align: center;
-            padding: 1rem;
-        }
-        .weather-icon {
-            font-size: 4rem;
-            margin-bottom: 0.5rem;
-        }
-        .temp-main {
-            font-size: 4.5rem;
-            font-weight: 300;
-            line-height: 1;
-            margin: 0;
-            letter-spacing: -2px;
-        }
-        .condition {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin: 0.5rem 0;
-        }
-        .high-low {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-        /* Forecast Cards */
-        .forecast-container {
-            padding: 1rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        .card {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 1rem;
-            backdrop-filter: blur(10px);
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--text-muted);
-            letter-spacing: 0.5px;
-            margin-bottom: 1rem;
-        }
-        .hourly-row {
-            display: flex;
-            justify-content: space-between;
-            text-align: center;
-            font-size: 0.9rem;
-        }
-        .hourly-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .daily-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid rgba(0,0,0,0.05);
-            font-size: 0.95rem;
-            font-weight: 500;
-        }
-        .daily-row:last-child {
-            border-bottom: none;
-        }
-        .bar-container {
-            flex: 1;
-            margin: 0 1rem;
-            height: 4px;
-            background: rgba(0,0,0,0.1);
-            border-radius: 2px;
-            position: relative;
-        }
-        .bar-fill {
-            position: absolute;
-            height: 100%;
-            background: #f59e0b;
-            border-radius: 2px;
-        }
-        /* Secret Trigger */
-        .secret-trigger {
-            cursor: pointer;
-        }
-        /* Modal */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s ease;
-        }
-        .modal-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .modal-card {
-            background: #fff;
-            padding: 1.5rem;
-            border-radius: 16px;
-            width: 80%;
-            max-width: 320px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        .modal-card h3 {
-            margin: 0 0 1rem;
-            font-size: 1.1rem;
-        }
-        .modal-card input {
-            width: 100%;
-            box-sizing: border-box;
-            padding: 0.75rem;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            font-size: 1rem;
-        }
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-        }
-        .modal-btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .modal-btn.cancel {
-            background: #f1f5f9;
-            color: var(--text-muted);
-        }
-        .modal-btn.add {
-            background: var(--navy);
-            color: #fff;
-        }
-    </style>
+  <meta charset="utf-8">
+  <title>Clear Sky</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#b8d8eb">
+  <link rel="manifest" href="/survivor/manifest.json">
+  <link rel="icon" href="/survivor/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
+  <link rel="stylesheet" href="/survivor/survivor.css">
 </head>
-<body>
+<body class="cover">
+  <header class="cv-header">
+    <button class="cv-loc-btn" id="cv-loc-btn" type="button" title="Switch area">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      <span id="cv-place">Cape Town</span>
+    </button>
+    <button class="cv-gps-btn" id="cv-gps-btn" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      <span>My area</span>
+    </button>
+  </header>
 
-    <div class="header-top">
-        <div class="header-pill">📍 <span id="header-loc">Cape Town</span></div>
-        <div class="header-pill">⌖ My area</div>
-    </div>
+  <nav class="cv-areas" id="cv-areas" aria-label="Areas"></nav>
+  <p class="cv-date-line" id="cv-date">Today</p>
 
-    <!-- Dynamic Location Chips -->
-    <div class="locations-scroll" id="location-chips">
-        <button type="button" class="loc-btn active" data-loc="current">My current location</button>
-        <button type="button" class="loc-btn" data-loc="Cape Town">Cape Town</button>
-        <!-- Custom locations will be appended here -->
-        <button type="button" id="btn-add-location" class="add-loc-btn" aria-label="Add location">+</button>
-    </div>
+  <main class="cv-main">
+    <section class="cv-now">
+      <svg class="cv-hero" id="cv-hero" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="24" cy="24" r="11" fill="#f2c14e"/>
+        <g stroke="#f2c14e" stroke-width="3" stroke-linecap="round"><path d="M24 5v4M24 39v4M5 24h4M39 24h4M10.6 10.6l2.8 2.8M34.6 34.6l2.8 2.8M10.6 37.4l2.8-2.8M34.6 13.4l2.8-2.8"/></g>
+        <path d="M22 50h26a9 9 0 000-18 12 12 0 00-23 3 7.5 7.5 0 00-3 15z" fill="#fff"/>
+      </svg>
+      <!-- Hidden way in #1: press and hold the temperature for ~1.5 s -->
+      <div class="cv-temp-wrap" id="cv-temp-wrap">
+        <p class="cv-temp" id="cv-temp">19°</p>
+      </div>
+      <p class="cv-desc" id="cv-desc">Partly cloudy</p>
+      <p class="cv-hl" id="cv-hl">H 22° · L 13° · Feels like 18°</p>
+    </section>
 
-    <div class="date-display" id="date-text">Saturday, 24 October</div>
+    <section class="cv-card" aria-label="Hourly forecast">
+      <h2 class="cv-h2"><span>Hourly forecast</span><span id="cv-wind-pill">SE 24 km/h</span></h2>
+      <div class="cv-hourly" id="cv-hourly"></div>
+    </section>
 
-    <div class="weather-main">
-        <div class="weather-icon">⛅</div>
-        <h1 class="temp-main">18°</h1>
-        <div class="condition">Partly cloudy</div>
-        <div class="high-low">H 22° · L 15° · Feels like 17°</div>
-    </div>
+    <section class="cv-card" aria-label="7-day forecast">
+      <h2 class="cv-h2"><span>7-day forecast</span><span>Tap day for alerts</span></h2>
+      <!-- Hidden way in #2: tapping Thursday's row opens the disguised Weather Alert PIN / setup modal -->
+      <ul class="cv-days" id="cv-days"></ul>
+    </section>
 
-    <div class="forecast-container">
-        <!-- Hourly -->
-        <div class="card">
-            <div class="card-header">
-                <span>HOURLY FORECAST</span>
-                <span>18 KM/H</span>
-            </div>
-            <div class="hourly-row">
-                <div class="hourly-item"><span>Now</span><span>☁️</span><span>19°</span></div>
-                <div class="hourly-item"><span>19:00</span><span>☁️</span><span>20°</span></div>
-                <div class="hourly-item"><span>20:00</span><span>☀️</span><span>22°</span></div>
-                <div class="hourly-item"><span>21:00</span><span>☁️</span><span>21°</span></div>
-                <div class="hourly-item"><span>22:00</span><span>☁️</span><span>19°</span></div>
-                <div class="hourly-item"><span>23:00</span><span>☁️</span><span>17°</span></div>
-            </div>
+    <section class="cv-card cv-details" aria-label="Current conditions">
+      <div class="cv-detail-box"><span>Wind</span><strong id="cv-wind">SE 24 km/h</strong><small>Gusts to 34 km/h</small></div>
+      <div class="cv-detail-box"><span>Humidity</span><strong id="cv-hum">61%</strong><small>Dew point 11°</small></div>
+      <div class="cv-detail-box"><span>UV index</span><strong id="cv-uv">6 High</strong><small>Sun protection advised</small></div>
+      <div class="cv-detail-box"><span>Rain chance</span><strong id="cv-rain">10%</strong><small>Next 24 hours</small></div>
+    </section>
+
+    <section class="cv-card cv-sun-grid" aria-label="Sun and air quality">
+      <div>
+        <h2 class="cv-h2" style="margin-bottom:.25rem"><span>Sunrise &amp; Sunset</span></h2>
+        <p style="font-weight:650;font-size:.92rem">06:14 · 19:02</p>
+        <p style="font-size:.78rem;color:#486273">12 hr 48 min daylight</p>
+      </div>
+      <div>
+        <h2 class="cv-h2" style="margin-bottom:.25rem"><span>Air quality</span></h2>
+        <span class="cv-aqi-badge">21 · Good</span>
+        <p style="font-size:.78rem;color:#486273;margin-top:.2rem">Clean coastal air</p>
+      </div>
+    </section>
+
+    <p class="cv-foot" id="cv-foot">Updated a few minutes ago</p>
+  </main>
+
+  <!-- Disguised PIN / First-time Setup Sheet (looks like a Weather Alert subscription modal) -->
+  <div class="cv-modal-backdrop" id="cv-modal" hidden>
+    <div class="cv-sheet" role="dialog" aria-modal="true" aria-labelledby="cv-sheet-title">
+      <div class="cv-sheet-top">
+        <h2 id="cv-sheet-title">Weather Alert Code</h2>
+        <button class="cv-close" id="cv-modal-close" type="button" aria-label="Close">×</button>
+      </div>
+
+      <!-- Existing user: 4-digit PIN entry -->
+      <div id="view-pin" hidden>
+        <p class="cv-sheet-sub">Enter your 4-digit alert code for Thursday weather notifications.</p>
+        <div class="pin-dots" id="pin-dots">
+          <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+        </div>
+        <p class="pin-err" id="pin-err" aria-live="polite"></p>
+        <div class="pin-pad" id="pin-pad"></div>
+      </div>
+
+      <!-- First-time user: 4-step setup wizard -->
+      <div id="view-setup" hidden>
+        <div class="ob-progress" id="ob-progress">
+          <span class="ob-bar is-active"></span><span class="ob-bar"></span><span class="ob-bar"></span><span class="ob-bar"></span>
         </div>
 
-        <!-- 7-Day -->
-        <div class="card">
-            <div class="card-header">
-                <span>7-DAY FORECAST</span>
-                <span class="secret-trigger" id="secret-enter">TAP DAY FOR ALERTS</span>
-            </div>
-            <div class="daily-row">
-                <span style="width: 50px;">Today</span><span>☁️</span>
-                <span style="width: 25px; text-align: right;">15°</span>
-                <div class="bar-container"><div class="bar-fill" style="left: 20%; right: 40%;"></div></div>
-                <span style="width: 25px;">22°</span>
-            </div>
-            <div class="daily-row">
-                <span style="width: 50px;">Sun</span><span>☁️</span>
-                <span style="width: 25px; text-align: right;">15°</span>
-                <div class="bar-container"><div class="bar-fill" style="left: 20%; right: 40%;"></div></div>
-                <span style="width: 25px;">22°</span>
-            </div>
-            <div class="daily-row">
-                <span style="width: 50px;">Mon</span><span>🌧️</span>
-                <span style="width: 25px; text-align: right;">15°</span>
-                <div class="bar-container"><div class="bar-fill" style="left: 20%; right: 40%;"></div></div>
-                <span style="width: 25px;">22°</span>
-            </div>
-            <div class="daily-row">
-                <span style="width: 50px;">Tue</span><span>⛅</span>
-                <span style="width: 25px; text-align: right;">13°</span>
-                <div class="bar-container"><div class="bar-fill" style="left: 10%; right: 30%; background: #fbbf24;"></div></div>
-                <span style="width: 25px;">23°</span>
-            </div>
+        <!-- Step 1: Create & confirm 4-digit PIN -->
+        <div class="ob-step" data-ob="1">
+          <p class="cv-sheet-sub" id="ob-pin-prompt" style="margin-top:.4rem"><strong>Step 1 of 4:</strong> Choose a 4-digit screen PIN (a disguise, not account security). You'll use this whenever you tap Thursday's forecast.</p>
+          <div class="pin-dots" id="ob-pin-dots">
+            <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
+          </div>
+          <p class="pin-err" id="ob-pin-err" aria-live="polite"></p>
+          <div class="pin-pad" id="ob-pin-pad"></div>
         </div>
-    </div>
 
-    <!-- Add Location Modal -->
-    <div class="modal-overlay" id="add-modal">
-        <div class="modal-card">
-            <h3>Add a location</h3>
-            <input type="text" id="new-loc-input" placeholder="e.g. Stellenbosch">
-            <div class="modal-actions">
-                <button type="button" class="modal-btn cancel" id="btn-cancel-loc">Cancel</button>
-                <button type="button" class="modal-btn add" id="btn-save-loc">Add</button>
-            </div>
+        <!-- Step 2: Secret entry & Quick Exit explanation -->
+        <div class="ob-step" data-ob="2" hidden>
+          <p class="cv-sheet-sub" style="margin:.4rem 0"><strong>Step 2 of 4:</strong> How your disguise works.</p>
+          <div class="ob-card">
+            <p><strong>🌤️ Opening Avenra:</strong> Clear Sky always opens on this weather screen. Tap <strong>Thursday's forecast</strong> (or press &amp; hold the temperature) and enter your 4-digit PIN.</p>
+            <p><strong>🚪 Quick exit:</strong> Tap <strong>Quick exit</strong> in the top corner at any time to cancel a countdown and jump straight back to the weather screen.</p>
+            <p><strong>🔒 Screen off / Back button:</strong> Leaving during the countdown cancels the unsent attempt. After it ends, a saved alert keeps retrying where your browser supports it.</p>
+          </div>
+          <div class="ob-actions">
+            <button class="btn" id="ob-next-2" type="button">Next · Location</button>
+          </div>
         </div>
+
+        <!-- Step 3: Warm up GPS permission -->
+        <div class="ob-step" data-ob="3" hidden>
+          <p class="cv-sheet-sub" style="margin:.4rem 0"><strong>Step 3 of 4:</strong> Allow location now so Android never interrupts you during an emergency.</p>
+          <div class="ob-card">
+            <p>Alert location is kept in phone memory only. If you enable sharing, a received alert can store location on the server. The weather area setting is separate.</p>
+            <button class="btn btn-quiet" id="ob-gps-btn" type="button">Grant location permission</button>
+            <p id="ob-gps-status" style="font-size:.8rem;color:var(--muted)">Not checked yet</p>
+          </div>
+          <div class="ob-actions">
+            <button class="btn" id="ob-next-3" type="button">Next · Trusted contacts</button>
+          </div>
+        </div>
+
+        <!-- Step 4: Review or customize trusted contacts -->
+        <div class="ob-step" data-ob="4" hidden>
+          <p class="cv-sheet-sub" style="margin:.4rem 0"><strong>Step 4 of 4:</strong> Choose fictional contacts for this demo. SMS delivery is not confirmed.</p>
+          <div class="ob-card">
+            <div class="ob-contact-row">
+              <input class="ob-input" id="ob-c1-name" type="text" placeholder="Contact 1 name" value="Lerato K">
+              <input class="ob-input" id="ob-c1-phone" type="tel" placeholder="+27 ..." value="+27 00 000 0001">
+            </div>
+            <div class="ob-contact-row">
+              <input class="ob-input" id="ob-c2-name" type="text" placeholder="Contact 2 name" value="Thabo M">
+              <input class="ob-input" id="ob-c2-phone" type="tel" placeholder="+27 ..." value="+27 00 000 0002">
+            </div>
+          </div>
+          <div class="ob-actions">
+            <button class="btn" id="ob-finish" type="button">Finish &amp; open SafePath</button>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Hidden Network State for Test Suite Compliance -->
-    <div class="section-gap" aria-live="polite" hidden>
-        <p id="connection-state">Checking connection…</p>
-        <p id="offline-state">Preparing offline opening…</p>
-    </div>
+  <script src="/survivor/queue.js"></script>
+  <script>
+    (function () {
+      "use strict";
 
-    <script src="/survivor/shell.js" defer></script>
-    <script src="/survivor/queue.js" defer></script>
-    <script>
-        (function() {
-            "use strict";
+      var AREAS = [
+        { id: "ct", name: "Cape Town", lat: -33.9249, lng: 18.4241, temp: 19, hi: 22, lo: 13, desc: "Partly cloudy", wind: "SE 24 km/h", hum: "61%", uv: "6 High", rain: "10%", base: [19, 20, 22, 21, 19, 17], days: [[13,22,"p"],[14,24,"s"],[15,23,"p"],[12,18,"r"],[12,20,"p"],[13,21,"s"],[14,22,"s"]] },
+        { id: "kh", name: "Khayelitsha", lat: -34.0378, lng: 18.6781, temp: 20, hi: 23, lo: 14, desc: "Sunny intervals", wind: "SE 28 km/h", hum: "58%", uv: "7 High", rain: "5%", base: [20, 21, 23, 22, 20, 18], days: [[14,23,"s"],[15,25,"s"],[15,24,"p"],[13,19,"r"],[13,21,"p"],[14,22,"s"],[15,23,"s"]] },
+        { id: "mp", name: "Mitchells Plain", lat: -34.0489, lng: 18.6226, temp: 19, hi: 22, lo: 13, desc: "Coastal breeze", wind: "SSE 26 km/h", hum: "63%", uv: "6 High", rain: "10%", base: [19, 20, 22, 21, 18, 16], days: [[13,22,"p"],[14,24,"s"],[14,23,"p"],[12,18,"r"],[12,20,"p"],[13,21,"s"],[14,22,"s"]] },
+        { id: "bv", name: "Bellville", lat: -33.8943, lng: 18.6294, temp: 21, hi: 25, lo: 13, desc: "Mostly sunny", wind: "SE 19 km/h", hum: "54%", uv: "7 High", rain: "5%", base: [21, 23, 25, 24, 21, 18], days: [[13,25,"s"],[14,26,"s"],[15,25,"p"],[12,19,"r"],[13,21,"p"],[14,23,"s"],[15,24,"s"]] },
+        { id: "jb", name: "Johannesburg", lat: -26.2041, lng: 28.0473, temp: 24, hi: 27, lo: 14, desc: "Clear & warm", wind: "NW 14 km/h", hum: "38%", uv: "8 Very High", rain: "15%", base: [24, 26, 27, 25, 22, 19], days: [[14,27,"s"],[15,28,"s"],[15,26,"p"],[14,23,"r"],[13,25,"p"],[14,26,"s"],[15,27,"s"]] },
+        { id: "db", name: "Durban", lat: -29.8587, lng: 31.0218, temp: 23, hi: 26, lo: 18, desc: "Warm & humid", wind: "NE 21 km/h", hum: "74%", uv: "7 High", rain: "25%", base: [23, 25, 26, 25, 23, 21], days: [[18,26,"p"],[19,27,"s"],[18,25,"r"],[17,23,"r"],[18,24,"p"],[18,26,"s"],[19,26,"p"]] }
+      ];
 
-            // Disguise entry point to actual app
-            document.getElementById('secret-enter').addEventListener('click', function() {
-                location.href = '/survivor/index.html';
+      var ICONS = {
+        s: '<svg class="cv-wx-ico" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" fill="#e9b949"/><g stroke="#e9b949" stroke-width="2" stroke-linecap="round"><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></svg>',
+        p: '<svg class="cv-wx-ico" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="9" r="4" fill="#e9b949"/><path d="M9 18h9a4 4 0 000-8 5.5 5.5 0 00-10.4 1.5A3.5 3.5 0 009 18z" fill="#fff" stroke="#8aa8bc" stroke-width="1.2"/></svg>',
+        r: '<svg class="cv-wx-ico" viewBox="0 0 24 24" fill="none"><path d="M7 15h10a4 4 0 000-8 5.5 5.5 0 00-10.4 1.5A3.5 3.5 0 007 15z" fill="#d7e4ec" stroke="#7896aa" stroke-width="1.2"/><path d="M9 18l-1 3M13 18l-1 3M17 18l-1 3" stroke="#4a8ab0" stroke-width="1.8" stroke-linecap="round"/></svg>'
+      };
+
+      var $ = function (id) { return document.getElementById(id); };
+      var now = new Date();
+      $("cv-date").textContent = now.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" });
+
+      var savedArea = null;
+      try { savedArea = JSON.parse(localStorage.getItem("cs_area") || "null"); } catch (_) {}
+      var currentArea = savedArea || AREAS[0];
+
+      function wmoToType(code) {
+        if (code === 0 || code === 1) return { t: "s", d: "Mostly clear" };
+        if (code >= 51) return { t: "r", d: "Light showers" };
+        return { t: "p", d: "Partly cloudy" };
+      }
+
+      function renderChips() {
+        var wrap = $("cv-areas");
+        wrap.innerHTML = "";
+        AREAS.forEach(function (a) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "cv-area-chip" + (a.name === currentArea.name ? " is-active" : "");
+          b.textContent = a.name;
+          b.addEventListener("click", function () { selectArea(a, true); });
+          wrap.appendChild(b);
+        });
+      }
+
+      function renderWeather(area) {
+        $("cv-place").textContent = area.name;
+        $("cv-temp").textContent = Math.round(area.temp) + "°";
+        $("cv-desc").textContent = area.desc || "Partly cloudy";
+        $("cv-hl").textContent = "H " + Math.round(area.hi) + "° · L " + Math.round(area.lo) + "° · Feels like " + (Math.round(area.temp) - 1) + "°";
+        $("cv-wind").textContent = area.wind || "SE 24 km/h";
+        $("cv-wind-pill").textContent = area.wind || "SE 24 km/h";
+        $("cv-hum").textContent = area.hum || "61%";
+        $("cv-uv").textContent = area.uv || "6 High";
+        $("cv-rain").textContent = area.rain || "10%";
+
+        var hrWrap = $("cv-hourly");
+        hrWrap.innerHTML = "";
+        var hr0 = now.getHours();
+        (area.base || [19, 20, 22, 21, 19, 17]).forEach(function (t, i) {
+          var h = (hr0 + i) % 24;
+          var label = i === 0 ? "Now" : (h < 10 ? "0" + h : h) + ":00";
+          var ico = i === 2 ? ICONS.s : ICONS.p;
+          var d = document.createElement("div");
+          d.className = "cv-hour";
+          d.innerHTML = "<span>" + label + "</span>" + ico + "<strong>" + Math.round(t) + "°</strong>";
+          hrWrap.appendChild(d);
+        });
+
+        // 7-day forecast so Thursday is ALWAYS visible in the list.
+        var daysUl = $("cv-days");
+        daysUl.innerHTML = "";
+        var rows = area.days || AREAS[0].days;
+        for (var i = 0; i < 7; i++) {
+          var dt = new Date(now);
+          dt.setDate(now.getDate() + i);
+          var isThu = dt.getDay() === 4;
+          var dayName = i === 0 ? "Today" : dt.toLocaleDateString("en-ZA", { weekday: "short" });
+          if (isThu && i === 0) dayName = "Thu · Today";
+          var r = rows[i % rows.length];
+          var lo = Math.round(r[0]), hi = Math.round(r[1]), ic = ICONS[r[2]] || ICONS.p;
+          var aPct = Math.max(10, Math.min(55, (lo - 8) * 4));
+          var bPct = Math.max(aPct + 20, Math.min(95, (hi - 8) * 4));
+
+          var li = document.createElement("li");
+          li.innerHTML =
+            '<span class="cv-day">' + dayName + "</span>" +
+            '<span class="cv-ic">' + ic + "</span>" +
+            '<span class="cv-rng"><span>' + lo + '°</span><i style="--a:' + aPct + '%;--b:' + bPct + '%"></i><strong>' + hi + "°</strong></span>";
+          if (isThu) {
+            li.dataset.thursday = "1";
+            li.addEventListener("click", openSecretModal);
+          } else {
+            li.addEventListener("click", function () {
+              $("cv-foot").textContent = "No severe weather alerts for this day";
             });
+          }
+          daysUl.appendChild(li);
+        }
+      }
 
-            // Set current date
-            const dateOpts = { weekday: 'long', day: 'numeric', month: 'long' };
-            document.getElementById('date-text').textContent = new Date().toLocaleDateString('en-ZA', dateOpts);
+      // Lightweight live weather fetch when online (~1 KB JSON from Open-Meteo, no API key),
+      // cached in localStorage so the last known area & forecast work offline too.
+      function fetchLiveWeather(area) {
+        if (navigator.onLine === false) return;
+        var url = "https://api.open-meteo.com/v1/forecast?latitude=" + area.lat +
+          "&longitude=" + area.lng +
+          "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
+          "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto";
+        fetch(url, { cache: "no-store" })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d || !d.current || !d.daily) return;
+            var wx = wmoToType(d.current.weather_code);
+            area.temp = Math.round(d.current.temperature_2m);
+            area.desc = wx.d;
+            area.wind = Math.round(d.current.wind_speed_10m) + " km/h";
+            area.hum = Math.round(d.current.relative_humidity_2m) + "%";
+            area.hi = Math.round(d.daily.temperature_2m_max[0]);
+            area.lo = Math.round(d.daily.temperature_2m_min[0]);
+            area.days = d.daily.temperature_2m_min.map(function (mn, idx) {
+              var mx = d.daily.temperature_2m_max[idx];
+              var t = wmoToType(d.daily.weather_code[idx]).t;
+              return [mn, mx, t];
+            });
+            try { localStorage.setItem("cs_area", JSON.stringify(area)); } catch (_) {}
+            renderWeather(area);
+            $("cv-foot").textContent = "Updated just now · " + area.name;
+          })
+          .catch(function () { /* offline or blocked: built-in / cached forecast stays up */ });
+      }
 
-            const container = document.getElementById('location-chips');
-            const addBtn = document.getElementById('btn-add-location');
-            const modal = document.getElementById('add-modal');
-            const cancelBtn = document.getElementById('btn-cancel-loc');
-            const saveBtn = document.getElementById('btn-save-loc');
-            const locInput = document.getElementById('new-loc-input');
-            const headerLoc = document.getElementById('header-loc');
+      function selectArea(area, save) {
+        currentArea = area;
+        if (save) {
+          try { localStorage.setItem("cs_area", JSON.stringify(area)); } catch (_) {}
+        }
+        renderChips();
+        renderWeather(area);
+        fetchLiveWeather(area);
+      }
 
-            // Load custom locations from local storage
-            let customLocations = JSON.parse(localStorage.getItem('cw_custom_locations') || '[]');
+      // "My area" button: finds nearest preset or saves live GPS coordinates for local weather.
+      $("cv-gps-btn").addEventListener("click", function () {
+        if (!("geolocation" in navigator)) return;
+        $("cv-foot").textContent = "Checking your area…";
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            var lat = pos.coords.latitude, lng = pos.coords.longitude;
+            var best = AREAS[0], bestDist = 1e9;
+            AREAS.forEach(function (a) {
+              var d = Math.hypot(a.lat - lat, a.lng - lng);
+              if (d < bestDist) { bestDist = d; best = a; }
+            });
+            var picked = Object.assign({}, best, {
+              name: bestDist < 0.35 ? best.name : "Current area",
+              lat: Math.round(lat * 1000) / 1000,
+              lng: Math.round(lng * 1000) / 1000
+            });
+            selectArea(picked, true);
+          },
+          function () { $("cv-foot").textContent = "Showing saved area · " + currentArea.name; },
+          { enableHighAccuracy: false, timeout: 6000, maximumAge: 600000 }
+        );
+      });
 
-            function createChip(name) {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'loc-btn';
-                btn.dataset.loc = name;
-                btn.textContent = name;
-                return btn;
+      $("cv-loc-btn").addEventListener("click", function () {
+        var idx = AREAS.findIndex(function (a) { return a.name === currentArea.name; });
+        selectArea(AREAS[(idx + 1) % AREAS.length], true);
+      });
+
+      // ----------------------------------- Secret Trigger #1: Hold temperature
+      var temp = $("cv-temp");
+      var tempWrap = $("cv-temp-wrap");
+      var holdTimer = 0;
+      function startHold(e) {
+        e.preventDefault();
+        clearTimeout(holdTimer);
+        tempWrap.classList.add("is-holding");
+        holdTimer = setTimeout(function () {
+          tempWrap.classList.remove("is-holding");
+          openSecretModal();
+        }, 1500);
+      }
+      function stopHold() {
+        clearTimeout(holdTimer);
+        tempWrap.classList.remove("is-holding");
+      }
+      temp.addEventListener("pointerdown", startHold);
+      ["pointerup", "pointercancel", "pointerleave"].forEach(function (t) { temp.addEventListener(t, stopHold); });
+      temp.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+      // ----------------------- Disguised PIN & First-time Onboarding Modal
+      var PIN_KEY = "cs_pin_hash";
+      var modal = $("cv-modal");
+      var viewPin = $("view-pin");
+      var viewSetup = $("view-setup");
+
+      function hashPin(pin) {
+        // Simple deterministic hash so the raw 4 digits aren't sitting in plain text.
+        var h = 2166136261;
+        var s = "safepath:" + pin;
+        for (var i = 0; i < s.length; i++) {
+          h ^= s.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return (h >>> 0).toString(16);
+      }
+
+      function getSavedPinHash() {
+        try { return localStorage.getItem(PIN_KEY); } catch (_) { return null; }
+      }
+
+      function buildKeypad(container, onDigit, onBack, onCancel) {
+        container.innerHTML = "";
+        ["1","2","3","4","5","6","7","8","9","Cancel","0","⌫"].forEach(function (k) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "pin-key" + (k.length > 1 || k === "⌫" ? " is-muted" : "");
+          b.textContent = k;
+          b.addEventListener("click", function () {
+            if (k === "Cancel") onCancel();
+            else if (k === "⌫") onBack();
+            else onDigit(k);
+          });
+          container.appendChild(b);
+        });
+      }
+
+      function renderDots(dotsContainer, len) {
+        var dots = dotsContainer.querySelectorAll(".pin-dot");
+        dots.forEach(function (d, idx) { d.classList.toggle("is-filled", idx < len); });
+      }
+
+      function closeModal() {
+        modal.hidden = true;
+      }
+      $("cv-modal-close").addEventListener("click", closeModal);
+      modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
+
+      // Existing user PIN flow
+      var enteredPin = "";
+      function startPinEntry() {
+        enteredPin = "";
+        $("cv-sheet-title").textContent = "Weather Alert Code";
+        viewSetup.hidden = true;
+        viewPin.hidden = false;
+        $("pin-err").textContent = "";
+        renderDots($("pin-dots"), 0);
+      }
+
+      buildKeypad(
+        $("pin-pad"),
+        function (d) {
+          if (enteredPin.length >= 4) return;
+          enteredPin += d;
+          $("pin-err").textContent = "";
+          renderDots($("pin-dots"), enteredPin.length);
+          if (enteredPin.length === 4) {
+            if (hashPin(enteredPin) === getSavedPinHash()) {
+              location.replace("/survivor/");
+            } else {
+              var dots = $("pin-dots");
+              dots.classList.add("is-error");
+              $("pin-err").textContent = "Incorrect alert code. Try again.";
+              setTimeout(function () {
+                dots.classList.remove("is-error");
+                enteredPin = "";
+                renderDots(dots, 0);
+              }, 380);
             }
+          }
+        },
+        function () {
+          enteredPin = enteredPin.slice(0, -1);
+          renderDots($("pin-dots"), enteredPin.length);
+        },
+        closeModal
+      );
 
-            function renderCustomChips() {
-                // Remove existing custom chips (everything between Cape Town and the + button)
-                const existing = container.querySelectorAll('.loc-btn[data-custom="true"]');
-                existing.forEach(e => e.remove());
+      // First-time user 4-step setup wizard
+      var draftPin = "", confirmPin = "", confirming = false;
+      function showSetupStep(step) {
+        document.querySelectorAll("[data-ob]").forEach(function (el) {
+          el.hidden = Number(el.dataset.ob) !== step;
+        });
+        var bars = $("ob-progress").querySelectorAll(".ob-bar");
+        bars.forEach(function (b, idx) { b.classList.toggle("is-active", idx < step); });
+      }
 
-                customLocations.forEach(loc => {
-                    const chip = createChip(loc);
-                    chip.dataset.custom = "true";
-                    container.insertBefore(chip, addBtn);
-                });
+      function startFirstTimeSetup() {
+        draftPin = ""; confirmPin = ""; confirming = false;
+        $("cv-sheet-title").textContent = "First-time setup";
+        viewPin.hidden = true;
+        viewSetup.hidden = false;
+        $("ob-pin-prompt").innerHTML = "<strong>Step 1 of 4:</strong> Choose a 4-digit screen PIN (a disguise, not account security). You'll use this whenever you tap Thursday's forecast.";
+        $("ob-pin-err").textContent = "";
+        renderDots($("ob-pin-dots"), 0);
+        showSetupStep(1);
+        loadContactsForSetup();
+      }
+
+      buildKeypad(
+        $("ob-pin-pad"),
+        function (d) {
+          $("ob-pin-err").textContent = "";
+          if (!confirming) {
+            if (draftPin.length >= 4) return;
+            draftPin += d;
+            renderDots($("ob-pin-dots"), draftPin.length);
+            if (draftPin.length === 4) {
+              confirming = true;
+              setTimeout(function () {
+                $("ob-pin-prompt").innerHTML = "<strong>Step 1 of 4:</strong> Enter the same 4-digit PIN once more to confirm.";
+                renderDots($("ob-pin-dots"), 0);
+              }, 160);
             }
-
-            function setActiveChip(targetBtn) {
-                container.querySelectorAll('.loc-btn').forEach(btn => btn.classList.remove('active'));
-                targetBtn.classList.add('active');
-                
-                const locName = targetBtn.dataset.loc;
-                if (locName === 'current') {
-                    headerLoc.textContent = "Locating...";
-                    // Trigger real geolocation
-                    if (navigator.geolocation) {
-                        try {
-                            navigator.geolocation.getCurrentPosition(
-                                function(pos) {
-                                    // In a real app, this lat/lng fetches weather data via an API
-                                    headerLoc.textContent = "Current Area";
-                                },
-                                function(err) {
-                                    headerLoc.textContent = "Location Denied";
-                                }
-                            );
-                        } catch (_) {
-                            headerLoc.textContent = "Location Denied";
-                        }
-                    }
-                } else {
-                    headerLoc.textContent = locName;
-                }
+          } else {
+            if (confirmPin.length >= 4) return;
+            confirmPin += d;
+            renderDots($("ob-pin-dots"), confirmPin.length);
+            if (confirmPin.length === 4) {
+              if (confirmPin === draftPin) {
+                try { localStorage.setItem(PIN_KEY, hashPin(draftPin)); } catch (_) {}
+                showSetupStep(2);
+              } else {
+                var dots = $("ob-pin-dots");
+                dots.classList.add("is-error");
+                $("ob-pin-err").textContent = "PINs didn't match. Choose a 4-digit PIN again.";
+                setTimeout(function () {
+                  dots.classList.remove("is-error");
+                  draftPin = ""; confirmPin = ""; confirming = false;
+                  $("ob-pin-prompt").innerHTML = "<strong>Step 1 of 4:</strong> Choose a 4-digit screen PIN (a disguise, not account security).";
+                  renderDots(dots, 0);
+                }, 400);
+              }
             }
+          }
+        },
+        function () {
+          if (!confirming) {
+            draftPin = draftPin.slice(0, -1);
+            renderDots($("ob-pin-dots"), draftPin.length);
+          } else {
+            confirmPin = confirmPin.slice(0, -1);
+            renderDots($("ob-pin-dots"), confirmPin.length);
+          }
+        },
+        closeModal
+      );
 
-            // Event delegation for chips
-            container.addEventListener('click', function(e) {
-                if (e.target.classList.contains('loc-btn')) {
-                    setActiveChip(e.target);
-                }
-            });
+      $("ob-next-2").addEventListener("click", function () { showSetupStep(3); });
+      $("ob-gps-btn").addEventListener("click", function () {
+        if (!("geolocation" in navigator)) {
+          $("ob-gps-status").textContent = "Geolocation not supported on this browser";
+          return;
+        }
+        $("ob-gps-status").textContent = "Requesting permission…";
+        navigator.geolocation.getCurrentPosition(
+          function () { $("ob-gps-status").textContent = "✓ Location ready"; },
+          function () { $("ob-gps-status").textContent = "Skipped (alerts still work without GPS)"; },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+        );
+      });
+      $("ob-next-3").addEventListener("click", function () { showSetupStep(4); });
 
-            // Modal Logic
-            addBtn.addEventListener('click', function() {
-                modal.classList.add('active');
-                locInput.value = '';
-                locInput.focus();
-            });
+      function loadContactsForSetup() {
+        fetch("/api/contacts", { headers: { "X-Device-Token": "demo-device" } })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (!d || !d.contacts || !d.contacts.length) return;
+            if (d.contacts[0]) {
+              $("ob-c1-name").value = d.contacts[0].name;
+              $("ob-c1-phone").value = d.contacts[0].phone;
+            }
+            if (d.contacts[1]) {
+              $("ob-c2-name").value = d.contacts[1].name;
+              $("ob-c2-phone").value = d.contacts[1].phone;
+            }
+          })
+          .catch(function () {});
+      }
 
-            cancelBtn.addEventListener('click', function() {
-                modal.classList.remove('active');
-            });
+      $("ob-finish").addEventListener("click", function () {
+        var list = [
+          { name: $("ob-c1-name").value.trim(), phone: $("ob-c1-phone").value.trim() },
+          { name: $("ob-c2-name").value.trim(), phone: $("ob-c2-phone").value.trim() },
+        ].filter(function (c) { return c.name && c.phone; });
+        $("ob-finish").disabled = true;
+        fetch("/api/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Device-Token": "demo-device" },
+          body: JSON.stringify({ contacts: list }),
+          keepalive: true,
+        }).then(function (response) {
+          if (!response.ok) throw new Error("Save failed");
+          try { localStorage.setItem("cs_contacts", JSON.stringify(list)); } catch (_) {}
+          location.replace("/survivor/");
+        }).catch(function () {
+          $("ob-finish").textContent = "Not saved — connect and retry";
+          $("ob-finish").disabled = false;
+        });
+      });
 
-            saveBtn.addEventListener('click', function() {
-                const val = locInput.value.trim();
-                if (val && !customLocations.includes(val) && val.toLowerCase() !== 'cape town') {
-                    customLocations.push(val);
-                    localStorage.setItem('cw_custom_locations', JSON.stringify(customLocations));
-                    renderCustomChips();
-                    
-                    // Auto-select the newly added chip
-                    const newBtn = container.querySelector(`.loc-btn[data-loc="${val}"]`);
-                    if (newBtn) setActiveChip(newBtn);
-                }
-                modal.classList.remove('active');
-            });
+      function openSecretModal() {
+        modal.hidden = false;
+        if (getSavedPinHash()) startPinEntry();
+        else startFirstTimeSetup();
+      }
 
-            // Initialize
-            renderCustomChips();
-            
-            // Default to current location on load
-            const currentLocBtn = container.querySelector('[data-loc="current"]');
-            if (currentLocBtn) setActiveChip(currentLocBtn);
+      // Keyboard support when PIN modal is open
+      document.addEventListener("keydown", function (e) {
+        if (modal.hidden) return;
+        if (e.key === "Escape") { closeModal(); return; }
+        var pad = !viewPin.hidden ? $("pin-pad") : (!viewSetup.hidden && !$("ob-pin-pad").closest(".ob-step").hidden ? $("ob-pin-pad") : null);
+        if (!pad) return;
+        var btns = Array.prototype.slice.call(pad.querySelectorAll("button"));
+        if (/^[0-9]$/.test(e.key)) {
+          var match = btns.find(function (b) { return b.textContent === e.key; });
+          if (match) match.click();
+        } else if (e.key === "Backspace") {
+          var back = btns.find(function (b) { return b.textContent === "⌫"; });
+          if (back) back.click();
+        }
+      });
 
-        })();
-    </script>
+      // Boot
+      selectArea(currentArea, false);
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/survivor/service-worker.js", { scope: "/survivor/" }).then(function (reg) {
+          if (reg.active) reg.active.postMessage({ type: "FLUSH_QUEUE" });
+        }).catch(function () {});
+        window.addEventListener("online", function () {
+          fetchLiveWeather(currentArea);
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: "FLUSH_QUEUE" });
+          }
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
