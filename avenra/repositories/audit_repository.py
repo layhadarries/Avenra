@@ -7,6 +7,10 @@ from avenra.config import Config
 
 class AuditRepository(BaseRepository):
     """Encapsulates SQL operations on the audit_log table."""
+    COUNTABLE_TABLES = frozenset((
+        'users', 'contacts', 'shelters', 'alerts', 'referrals',
+        'diary_entries', 'consents', 'audit_log',
+    ))
 
     def log(
             self,
@@ -42,6 +46,8 @@ class AuditRepository(BaseRepository):
         return [AuditEntry.from_row(r) for r in rows]
 
     def table_counts(self) -> Dict[str, int]:
+        if not set(Config.COUNT_TABLES) <= self.COUNTABLE_TABLES:
+            raise ValueError('Unsupported count table')
         return {
             table: self.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             for table in Config.COUNT_TABLES

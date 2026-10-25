@@ -1,5 +1,6 @@
 """Read models and transactional workflow persistence for the staff portal."""
 from avenra.repositories.base import BaseRepository
+from avenra.models.identifiers import MAX_PAGE
 
 
 class PortalRepository(BaseRepository):
@@ -64,6 +65,8 @@ class PortalRepository(BaseRepository):
 
     def audit_page(self, user, args):
         page = max(1, int(args.get('page', 1)))
+        if page > MAX_PAGE:
+            raise ValueError('Invalid page')
         limit = min(100, max(1, int(args.get('limit', 50))))
         query = ''' FROM audit_log e WHERE (EXISTS (
                    SELECT 1 FROM users s JOIN case_access c ON c.survivor_id=s.id

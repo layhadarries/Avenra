@@ -2,6 +2,23 @@
 
 This matrix records implemented controls and automated verification evidence across Stages 5 and 6A. It is engineering verification evidence, not a formal external security certification.
 
+## Stage 7 engineering follow-up (2026-10-26)
+
+Threat model, trust-boundary flows and route/repository review are in
+[`SECURITY_REQUIREMENTS.md`](SECURITY_REQUIREMENTS.md#stage-7-practical-threat-model-and-routerepository-audit).
+Baseline was `fd282b9`; tests use isolated fictional records with outbound providers
+disabled. This follow-up does not claim completion of later stages or real-data approval.
+Full Python regression: 411 tests passed (existing fixture resource warnings remain).
+Stage 4 audit and staff-invitation Chromium browser scripts also passed.
+
+| Requirement | Check | Actual result | Limits |
+|---|---|---|---|
+| Concrete malformed-input fixes | `test_stage7_boundaries.py`: route/filter/body overflow, referral coercion | 13 focused tests pass after failing-first reproduction | SQLite; translated SQL templates, not a live hosted DB assessment |
+| Injection boundaries | Captured actual repository SQL/bindings, hostile email/search/case filters, rejected dynamic table identifier | Payloads remain parameters; no scope expansion or table destruction | Manual repository/control-flow review supplements tests; not a penetration-test claim |
+| Private local media | No-follow bounded regular-file read and byte-based private serving | Symlink regression and existing diary browser acceptance pass | Server/root compromise remains outside this protection |
+| Ownership, roles, escaping, abuse, privacy | Assignment revocation, shelter denials, escaped staff name, persistent pairing limit, worker auth; Node shell-cache exclusions | Focused suite and 30 Node checks pass | Staff MFA/local encryption remain later-stage gaps |
+| UX/security regression | `stage3_case_browser.py`, `stage5_pwa_browser.py`, `weather_tap_browser.py` | Chromium acceptance passed, including consent/revocation and offline paths | Emulation/injected GPS, not physical phones; WebKit host libraries unavailable |
+
 | Task ID | Control / OWASP ASVS Area | Commit / Baseline | Environment | Harness / Browser | Expected Outcome | Actual Outcome | Result | Owner | Retest Date |
 |---|---|---|---|---|---|---|---|---|---|
 | `T5.1-VAL` | Strict input validation, no type coercion, authority selector rejection (`POST /api/diary`) | `Stage 5 v2` | Python 3.14 / SQLite (`unittest`) | `tests/test_stage5_diary_retries.py` | Non-boolean `shared`, non-string `note`, or client-supplied `user_id`/`case_code`/`owner_id` rejected with `400` | `400 Bad Request` (`invalid_authority_selector`, `shared_must_be_boolean`, `invalid_note`); zero DB writes | PASS | Tazio | 2026-10-25 |

@@ -2,6 +2,7 @@
 import secrets
 from avenra.repositories.base import BaseRepository
 from avenra.services.push_service import PushError,digest
+from avenra.models.identifiers import valid_identifier
 
 SCHEMA="""
 CREATE TABLE IF NOT EXISTS push_invites (
@@ -54,7 +55,7 @@ class PushRepository(BaseRepository):
         if not isinstance(token,str) or len(token)!=43:return []
         return [dict(r) for r in self.conn.execute('SELECT id FROM push_subscriptions WHERE browser_hash=? AND active=1',(digest(token),))]
     def owned(self,subscription_id,token):
-        if type(subscription_id) is not int or not isinstance(token,str) or len(token)!=43:return None
+        if not valid_identifier(subscription_id) or not isinstance(token,str) or len(token)!=43:return None
         return self.conn.execute('SELECT * FROM push_subscriptions WHERE id=? AND browser_hash=? AND active=1',(subscription_id,digest(token))).fetchone()
     def revoke(self,subscription_id):
         self.conn.execute('UPDATE push_subscriptions SET active=0 WHERE id=?',(subscription_id,))

@@ -86,6 +86,12 @@ def require_role(*roles):
 
 def validate_json_body():
     """Validate API bodies, write origins and queued-write ownership."""
+    from avenra.models.identifiers import valid_identifier
+    # Werkzeug's integer converter accepts arbitrarily large Python integers;
+    # neither database adapter does. Reject before any repository is invoked.
+    if any(type(value) is int and not valid_identifier(value)
+           for value in (request.view_args or {}).values()):
+        return jsonify(error='not_found'), 404
     if not (
         request.path.startswith("/api/")
         and request.method in ("POST", "PUT", "PATCH", "DELETE")

@@ -9,6 +9,7 @@ from avenra.repositories.audit_repository import AuditRepository
 from avenra.models.user import User
 from avenra.repositories.case_access_repository import CaseAccessRepository
 from avenra.repositories.portal_repository import PortalRepository
+from avenra.models.identifiers import valid_identifier
 
 
 def utc_now() -> str:
@@ -52,6 +53,8 @@ class ReferralService:
         shelter_id: int,
         user: User,
     ) -> Tuple[Dict[str, Any], int]:
+        if not valid_identifier(alert_id) or not valid_identifier(shelter_id):
+            return {'error': 'alert_id_and_shelter_id_required'}, 400
         self.referral_repo.conn.execute('BEGIN IMMEDIATE')
         alert = self.alert_repo.get_by_id(alert_id)
         shelter = self.shelter_repo.get_by_id(shelter_id)

@@ -21,13 +21,7 @@ class ReferralsController:
     def create_referral(self):
         user = current_user()
         data = request.get_json(silent=True) or {}
-        try:
-            alert_id = int(data.get("alert_id"))
-            shelter_id = int(data.get("shelter_id"))
-        except (TypeError, ValueError):
-            return jsonify({"error": "alert_id_and_shelter_id_required"}), 400
-
-        res, status = self.referral_service.create_referral(alert_id, shelter_id, user)
+        res, status = self.referral_service.create_referral(data.get('alert_id'), data.get('shelter_id'), user)
         return jsonify(res), status
 
     @require_role("shelter", "responder", "admin")

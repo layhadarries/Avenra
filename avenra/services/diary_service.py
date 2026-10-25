@@ -1,5 +1,6 @@
 """Offline case diary and forensic evidence vault service."""
 import os
+import stat
 import base64
 import uuid
 import hashlib
@@ -193,7 +194,13 @@ class LocalDiaryStorage(DiaryStorageBackend):
         self, object_name: str, max_bytes: int = LEGACY_MAX_PHOTO_BYTES
     ) -> bytes:
         target_path = self._target_path(object_name)
-        with open(target_path, "rb") as fh:
+        if os.path.islink(target_path):
+            raise OSError('Unsafe object type')
+        flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0)
+        descriptor = os.open(target_path, flags)
+        with os.fdopen(descriptor, "rb") as fh:
+            if not stat.S_ISREG(os.fstat(fh.fileno()).st_mode):
+                raise OSError('Unsafe object type')
             data = fh.read(max_bytes + 1)
         if len(data) > max_bytes:
             raise OSError("Stored object exceeds maximum size")

@@ -2,7 +2,7 @@
 from typing import Optional
 import sys
 import io
-from flask import request, jsonify, abort, url_for, send_from_directory, send_file
+from flask import request, jsonify, abort, url_for, send_file
 from avenra.services.diary_service import DiaryService, LEGACY_MAX_PHOTO_BYTES
 from avenra.security import device_user, current_user, require_role
 from avenra.config import Config
@@ -18,17 +18,17 @@ def get_uploads_dir() -> str:
 
 def serve_private_photo(service, uploads_dir, filename):
     storage = service._storage_for(uploads_dir)
-    if getattr(storage, 'database_backed', False):
-        try:
-            raw = storage.get_object(filename)
-        except OSError:
-            abort(404)
-        response = send_file(io.BytesIO(raw), mimetype='image/jpeg',
-                             download_name='evidence.jpg', conditional=False,
-                             etag=False, max_age=0)
-        response.headers['Cache-Control'] = 'private, no-store'
-        return response
-    return send_from_directory(uploads_dir, filename)
+    try:
+        raw = storage.get_object(filename)
+    except OSError:
+        abort(404)
+    # Serve the safely opened, bounded bytes, not a second path-based open after
+    # verification. This also avoids public validators on local private media.
+    response = send_file(io.BytesIO(raw), mimetype='image/jpeg',
+                         download_name='evidence.jpg', conditional=False,
+                         etag=False, max_age=0)
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
 
 
 class DiaryController:

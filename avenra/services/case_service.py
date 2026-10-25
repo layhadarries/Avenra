@@ -7,6 +7,7 @@ from avenra.repositories.shelter_repository import ShelterRepository
 from avenra.repositories.referral_repository import ReferralRepository
 from avenra.repositories.diary_repository import DiaryRepository
 from avenra.repositories.audit_repository import AuditRepository
+from avenra.models.identifiers import valid_identifier
 
 
 class CaseService:
@@ -60,6 +61,8 @@ class CaseService:
     def manage_grant(self, admin_user, case_code: str, action: str, staff_id: int):
         if admin_user.role != 'admin':
             return {'error': 'forbidden'}, 403
+        if not valid_identifier(staff_id):
+            return {'error': 'invalid_staff'}, 400
         conn = self.repo.conn
         with conn:
             survivor = UserRepository(conn).get_survivor_by_case(case_code)

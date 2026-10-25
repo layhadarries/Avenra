@@ -172,6 +172,7 @@ Do not represent app alerts as emergency-service dispatch, messages as read, pro
 ## Further reading
 
 - [Security requirements](docs/SECURITY_REQUIREMENTS.md)
+- [Stage 7 threat model and route/repository audit](docs/SECURITY_REQUIREMENTS.md#stage-7-practical-threat-model-and-routerepository-audit)
 - [Governance](docs/GOVERNANCE.md)
 - [Vercel dashboard deployment](docs/vercel-dashboard.md)
 - [PWA pairing checkpoint](docs/hosted-pwa-pairing-checkpoint.md)

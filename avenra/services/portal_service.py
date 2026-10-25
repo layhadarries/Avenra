@@ -6,6 +6,7 @@ from avenra.repositories.alert_repository import AlertRepository
 from avenra.repositories.consent_repository import ConsentRepository
 from avenra.models.alert import Alert
 from avenra.services.alert_service import utc_now
+from avenra.models.identifiers import MAX_DATABASE_ID, MAX_PAGE, valid_identifier
 
 
 class PortalService:
@@ -16,13 +17,15 @@ class PortalService:
         try:
             filters = {key: int(args.get(key, default)) for key, default in
                        [('page', 1), ('per_page', 25), ('snapshot', 0)]}
-            if filters['page'] < 1 or not 1 <= filters['per_page'] <= 100 or filters['snapshot'] < 0:
+            if not 1 <= filters['page'] <= MAX_PAGE or not 1 <= filters['per_page'] <= 100 or not 0 <= filters['snapshot'] <= MAX_DATABASE_ID:
                 raise ValueError
             filters['q'] = args.get('q', '').strip()[:80]
             filters['status'] = args.get('status', '')
             if filters['status'] not in ('', 'new', 'acknowledged', 'in_progress', 'resolved'):
                 raise ValueError
             filters['assignee'] = int(args['assignee']) if args.get('assignee') else None
+            if filters['assignee'] is not None and not valid_identifier(filters['assignee']):
+                raise ValueError
             for key in ('since', 'until'):
                 if args.get(key):
                     value = date.fromisoformat(args[key])
