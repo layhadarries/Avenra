@@ -1,9 +1,10 @@
 /* Only public static shell assets are cached. */
-const CACHE_NAME = 'clear-sky-shell-v17';
+const CACHE_NAME = 'clear-sky-shell-v18';
 const SHELL_ASSETS = [
   '/survivor/device.html', '/survivor/device.js', '/survivor/identity.js',
   '/survivor/theme.js',
   '/survivor/unlock.js', '/survivor/onboarding.js',
+  '/survivor/weather.js', '/survivor/weather.css',
   '/survivor/install.html', '/survivor/install.css', '/survivor/install.js',
   '/survivor/', '/survivor/index.html', '/survivor/cover.html',
   '/survivor/setup.html', '/survivor/shell.js', '/survivor/survivor.js',
@@ -11,8 +12,7 @@ const SHELL_ASSETS = [
   '/survivor/help.html', '/survivor/help.js',
   '/survivor/privacy.html', '/survivor/privacy.js',
   '/survivor/diary.html', '/survivor/diary.js',
-  '/survivor/icons/icon-192.png', '/survivor/icons/icon-512.png', '/survivor/pwa.css',
-  '/survivor/survivor.css'
+  '/survivor/icons/icon-192.png', '/survivor/icons/icon-512.png', '/survivor/pwa.css'
 ];
 const PUBLIC_PATHS = new Set(SHELL_ASSETS);
 // Activate only after an explicit update action. Never reload an open form.

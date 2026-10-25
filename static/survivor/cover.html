@@ -4,75 +4,87 @@
   <meta charset="utf-8">
   <title>Clear Sky</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#b8d8eb">
+  <meta name="theme-color" content="#496f91">
+  <meta name="referrer" content="no-referrer">
   <link rel="manifest" href="/survivor/manifest.json">
   <link rel="icon" href="/survivor/icons/icon-192.png">
   <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
-  <link rel="stylesheet" href="/survivor/survivor.css">
+  <link rel="stylesheet" href="/survivor/weather.css">
 </head>
-<body class="cover">
+<body class="cover" data-sky="clear">
+  <svg class="weather-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <symbol id="wx-sun" viewBox="0 0 32 32"><circle cx="16" cy="16" r="6" fill="currentColor" stroke="none"/><path d="M16 2v3m0 22v3M2 16h3m22 0h3M6 6l2 2m16 16 2 2M6 26l2-2M24 8l2-2"/></symbol>
+      <symbol id="wx-moon" viewBox="0 0 32 32"><path d="M25 22A12 12 0 0 1 10 5a12 12 0 1 0 15 17Z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="wx-cloud" viewBox="0 0 32 32"><path d="M9 24h15a6 6 0 0 0 0-12 8 8 0 0 0-15-1 6.5 6.5 0 0 0 0 13Z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="wx-partly" viewBox="0 0 32 32"><circle cx="12" cy="11" r="6" fill="#f6d58c" stroke="none"/><path d="M12 1v2M2 11h2m1-7 2 2m14-2-2 2" stroke="#f6d58c"/><path d="M10 26h15a5 5 0 0 0 0-10 7 7 0 0 0-13-1 5.5 5.5 0 0 0-2 11Z" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="wx-rain" viewBox="0 0 32 32"><path d="M8 20h16a5 5 0 0 0 0-10 7 7 0 0 0-13-1 6 6 0 0 0-3 11Z" fill="currentColor" stroke="none"/><path d="m11 24-2 4m9-4-2 4m9-4-2 4"/></symbol>
+      <symbol id="wx-snow" viewBox="0 0 32 32"><path d="M8 19h16a5 5 0 0 0 0-10 7 7 0 0 0-13-1 6 6 0 0 0-3 11Z" fill="currentColor" stroke="none"/><path d="M10 24v5m-2-3h4m10-2v5m-2-3h4"/></symbol>
+      <symbol id="wx-storm" viewBox="0 0 32 32"><path d="M8 19h16a5 5 0 0 0 0-10 7 7 0 0 0-13-1 6 6 0 0 0-3 11Z" fill="currentColor" stroke="none"/><path d="m18 18-6 8h5l-2 5 8-10h-6Z" fill="#f6d58c" stroke="none"/></symbol>
+      <symbol id="wx-fog" viewBox="0 0 32 32"><path d="M5 10h22M2 16h28M5 22h22"/></symbol>
+      <symbol id="wx-unknown" viewBox="0 0 32 32"><path d="M10 16h12"/></symbol>
+    </defs>
+  </svg>
   <header class="cv-header">
-    <button class="cv-loc-btn" id="cv-loc-btn" type="button" title="Switch area">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-      <span id="cv-place">Cape Town</span>
-    </button>
-    <button class="cv-gps-btn" id="cv-gps-btn" type="button">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-      <span>My area</span>
-    </button>
+    <span class="cv-wordmark">Clear Sky</span>
+    <div class="cv-tools">
+      <button class="cv-tool" id="cv-refresh" type="button" aria-label="Refresh weather"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1"/></svg></button>
+      <button class="cv-tool" id="cv-loc-btn" type="button" aria-label="Choose weather location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6 7-12A7 7 0 0 0 5 9c0 6 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg></button>
+    </div>
   </header>
-
-  <nav class="cv-areas" id="cv-areas" aria-label="Areas"></nav>
-  <p class="cv-date-line" id="cv-date">Today</p>
-
   <main class="cv-main">
-    <section class="cv-now">
-      <svg class="cv-hero" id="cv-hero" viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="24" cy="24" r="11" fill="#f2c14e"/>
-        <g stroke="#f2c14e" stroke-width="3" stroke-linecap="round"><path d="M24 5v4M24 39v4M5 24h4M39 24h4M10.6 10.6l2.8 2.8M34.6 34.6l2.8 2.8M10.6 37.4l2.8-2.8M34.6 13.4l2.8-2.8"/></g>
-        <path d="M22 50h26a9 9 0 000-18 12 12 0 00-23 3 7.5 7.5 0 00-3 15z" fill="#fff"/>
-      </svg>
-      <!-- Hidden way in #1: press and hold the temperature for ~1.5 s -->
+    <section class="cv-now" aria-label="Local weather">
+      <p class="cv-location-note" id="cv-location-note">WEATHER NEAR YOU</p>
+      <h1 id="cv-place">Your local sky</h1>
+      <p class="cv-region" id="cv-region">A little closer to the day ahead.</p>
+      <!-- Existing hidden entry: hold the temperature. No alert gesture here. -->
       <div class="cv-temp-wrap" id="cv-temp-wrap">
-        <p class="cv-temp" id="cv-temp">19°</p>
+        <button class="cv-temp" id="cv-temp" type="button" aria-label="Current temperature">—°</button>
       </div>
-      <p class="cv-desc" id="cv-desc">Partly cloudy</p>
-      <p class="cv-hl" id="cv-hl">H 22° · L 13° · Feels like 18°</p>
+      <p class="cv-desc"><span id="cv-condition-icon" aria-hidden="true"></span><span id="cv-desc">Waiting for your location</span></p>
+      <p class="cv-hl" id="cv-hl">H: —° &nbsp; L: —°</p>
+      <p class="cv-date-line" id="cv-date"></p>
     </section>
-
+    <section class="cv-location-prompt" id="cv-location-prompt" aria-label="Weather location">
+      <p id="cv-location-message" role="status">Allow location for weather near you. Approximate coordinates go to Open-Meteo and BigDataCloud; the latter also uses location/IP pairs to improve its service. You can search for a place instead.</p>
+      <div class="cv-location-actions">
+        <button id="cv-gps-btn" class="cv-text-button" type="button">Use my location</button>
+        <button id="cv-search-open" class="cv-text-button" type="button">Search for a place</button>
+      </div>
+    </section>
+    <p class="cv-weather-status" id="cv-weather-status" role="status" aria-live="polite"></p>
     <section class="cv-card" aria-label="Hourly forecast">
-      <h2 class="cv-h2"><span>Hourly forecast</span><span id="cv-wind-pill">SE 24 km/h</span></h2>
-      <div class="cv-hourly" id="cv-hourly"></div>
+      <h2 class="cv-h2">Hourly forecast <span>Next 24 hours</span></h2>
+      <div class="cv-hourly" id="cv-hourly"><p class="cv-empty">Your hourly forecast will appear here.</p></div>
     </section>
-
     <section class="cv-card" aria-label="7-day forecast">
-      <h2 class="cv-h2"><span>7-day forecast</span><span>Tap day for alerts</span></h2>
-      <!-- Hidden way in #2: tapping Thursday's row opens the disguised Weather Alert PIN / setup modal -->
+      <h2 class="cv-h2">7-day forecast <span>Low / High</span></h2>
+      <!-- Existing hidden entry: Thursday remains available without a forecast. -->
       <ul class="cv-days" id="cv-days"></ul>
     </section>
-
-    <section class="cv-card cv-details" aria-label="Current conditions">
-      <div class="cv-detail-box"><span>Wind</span><strong id="cv-wind">SE 24 km/h</strong><small>Gusts to 34 km/h</small></div>
-      <div class="cv-detail-box"><span>Humidity</span><strong id="cv-hum">61%</strong><small>Dew point 11°</small></div>
-      <div class="cv-detail-box"><span>UV index</span><strong id="cv-uv">6 High</strong><small>Sun protection advised</small></div>
-      <div class="cv-detail-box"><span>Rain chance</span><strong id="cv-rain">10%</strong><small>Next 24 hours</small></div>
+    <section class="cv-details" aria-label="Weather details" hidden>
+      <div class="cv-card cv-detail-box"><h2>Feels like</h2><strong id="cv-feels">—°</strong><small>Current conditions</small></div>
+      <div class="cv-card cv-detail-box"><h2>Wind</h2><strong id="cv-wind">—</strong><small id="cv-gusts">Gusts unavailable</small></div>
+      <div class="cv-card cv-detail-box"><h2>Humidity</h2><strong id="cv-hum">—</strong><small>Relative humidity</small></div>
+      <div class="cv-card cv-detail-box"><h2>UV index</h2><strong id="cv-uv">—</strong><small>Today’s forecast maximum</small></div>
+      <div class="cv-card cv-detail-box"><h2>Rain chance</h2><strong id="cv-rain">—</strong><small>Today’s forecast maximum</small></div>
+      <div class="cv-card cv-detail-box"><h2>Sunrise / Sunset</h2><strong class="cv-sun-times" id="cv-sun">— / —</strong><small id="cv-daylight">Daylight unavailable</small></div>
     </section>
-
-    <section class="cv-card cv-sun-grid" aria-label="Sun and air quality">
-      <div>
-        <h2 class="cv-h2" style="margin-bottom:.25rem"><span>Sunrise &amp; Sunset</span></h2>
-        <p style="font-weight:650;font-size:.92rem">06:14 · 19:02</p>
-        <p style="font-size:.78rem;color:#486273">12 hr 48 min daylight</p>
-      </div>
-      <div>
-        <h2 class="cv-h2" style="margin-bottom:.25rem"><span>Air quality</span></h2>
-        <span class="cv-aqi-badge">21 · Good</span>
-        <p style="font-size:.78rem;color:#486273;margin-top:.2rem">Clean coastal air</p>
-      </div>
-    </section>
-
-    <p class="cv-foot" id="cv-foot">Updated a few minutes ago</p>
+    <footer class="cv-footer">
+      <p id="cv-foot">No forecast downloaded yet.</p>
+      <p>Weather by <a href="https://open-meteo.com/" target="_blank" rel="noreferrer noopener">Open-Meteo</a></p>
+      <details class="cv-data-info"><summary>About location &amp; data</summary><p>Approximate weather coordinates and this forecast are saved only in this browser. Open-Meteo receives coordinates for forecasts; BigDataCloud receives your current coordinates and IP for area names and uses them to improve its location service. Place searches use Open-Meteo / GeoNames. Weather permission does not enable any other location sharing.</p><button class="cv-text-button" id="cv-forget" type="button">Forget saved weather location</button></details>
+    </footer>
   </main>
+
+  <dialog class="cv-search-dialog" id="cv-search-dialog" aria-labelledby="cv-search-title">
+    <div class="cv-search-heading"><h2 id="cv-search-title">Find a place</h2><button class="cv-search-close" id="cv-search-close" type="button" aria-label="Close location search">×</button></div>
+    <form id="cv-search-form"><label for="cv-search-input">City, town or suburb</label><div class="cv-search-fields"><input id="cv-search-input" name="place" type="search" minlength="2" maxlength="80" autocomplete="off" placeholder="Search for a place" required><button type="submit" id="cv-search-submit">Search</button></div></form>
+    <p class="cv-search-status" id="cv-search-status" role="status">Search only when you’re ready. No live typing requests.</p>
+    <ul id="cv-search-results"></ul>
+    <button class="cv-search-current" id="cv-search-current" type="button">Use my current location instead</button>
+    <p class="cv-search-credit">Place search: Open-Meteo / GeoNames. Your search text is sent to this service.</p>
+  </dialog>
 
   <!-- Disguised PIN / First-time Setup Sheet (looks like a Weather Alert subscription modal) -->
   <div class="cv-modal-backdrop" id="cv-modal" hidden>
@@ -174,173 +186,7 @@
     (function () {
       "use strict";
 
-      var AREAS = [
-        { id: "ct", name: "Cape Town", lat: -33.9249, lng: 18.4241, temp: 19, hi: 22, lo: 13, desc: "Partly cloudy", wind: "SE 24 km/h", hum: "61%", uv: "6 High", rain: "10%", base: [19, 20, 22, 21, 19, 17], days: [[13,22,"p"],[14,24,"s"],[15,23,"p"],[12,18,"r"],[12,20,"p"],[13,21,"s"],[14,22,"s"]] },
-        { id: "kh", name: "Khayelitsha", lat: -34.0378, lng: 18.6781, temp: 20, hi: 23, lo: 14, desc: "Sunny intervals", wind: "SE 28 km/h", hum: "58%", uv: "7 High", rain: "5%", base: [20, 21, 23, 22, 20, 18], days: [[14,23,"s"],[15,25,"s"],[15,24,"p"],[13,19,"r"],[13,21,"p"],[14,22,"s"],[15,23,"s"]] },
-        { id: "mp", name: "Mitchells Plain", lat: -34.0489, lng: 18.6226, temp: 19, hi: 22, lo: 13, desc: "Coastal breeze", wind: "SSE 26 km/h", hum: "63%", uv: "6 High", rain: "10%", base: [19, 20, 22, 21, 18, 16], days: [[13,22,"p"],[14,24,"s"],[14,23,"p"],[12,18,"r"],[12,20,"p"],[13,21,"s"],[14,22,"s"]] },
-        { id: "bv", name: "Bellville", lat: -33.8943, lng: 18.6294, temp: 21, hi: 25, lo: 13, desc: "Mostly sunny", wind: "SE 19 km/h", hum: "54%", uv: "7 High", rain: "5%", base: [21, 23, 25, 24, 21, 18], days: [[13,25,"s"],[14,26,"s"],[15,25,"p"],[12,19,"r"],[13,21,"p"],[14,23,"s"],[15,24,"s"]] },
-        { id: "jb", name: "Johannesburg", lat: -26.2041, lng: 28.0473, temp: 24, hi: 27, lo: 14, desc: "Clear & warm", wind: "NW 14 km/h", hum: "38%", uv: "8 Very High", rain: "15%", base: [24, 26, 27, 25, 22, 19], days: [[14,27,"s"],[15,28,"s"],[15,26,"p"],[14,23,"r"],[13,25,"p"],[14,26,"s"],[15,27,"s"]] },
-        { id: "db", name: "Durban", lat: -29.8587, lng: 31.0218, temp: 23, hi: 26, lo: 18, desc: "Warm & humid", wind: "NE 21 km/h", hum: "74%", uv: "7 High", rain: "25%", base: [23, 25, 26, 25, 23, 21], days: [[18,26,"p"],[19,27,"s"],[18,25,"r"],[17,23,"r"],[18,24,"p"],[18,26,"s"],[19,26,"p"]] }
-      ];
-
-      var ICONS = {
-        s: '<svg class="cv-wx-ico" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" fill="#e9b949"/><g stroke="#e9b949" stroke-width="2" stroke-linecap="round"><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></svg>',
-        p: '<svg class="cv-wx-ico" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="9" r="4" fill="#e9b949"/><path d="M9 18h9a4 4 0 000-8 5.5 5.5 0 00-10.4 1.5A3.5 3.5 0 009 18z" fill="#fff" stroke="#8aa8bc" stroke-width="1.2"/></svg>',
-        r: '<svg class="cv-wx-ico" viewBox="0 0 24 24" fill="none"><path d="M7 15h10a4 4 0 000-8 5.5 5.5 0 00-10.4 1.5A3.5 3.5 0 007 15z" fill="#d7e4ec" stroke="#7896aa" stroke-width="1.2"/><path d="M9 18l-1 3M13 18l-1 3M17 18l-1 3" stroke="#4a8ab0" stroke-width="1.8" stroke-linecap="round"/></svg>'
-      };
-
       var $ = function (id) { return document.getElementById(id); };
-      var now = new Date();
-      $("cv-date").textContent = now.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" });
-
-      var savedArea = null;
-      try { savedArea = JSON.parse(localStorage.getItem("cs_area") || "null"); } catch (_) {}
-      var currentArea = savedArea || AREAS[0];
-
-      function wmoToType(code) {
-        if (code === 0 || code === 1) return { t: "s", d: "Mostly clear" };
-        if (code >= 51) return { t: "r", d: "Light showers" };
-        return { t: "p", d: "Partly cloudy" };
-      }
-
-      function renderChips() {
-        var wrap = $("cv-areas");
-        wrap.innerHTML = "";
-        AREAS.forEach(function (a) {
-          var b = document.createElement("button");
-          b.type = "button";
-          b.className = "cv-area-chip" + (a.name === currentArea.name ? " is-active" : "");
-          b.textContent = a.name;
-          b.addEventListener("click", function () { selectArea(a, true); });
-          wrap.appendChild(b);
-        });
-      }
-
-      function renderWeather(area) {
-        $("cv-place").textContent = area.name;
-        $("cv-temp").textContent = Math.round(area.temp) + "°";
-        $("cv-desc").textContent = area.desc || "Partly cloudy";
-        $("cv-hl").textContent = "H " + Math.round(area.hi) + "° · L " + Math.round(area.lo) + "° · Feels like " + (Math.round(area.temp) - 1) + "°";
-        $("cv-wind").textContent = area.wind || "SE 24 km/h";
-        $("cv-wind-pill").textContent = area.wind || "SE 24 km/h";
-        $("cv-hum").textContent = area.hum || "61%";
-        $("cv-uv").textContent = area.uv || "6 High";
-        $("cv-rain").textContent = area.rain || "10%";
-
-        var hrWrap = $("cv-hourly");
-        hrWrap.innerHTML = "";
-        var hr0 = now.getHours();
-        (area.base || [19, 20, 22, 21, 19, 17]).forEach(function (t, i) {
-          var h = (hr0 + i) % 24;
-          var label = i === 0 ? "Now" : (h < 10 ? "0" + h : h) + ":00";
-          var ico = i === 2 ? ICONS.s : ICONS.p;
-          var d = document.createElement("div");
-          d.className = "cv-hour";
-          d.innerHTML = "<span>" + label + "</span>" + ico + "<strong>" + Math.round(t) + "°</strong>";
-          hrWrap.appendChild(d);
-        });
-
-        // 7-day forecast so Thursday is ALWAYS visible in the list.
-        var daysUl = $("cv-days");
-        daysUl.innerHTML = "";
-        var rows = area.days || AREAS[0].days;
-        for (var i = 0; i < 7; i++) {
-          var dt = new Date(now);
-          dt.setDate(now.getDate() + i);
-          var isThu = dt.getDay() === 4;
-          var dayName = i === 0 ? "Today" : dt.toLocaleDateString("en-ZA", { weekday: "short" });
-          if (isThu && i === 0) dayName = "Thu · Today";
-          var r = rows[i % rows.length];
-          var lo = Math.round(r[0]), hi = Math.round(r[1]), ic = ICONS[r[2]] || ICONS.p;
-          var aPct = Math.max(10, Math.min(55, (lo - 8) * 4));
-          var bPct = Math.max(aPct + 20, Math.min(95, (hi - 8) * 4));
-
-          var li = document.createElement("li");
-          li.innerHTML =
-            '<span class="cv-day">' + dayName + "</span>" +
-            '<span class="cv-ic">' + ic + "</span>" +
-            '<span class="cv-rng"><span>' + lo + '°</span><i style="--a:' + aPct + '%;--b:' + bPct + '%"></i><strong>' + hi + "°</strong></span>";
-          if (isThu) {
-            li.dataset.thursday = "1";
-            li.addEventListener("click", openSecretModal);
-          } else {
-            li.addEventListener("click", function () {
-              $("cv-foot").textContent = "No severe weather alerts for this day";
-            });
-          }
-          daysUl.appendChild(li);
-        }
-      }
-
-      // Lightweight live weather fetch when online (~1 KB JSON from Open-Meteo, no API key),
-      // cached in localStorage so the last known area & forecast work offline too.
-      function fetchLiveWeather(area) {
-        if (navigator.onLine === false) return;
-        var url = "https://api.open-meteo.com/v1/forecast?latitude=" + area.lat +
-          "&longitude=" + area.lng +
-          "&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m" +
-          "&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto";
-        fetch(url, { cache: "no-store" })
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (d) {
-            if (!d || !d.current || !d.daily) return;
-            var wx = wmoToType(d.current.weather_code);
-            area.temp = Math.round(d.current.temperature_2m);
-            area.desc = wx.d;
-            area.wind = Math.round(d.current.wind_speed_10m) + " km/h";
-            area.hum = Math.round(d.current.relative_humidity_2m) + "%";
-            area.hi = Math.round(d.daily.temperature_2m_max[0]);
-            area.lo = Math.round(d.daily.temperature_2m_min[0]);
-            area.days = d.daily.temperature_2m_min.map(function (mn, idx) {
-              var mx = d.daily.temperature_2m_max[idx];
-              var t = wmoToType(d.daily.weather_code[idx]).t;
-              return [mn, mx, t];
-            });
-            try { localStorage.setItem("cs_area", JSON.stringify(area)); } catch (_) {}
-            renderWeather(area);
-            $("cv-foot").textContent = "Updated just now · " + area.name;
-          })
-          .catch(function () { /* offline or blocked: built-in / cached forecast stays up */ });
-      }
-
-      function selectArea(area, save) {
-        currentArea = area;
-        if (save) {
-          try { localStorage.setItem("cs_area", JSON.stringify(area)); } catch (_) {}
-        }
-        renderChips();
-        renderWeather(area);
-        fetchLiveWeather(area);
-      }
-
-      // "My area" button: finds nearest preset or saves live GPS coordinates for local weather.
-      $("cv-gps-btn").addEventListener("click", function () {
-        if (!("geolocation" in navigator)) return;
-        $("cv-foot").textContent = "Checking your area…";
-        navigator.geolocation.getCurrentPosition(
-          function (pos) {
-            var lat = pos.coords.latitude, lng = pos.coords.longitude;
-            var best = AREAS[0], bestDist = 1e9;
-            AREAS.forEach(function (a) {
-              var d = Math.hypot(a.lat - lat, a.lng - lng);
-              if (d < bestDist) { bestDist = d; best = a; }
-            });
-            var picked = Object.assign({}, best, {
-              name: bestDist < 0.35 ? best.name : "Current area",
-              lat: Math.round(lat * 1000) / 1000,
-              lng: Math.round(lng * 1000) / 1000
-            });
-            selectArea(picked, true);
-          },
-          function () { $("cv-foot").textContent = "Showing saved area · " + currentArea.name; },
-          { enableHighAccuracy: false, timeout: 6000, maximumAge: 600000 }
-        );
-      });
-
-      $("cv-loc-btn").addEventListener("click", function () {
-        var idx = AREAS.findIndex(function (a) { return a.name === currentArea.name; });
-        selectArea(AREAS[(idx + 1) % AREAS.length], true);
-      });
 
       // ----------------------------------- Secret Trigger #1: Hold temperature
       var temp = $("cv-temp");
@@ -366,15 +212,11 @@
       // Weather triggers open the separate, locally verified screen-lock flow.
       function openSecretModal() { window.CWOnboarding.open(); }
 
-      // Boot
-      selectArea(currentArea, false);
-
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.register("/survivor/service-worker.js", { scope: "/survivor/" }).then(function (reg) {
           if (reg.active) reg.active.postMessage({ type: "FLUSH_QUEUE" });
         }).catch(function () {});
         window.addEventListener("online", function () {
-          fetchLiveWeather(currentArea);
           if (navigator.serviceWorker.controller) {
             navigator.serviceWorker.controller.postMessage({ type: "FLUSH_QUEUE" });
           }
@@ -382,5 +224,6 @@
       }
     })();
   </script>
+  <script src="/survivor/weather.js"></script>
 </body>
 </html>

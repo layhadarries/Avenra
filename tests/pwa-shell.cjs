@@ -47,6 +47,9 @@ test('installation includes both icons, direct entry and offline script without 
     assert.ok(w.assets.includes(asset),asset);
   assert.ok(w.assets.includes('/survivor/pwa.css'));
   assert.ok(w.assets.includes('/survivor/theme.js'));
+  assert.ok(w.assets.includes('/survivor/weather.js'));
+  assert.ok(w.assets.includes('/survivor/weather.css'));
+  assert.equal(new Set(w.assets).size,w.assets.length,'Duplicate assets can break cache installation');
   assert.ok(!w.assets.includes('/static/css/style.css'), 'PWA must not download dashboard CSS');
   assert.equal(w.skipped.length,0);
 });
@@ -74,4 +77,17 @@ test('worker activation requires an explicit public-shell update message', async
   assert.equal(w.skipped.length,1);
   const script=fs.readFileSync(path.join(__dirname,'../static/survivor/update.js'),'utf8');
   assert.doesNotMatch(script,/localStorage\s*\.|indexedDB\s*\.|document\.cookie|location\.reload/);
+});
+
+test('weather uses a small standalone shell with no remote visual assets or dummy readings',()=>{
+  const root=path.join(__dirname,'../static/survivor');
+  const html=fs.readFileSync(path.join(root,'cover.html'),'utf8');
+  const css=fs.readFileSync(path.join(root,'weather.css'),'utf8');
+  const script=fs.readFileSync(path.join(root,'weather.js'),'utf8');
+  const gzip=require('node:zlib').gzipSync;
+  assert.ok(gzip(css).length + gzip(script).length < 12*1024,'Weather CSS + JS budget: 12 KiB gzipped');
+  assert.doesNotMatch(css,/@import|url\(|@font-face/i);
+  assert.ok(!html.includes('href="/survivor/survivor.css"'),'Do not download the legacy full-app CSS');
+  assert.doesNotMatch(html,/\bAREAS\b|Clean coastal air|06:14|cv-areas/);
+  assert.doesNotMatch(script,/watchPosition|\/api\/alerts|\/api\/consents|indexedDB|document\.cookie/);
 });
