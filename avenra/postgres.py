@@ -16,6 +16,8 @@ DAY = "to_char((CURRENT_TIMESTAMP + interval '1 day') AT TIME ZONE 'UTC', 'YYYY-
 
 
 def translate(sql):
+    sql = sql.replace("julianday(claimed_at)<julianday(?)", "CAST(claimed_at AS timestamptz)<CAST(? AS timestamptz)")
+    sql = sql.replace("julianday(b.attempted_at)>=julianday('now','-1 hour')", "CAST(b.attempted_at AS timestamptz)>=(CURRENT_TIMESTAMP - interval '1 hour')")
     sql = sql.replace("strftime('%Y-%m-%dT%H:%M:%SZ','now','+1 day')",DAY)
     sql = sql.replace("strftime('%Y-%m-%dT%H:%M:%SZ','now')",NOW)
     sql = sql.replace('MAX(0, beds_available - 1)','GREATEST(0, beds_available - 1)')
