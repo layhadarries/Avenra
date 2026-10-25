@@ -41,6 +41,15 @@ class SubscriptionTests(unittest.TestCase):
     def test_rejects_oversized_or_non_object_input(self):
         for value in (None,[],{'endpoint':'x'*4096}):
             with self.subTest(value=type(value)),self.assertRaises(PushError):validate_subscription(value)
+    def test_rejects_dns_rebinding_to_private_or_metadata_ips(self):
+        from avenra.services.push_service import verify_public_endpoint_dns
+        import socket
+        for bad_ip in ('127.0.0.1','10.0.0.1','169.254.169.254','192.168.1.1','::1','fe80::1'):
+            with self.subTest(ip=bad_ip), patch.object(socket,'getaddrinfo',return_value=[(socket.AF_INET,socket.SOCK_STREAM,6,'',(bad_ip,443))]):
+                with self.assertRaises(PushError):
+                    verify_public_endpoint_dns('fcm.googleapis.com',443)
+        with patch.object(socket,'getaddrinfo',return_value=[(socket.AF_INET,socket.SOCK_STREAM,6,'',('142.250.180.10',443))]):
+            verify_public_endpoint_dns('fcm.googleapis.com',443)
 
 class PushAPITests(unittest.TestCase):
     setUpFixture=test_avenra.avenraStagesTestCase.setUp

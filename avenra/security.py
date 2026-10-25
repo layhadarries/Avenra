@@ -84,10 +84,11 @@ def validate_json_body():
 def apply_security_headers(resp):
     """After-request hook to attach hardened HTTP security headers."""
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
-    resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    resp.headers.setdefault("Referrer-Policy", "same-origin")
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=()")
     if request.path.startswith((
+        "/activate",
         "/api/",
         "/cases",
         "/dashboard",

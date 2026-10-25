@@ -13,6 +13,10 @@ from werkzeug.security import generate_password_hash
 # Ensure importing app/db never creates avenra.db in the repository root
 _BOOT_TMP = tempfile.TemporaryDirectory()
 os.environ["DATABASE_PATH"] = os.path.join(_BOOT_TMP.name, "boot_avenra.db")
+# Test discovery must never connect to a hosted database inherited from the shell.
+os.environ.pop("DATABASE_URL", None)
+# Local fixtures use localhost, never an inherited production origin.
+os.environ.pop("PUBLIC_BASE_URL", None)
 os.environ['APP_ENV'] = 'development'
 os.environ['COOKIE_SECURE'] = '0'
 # Another test may have imported db before this fixture set DATABASE_PATH.

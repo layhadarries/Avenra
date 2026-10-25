@@ -26,3 +26,11 @@ env/
 .coverage
 htmlcov/
 evaluation-uploads/
+.vercel
+.env*
+
+/.vercel/
+
+/.env*
+
+/public/static/

@@ -22,6 +22,12 @@ ROOT = Path(__file__).resolve().parents[1]
 def main(staff_check=None):
     with tempfile.TemporaryDirectory() as directory:
         env = os.environ.copy()
+        # Never pass hosted database, origin or mail credentials to a fixture server.
+        for key in ('DATABASE_URL', 'PUBLIC_BASE_URL', 'VERCEL', 'VERCEL_ENV',
+                    'SMTP_HOST', 'SMTP_PORT', 'SMTP_TLS_MODE', 'SMTP_USERNAME',
+                    'SMTP_PASSWORD', 'SMTP_FROM'):
+            env.pop(key, None)
+
         for name in ('SMS_WEBHOOK_URL', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'):
             env.pop(name, None)
         env.update(APP_ENV='evaluation', COOKIE_SECURE='0',

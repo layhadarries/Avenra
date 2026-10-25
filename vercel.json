@@ -1,0 +1,18 @@
+{
+  "services": {
+    "avenra": {
+      "root": ".",
+      "buildCommand": "pip install -r requirements.txt && python tools/build_vercel_assets.py",
+      "entrypoint": "app:app"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "avenra"
+      }
+    }
+  ]
+}

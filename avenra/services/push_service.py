@@ -36,6 +36,33 @@ def validate_subscription(value):
     except ValueError:raise PushError('invalid_subscription') from None
     return {'endpoint':endpoint,'keys':{'p256dh':keys['p256dh'],'auth':keys['auth']}}
 
+def verify_public_endpoint_dns(hostname: str, port: int = 443) -> None:
+    import ipaddress
+    import socket
+    if not isinstance(hostname, str) or hostname not in PROVIDERS or port not in (None, 443):
+        raise PushError('invalid_subscription')
+    try:
+        records = socket.getaddrinfo(hostname, port or 443, type=socket.SOCK_STREAM)
+    except OSError:
+        raise PushError('push_unavailable', 503) from None
+    if not records:
+        raise PushError('invalid_subscription')
+    for _, _, _, _, sockaddr in records:
+        try:
+            addr = ipaddress.ip_address(sockaddr[0])
+        except ValueError:
+            raise PushError('invalid_subscription') from None
+        if (
+            not addr.is_global
+            or addr.is_private
+            or addr.is_loopback
+            or addr.is_link_local
+            or addr.is_multicast
+            or addr.is_reserved
+            or addr.is_unspecified
+        ):
+            raise PushError('invalid_subscription')
+
 def generate_keys(directory):
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.hazmat.primitives import serialization

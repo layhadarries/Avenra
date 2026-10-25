@@ -14,6 +14,11 @@ SCHEMA_PATH = os.path.join(BASE_DIR, "schema.sql")
 
 def connect():
     """Open a new connection. Rows come back as dictionary-like objects."""
+    if os.environ.get("DATABASE_URL"):
+        from avenra.postgres import Connection
+        return Connection(os.environ["DATABASE_URL"])
+    if os.environ.get("VERCEL"):
+        raise RuntimeError("Vercel requires DATABASE_URL; local SQLite is disabled on Vercel")
     path = Path(DB_PATH)
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     conn = sqlite3.connect(DB_PATH, timeout=10)
@@ -45,6 +50,11 @@ def init_db():
     """Create every table from schema.sql. Safe to run on every startup."""
     conn = connect()
     try:
+        if os.environ.get("DATABASE_URL"):
+            row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
+            if not row or row[0] != 6:
+                raise RuntimeError("Apply the hosted database migration before starting the app")
+            return
         with open(SCHEMA_PATH, encoding="utf-8") as f:
             conn.executescript(f.read())
         migrate(conn)
@@ -100,6 +110,10 @@ def migrate(conn):
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (2)')
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (3)')
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (4)')
+    from avenra.services.staff_invitation_service import SCHEMA as INVITATION_SCHEMA
+    conn.execute(INVITATION_SCHEMA)
+    conn.execute('CREATE TABLE IF NOT EXISTS staff_activation_attempts(bucket TEXT PRIMARY KEY, window_start INTEGER NOT NULL, attempts INTEGER NOT NULL)')
+    conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (5)')
     conn.execute('''CREATE TABLE IF NOT EXISTS app_metadata (
         key TEXT PRIMARY KEY, value TEXT NOT NULL
     )''')

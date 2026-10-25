@@ -1,6 +1,7 @@
 """Encrypted neutral Web Push; no redirects, retries, SMS fallback or PII payload."""
 import json
-from avenra.services.push_service import validate_subscription
+from urllib.parse import urlsplit
+from avenra.services.push_service import PushError, validate_subscription, verify_public_endpoint_dns
 
 class WebPushSender:
     def __init__(self,settings,transport=None):self.settings,self.transport=settings,transport
@@ -15,9 +16,11 @@ class WebPushSender:
         import requests
         class BoundedSession(requests.Session):
             def __init__(self):super().__init__();self.trust_env=False
-            def post(self,*args,**kwargs):
+            def post(self,target_url,*args,**kwargs):
+                parsed=urlsplit(target_url)
+                verify_public_endpoint_dns(parsed.hostname,parsed.port or 443)
                 kwargs['allow_redirects']=False;kwargs['stream']=True
-                response=super().post(*args,**kwargs)
+                response=super().post(target_url,*args,**kwargs)
                 try:
                     data=response.raw.read(65537,decode_content=True)
                     if len(data)>65536:raise OSError('response_too_large')
@@ -31,6 +34,10 @@ class WebPushSender:
                     vapid_private_key=str(self.settings.private),vapid_claims={'sub':self.settings.subject},
                     ttl=300,timeout=10,requests_session=client)
             status=response.status_code
+        except PushError as error:
+            if error.status == 503:
+                return {'outcome':'unknown','reason':'transport_uncertain'}
+            return {'outcome':'failed','reason':'provider_rejected'}
         except WebPushException as error:
             status=error.response.status_code if error.response is not None else None
         except (requests.RequestException,TimeoutError,OSError):

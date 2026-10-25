@@ -32,10 +32,13 @@ class AvenraApplication:
         self._register_controllers(app)
         from avenra.controllers.push_controller import register_webpush
         register_webpush(app)
+        from avenra.controllers.staff_invitation_controller import register_staff_invitations
+        register_staff_invitations(app)
 
         # All entrypoints, including gunicorn app:app, initialise the same schema.
         db.init_db()
-        os.makedirs(self.config_class.UPLOADS_DIR, mode=0o700, exist_ok=True)
+        if not os.environ.get("VERCEL"):
+            os.makedirs(self.config_class.UPLOADS_DIR, mode=0o700, exist_ok=True)
         if app.config['EVALUATION_MODE']:
             import seed
             seed.prepare_evaluation_database()
@@ -93,23 +96,25 @@ class AvenraApplication:
                 return
             if request.endpoint in self.DEVICE_WRITE_ENDPOINTS:
                 return
-            if request.endpoint.startswith('contact_push.'):
+            if request.endpoint.startswith('contact_push.') or request.endpoint in {'staff_invitation.accept', 'login', 'logout'}:
                 # These pages deliberately suppress Referer. Keep session-bound
                 # CSRF token validation and require HTTPS browser Origin instead
                 # of disabling CSRF or weakening the site's other form checks.
                 from flask_wtf.csrf import validate_csrf
                 from wtforms.validators import ValidationError
                 try:
-                    validate_csrf(request.headers.get('X-CSRFToken'))
+                    validate_csrf(request.form.get('csrf_token') if request.endpoint in {'staff_invitation.accept', 'login', 'logout'} else request.headers.get('X-CSRFToken'))
                 except ValidationError:
                     raise CSRFError('Invalid contact form token.') from None
-                if request.is_secure and request.headers.get('Origin') != request.host_url.rstrip('/'):
+                if request.is_secure and request.headers.get('Origin') != os.environ.get('PUBLIC_BASE_URL', request.host_url.rstrip('/')).rstrip('/'):
                     return jsonify({'error':'cross_origin_write_forbidden'}),403
                 return
             self.csrf.protect()
 
         @app.before_request
         def check_json_body():
+            if os.environ.get('VERCEL') and request.path.startswith('/api/diary') and request.method not in {'GET','HEAD','OPTIONS'}:
+                return jsonify({'error':'diary_storage_not_configured'}),503
             if request.path.startswith('/api/contact-push/') and request.content_length and request.content_length>4096:
                 return jsonify({'error':'request_too_large'}),413
             return validate_json_body()
