@@ -62,6 +62,49 @@ def register_staff_invitations(app):
             raise click.ClickException('Account provisioning failed. Check role and access configuration.') from None
         click.echo(f'Invitation submitted to the email server for staff account {uid}. Delivery is not yet confirmed.')
 
+    @app.cli.command("staff-setup")
+    def setup_staff():
+        """Interactively provision staff and send a one-use activation link."""
+        role = click.prompt(
+            "Account type",
+            type=click.Choice(["admin", "responder", "shelter"], case_sensitive=False),
+        ).lower()
+        email = click.prompt("Email address").strip()
+        name = click.prompt("Full name").strip()
+        org = click.prompt("Organisation").strip()
+
+        case_codes = ()
+        shelter_id = None
+        if role == "responder":
+            raw = click.prompt(
+                "Assigned case codes (comma-separated; blank for none)",
+                default="",
+                show_default=False,
+            )
+            case_codes = tuple(code.strip() for code in raw.split(",") if code.strip())
+        elif role == "shelter":
+            shelter_id = click.prompt(
+                "Existing shelter ID",
+                type=click.IntRange(min=1),
+            )
+
+        if not click.confirm(
+            f"Send a one-use activation invitation to {email} as {role}?",
+            default=False,
+        ):
+            click.echo("Cancelled; no account or invitation was created.")
+            return
+
+        click.get_current_context().invoke(
+            invite,
+            email=email,
+            name=name,
+            role=role,
+            org=org,
+            case_code=case_codes,
+            shelter_id=shelter_id,
+        )
+
     @app.cli.command('staff-disable')
     @click.option('--email', required=True)
     def disable(email):
