@@ -106,7 +106,24 @@ def main(staff_check=None):
                     return urls;
                 }''')
                 assert cached and all('/survivor/' in url or url.endswith('/static/css/style.css') for url in cached), cached
-                assert page.evaluate('localStorage.length') == 0
+                local_values = page.evaluate(
+                    "() => Object.fromEntries(Object.entries(localStorage))"
+                )
+
+                allowed_keys = {"clear-sky-alert-owner-v1"}
+                assert set(local_values) <= allowed_keys, (
+                    "Unexpected localStorage keys",
+                    list(local_values),
+                )
+
+                owner = local_values.get("clear-sky-alert-owner-v1")
+                if owner is not None:
+                    assert (
+                            owner.isascii()
+                            and owner.isdecimal()
+                            and 0 < int(owner) <= 9007199254740991
+                            and str(int(owner)) == owner
+                    ), "Invalid cached account identifier"
                 assert not errors, errors
                 mobile.close()
                 browser.close()
