@@ -11,7 +11,49 @@
   <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
   <link rel="stylesheet" href="/survivor/weather.css">
 </head>
-<body class="cover" data-sky="clear">
+<body class="cover" data-sky="clear" data-atmosphere="unknown">
+  <div class="cv-sky-scene" aria-hidden="true">
+    <svg viewBox="0 0 1000 700" preserveAspectRatio="xMidYMin slice" focusable="false">
+      <defs>
+        <radialGradient id="sky-sun-glow"><stop stop-color="#ffdf9e" stop-opacity=".2"/><stop offset="1" stop-color="#ffdf9e" stop-opacity="0"/></radialGradient>
+        <radialGradient id="sky-sun-disc"><stop offset=".8" stop-color="#fff0c9" stop-opacity=".8"/><stop offset="1" stop-color="#fff0c9" stop-opacity="0"/></radialGradient>
+        <radialGradient id="sky-moon-glow"><stop stop-color="#e1eaff" stop-opacity=".16"/><stop offset="1" stop-color="#e1eaff" stop-opacity="0"/></radialGradient>
+        <linearGradient id="sky-cloud-fill" x2="0" y2="1"><stop stop-color="#e4edf3" stop-opacity=".1"/><stop offset=".35" stop-color="#e4edf3"/><stop offset="1" stop-color="#e4edf3" stop-opacity="0"/></linearGradient>
+        <linearGradient id="sky-fade" x2="0" y2="1"><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
+        <mask id="sky-scene-fade"><rect width="1000" height="700" fill="url(#sky-fade)"/></mask>
+      </defs>
+      <g mask="url(#sky-scene-fade)">
+        <g class="sky-stars" fill="none" stroke="#e4edff" stroke-linecap="round">
+          <path stroke-width="1.8" opacity=".62" d="M69 76v.1m101 91v.1m111-134v.1m67 65v.1m51-46v.1m40 144v.1m91-155v.1m53 59v.1m91-49v.1m80 111v.1m61-105v.1m102 57v.1m48 119v.1M122 265v.1m112 97v.1m99-112v.1m46 118v.1m228-129v.1m63 128v.1m120-77v.1m102 112v.1"/>
+          <path stroke-width="2.5" opacity=".75" d="M236 104v.1m110-43v.1m73 65v.1m163-61v.1m98 142v.1m153 8v.1m-466 68v.1m-174 22v.1m551 123v.1"/>
+          <path stroke-width=".8" opacity=".55" d="M384 184v5m-2.5-2.5h5M565 146v6m-3-3h6M705 88v5m-2.5-2.5h5"/>
+        </g>
+        <g class="sky-sun" transform="translate(0 -75)">
+          <circle cx="650" cy="155" r="135" fill="url(#sky-sun-glow)"/>
+          <circle cx="650" cy="155" r="32" fill="url(#sky-sun-disc)"/>
+        </g>
+        <g class="sky-moon" transform="translate(0 -64)">
+          <circle cx="650" cy="139" r="100" fill="url(#sky-moon-glow)"/>
+          <circle cx="650" cy="139" r="25" fill="#e3e8ec"/>
+          <path d="M650 114a25 25 0 0 1 0 50c13-8 14-38 0-50Z" fill="#91a2b5" opacity=".12"/>
+          <g fill="#8294a9" opacity=".08"><circle cx="641" cy="132" r="5"/><circle cx="648" cy="148" r="7"/><circle cx="658" cy="130" r="3"/></g>
+        </g>
+        <g class="sky-clouds" fill="url(#sky-cloud-fill)">
+          <path opacity=".12" d="M-80 188c87-32 100-7 161-17 32-39 78-43 117-14 47-7 73 2 111 31 58 0 82 14 118 39-103 5-188 1-266 10-97-2-176-6-241-1Z"/>
+          <path opacity=".1" d="M576 185c40-28 66-21 99-14 29-35 83-38 120-7 73-22 98 10 135 22 56-12 90-2 139 24v44c-151-17-270-3-493-11-41-11-40-38 0-58Z"/>
+          <path opacity=".08" d="M152 299c49-32 93-29 131-3 51-9 69 10 102 26 36-9 73-2 100 21-158-9-285 8-402-3 11-26 34-37 69-41Z"/>
+        </g>
+        <g class="sky-rain" fill="none" stroke="#d1e1eb" stroke-width="1.2" stroke-linecap="round" opacity=".28">
+          <path d="m130 260-9 28m109-58-6 20m122-11-10 31m63-57-7 23m255-9-11 34m87-5-7 23m110-62-9 27m85 2-8 24M69 372l-8 25m140-50-10 32m115-13-7 24m85 31-9 29m285-64-8 25m100-45-6 20m83 26-11 34M156 481l-7 22m136-30-9 28m132 29-8 26m233-69-10 30m120 6-7 22m115-16-9 28"/>
+        </g>
+        <g class="sky-snow" fill="#f1f5f8" opacity=".44">
+          <circle cx="341" cy="233" r="2"/><circle cx="660" cy="250" r="3"/><circle cx="382" cy="315" r="3"/><circle cx="607" cy="360" r="2"/><circle cx="284" cy="412" r="2"/><circle cx="716" cy="420" r="3"/><circle cx="355" cy="482" r="2"/><circle cx="649" cy="515" r="2"/><circle cx="145" cy="277" r="3"/><circle cx="820" cy="329" r="2"/><circle cx="211" cy="531" r="2"/><circle cx="852" cy="520" r="3"/>
+        </g>
+        <g class="sky-fog" fill="none" stroke="#d8e5eb" stroke-linecap="round" opacity=".12"><path stroke-width="20" d="M-40 265h380m310 45h420M-60 405h430m220 75h480"/><path stroke-width="9" d="M50 345h260m390 45h300"/></g>
+        <path class="sky-lightning" d="m677 239-22 39h18l-24 37" fill="none" stroke="#e9e2be" stroke-width="2" opacity=".3"/>
+      </g>
+    </svg>
+  </div>
   <svg class="weather-symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <defs>
       <symbol id="wx-sun" viewBox="0 0 32 32"><circle cx="16" cy="16" r="6" fill="currentColor" stroke="none"/><path d="M16 2v3m0 22v3M2 16h3m22 0h3M6 6l2 2m16 16 2 2M6 26l2-2M24 8l2-2"/></symbol>

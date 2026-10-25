@@ -21,6 +21,8 @@ h1, h2 { line-height: 1.25; }
 .cv-rng span { text-align: right; }
 .cv-details { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
 body.cover {
+  position: relative;
+  isolation: isolate;
   --sky-top: #355c80;
   --sky-bottom: #486f8b;
   --weather-muted: rgba(255,255,255,.86);
@@ -33,6 +35,26 @@ body.cover {
 body.cover[data-sky="cloud"] { --sky-top: #43586b; --sky-bottom: #5d7280; }
 body.cover[data-sky="rain"] { --sky-top: #2d4358; --sky-bottom: #536779; }
 body.cover[data-sky="night"] { --sky-top: #101b2e; --sky-bottom: #24374e; }
+.cv-sky-scene { position: absolute; inset: 0 0 auto; height: 700px; overflow: hidden; pointer-events: none; user-select: none; z-index: 0; }
+.cv-sky-scene > svg { display: block; width: 100%; max-width: 1000px; height: 100%; margin: 0 auto; }
+.cv-sky-scene .sky-stars, .cv-sky-scene .sky-sun, .cv-sky-scene .sky-moon,
+.cv-sky-scene .sky-clouds, .cv-sky-scene .sky-rain, .cv-sky-scene .sky-snow,
+.cv-sky-scene .sky-fog, .cv-sky-scene .sky-lightning { display: none; }
+.cover[data-atmosphere="clear"] .sky-sun, .cover[data-atmosphere="partly"] .sky-sun { display: inline; }
+.cover[data-atmosphere="partly"] .sky-clouds, .cover[data-atmosphere="cloud"] .sky-clouds,
+.cover[data-atmosphere="rain"] .sky-clouds, .cover[data-atmosphere="snow"] .sky-clouds,
+.cover[data-atmosphere="storm"] .sky-clouds { display: inline; }
+.cover[data-atmosphere="rain"] .sky-rain, .cover[data-atmosphere="storm"] .sky-rain,
+.cover[data-atmosphere="snow"] .sky-snow, .cover[data-atmosphere="fog"] .sky-fog,
+.cover[data-atmosphere="storm"] .sky-lightning { display: inline; }
+.cover[data-sky="night"] .sky-sun { display: none; }
+.cover[data-sky="night"][data-atmosphere="clear"] .sky-stars,
+.cover[data-sky="night"][data-atmosphere="clear"] .sky-moon,
+.cover[data-sky="night"][data-atmosphere="partly"] .sky-stars,
+.cover[data-sky="night"][data-atmosphere="partly"] .sky-moon { display: inline; }
+.cover[data-sky="night"][data-atmosphere="partly"] .sky-stars { opacity: .45; }
+.cover[data-sky="night"][data-atmosphere="partly"] .sky-moon { opacity: .65; }
+.cover .cv-header, .cover .cv-main { position: relative; z-index: 1; }
 .weather-symbols { position: absolute; width: 0; height: 0; overflow: hidden; }
 .cover .cv-header { max-width: 640px; margin: 0 auto; padding: calc(12px + env(safe-area-inset-top)) 20px 0; }
 .cv-wordmark { font-size: 14px; font-weight: 600; letter-spacing: -.02em; color: var(--weather-muted); }

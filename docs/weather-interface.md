@@ -3,6 +3,17 @@
 The start page is `/survivor/cover.html`. It uses a single location, system fonts,
 inline SVG symbols and restrained day/cloud/rain/night sky colours. There are no
 background videos, map widgets, external fonts, icon libraries or build dependencies.
+An inline, non-interactive SVG scene adds a sun, light clouds, a moon/stars, rain,
+snow, fog or a static storm accent as appropriate. There are no particle engines,
+image downloads, animation loops or flashing lightning. These are decorative
+illustrations, not measurements of moon phase or sun/moon position.
+
+Day/night is determined at viewing time using that location's forecast sunrise
+and sunset, with the API's `is_day` flag as fallback for missing/polar data. A
+single timer at the next known sunrise, sunset or date boundary updates the scene
+without an API request. It is stopped while hidden and checked again on return.
+Precipitation/clouds remain based on the most recently fetched conditions;
+cached/offline status and observation/download times remain visible.
 `weather.css` is standalone: the legacy full-app `survivor.css` is no longer loaded
 or precached. Both weather assets are in the public-only service-worker allowlist.
 

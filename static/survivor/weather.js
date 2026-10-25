@@ -5,6 +5,7 @@
   var PLACE = 'cs_weather_place_v1', CACHE = 'cs_weather_forecast_v1', ASKED = 'cs_weather_location_asked';
   var MAX_AGE = 30 * 60 * 1000, place = null, cached = null, forecastId = 0, interaction = 0;
   var weatherRequest = null, searchRequest = null, searchId = 0, locating = false;
+  var skyTimer = null;
   function $(id) { return document.getElementById(id); }
   function text(id, value) { $(id).textContent = value; }
   function number(value) { return typeof value === 'number' && Number.isFinite(value) ? value : null; }
@@ -118,17 +119,35 @@
     text('cv-region',place ? place.region : 'A little closer to the day ahead.');
     text('cv-location-note',!place ? 'WEATHER NEAR YOU' : place.mode === 'gps' ? 'CURRENT LOCATION' : 'CHOSEN LOCATION');
   }
+  function updateSky(weather) {
+    clearTimeout(skyTimer);
+    var now = Date.now(), current = weather ? weather.current : {};
+    var today = weather ? dateKey(now,weather.zone) : null;
+    var day = weather && weather.days.find(function (entry) { return dateKey(entry.time * 1000,weather.zone) === today; });
+    var daylight = current.is_day;
+    // Use the selected location's actual sunrise/sunset at viewing time, not
+    // the old is_day flag in a cached forecast. Polar/missing data use the API flag.
+    if (day && day.sunrise > 0 && day.sunset > day.sunrise) daylight = now >= day.sunrise * 1000 && now < day.sunset * 1000 ? 1 : 0;
+    var code = number(current.weather_code), conditions = condition(code,daylight);
+    var atmosphere = code === 2 ? 'partly' : ['sun','moon'].includes(conditions.icon) ? 'clear' : conditions.icon;
+    document.body.dataset.sky = weather ? conditions.sky : 'clear';
+    document.body.dataset.atmosphere = weather ? atmosphere : 'unknown';
+    text('cv-desc',weather ? conditions.label : place ? 'Waiting for weather' : 'Waiting for your location');
+    $('cv-condition-icon').replaceChildren();
+    if (weather) $('cv-condition-icon').appendChild(icon(conditions.icon));
+    document.querySelector('meta[name="theme-color"]').content = weather && conditions.sky === 'night' ? '#101b2e' : '#355c80';
+    if (!weather || document.hidden) return;
+    // One timer at the next known day boundary. No animation loop or extra API call.
+    var boundaries = weather.days.flatMap(function (entry) { return [entry.time,entry.sunrise,entry.sunset]; })
+      .filter(function (time) { return time !== null && time * 1000 > now; });
+    if (boundaries.length) skyTimer = setTimeout(function () { updateSky(weather); },Math.min(2147483647,Math.min.apply(null,boundaries) * 1000 - now + 50));
+  }
   function render(weather) {
     var current = weather ? weather.current : {}, day = renderDays(weather);
     document.querySelector('.cv-details').hidden = !weather;
     renderHours(weather); renderLocation();
     text('cv-temp',degrees(current.temperature_2m));
-    var conditions = condition(number(current.weather_code),current.is_day);
-    text('cv-desc',weather ? conditions.label : place ? 'Waiting for weather' : 'Waiting for your location');
-    $('cv-condition-icon').replaceChildren();
-    if (weather) $('cv-condition-icon').appendChild(icon(conditions.icon));
-    document.body.dataset.sky = weather ? conditions.sky : 'clear';
-    document.querySelector('meta[name="theme-color"]').content = weather && conditions.sky === 'night' ? '#101b2e' : '#355c80';
+    updateSky(weather);
     text('cv-hl','H: ' + degrees(day ? day.high : null) + '   L: ' + degrees(day ? day.low : null));
     text('cv-date',new Intl.DateTimeFormat('en', {weekday:'long',month:'long',day:'numeric',timeZone:weather ? weather.zone : undefined}).format(new Date()));
     text('cv-feels',degrees(current.apparent_temperature));
@@ -275,7 +294,9 @@
   function reconnect() { if (place && !document.hidden) loadForecast(false); }
   window.addEventListener('online',reconnect);
   window.addEventListener('offline',function () { if (place) { if (weatherRequest) weatherRequest.abort(); loadForecast(false); } });
-  document.addEventListener('visibilitychange',function () { if (!document.hidden) reconnect(); });
+  document.addEventListener('visibilitychange',function () { if (document.hidden) clearTimeout(skyTimer); else reconnect(); });
+  window.addEventListener('pagehide',function () { clearTimeout(skyTimer); });
+  window.addEventListener('pageshow',function (event) { if (event.persisted) reconnect(); });
   async function boot() {
     var savedPlace = read(PLACE), savedCache = read(CACHE);
     if (validPlace(savedPlace)) place = savedPlace;

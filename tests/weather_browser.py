@@ -9,9 +9,13 @@ from playwright.sync_api import expect
 from stage0_browser import main
 
 
+def viewing_time(is_day=1):
+    return datetime.now(timezone(timedelta(hours=2))).replace(hour=12 if is_day else 22, minute=0, second=0, microsecond=0)
+
+
 def forecast(code=2, is_day=1):
-    now = datetime.now(timezone.utc)
-    local = now.astimezone(timezone(timedelta(hours=2)))
+    local = viewing_time(is_day)
+    now = local.astimezone(timezone.utc)
     midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
     days = [int((midnight + timedelta(days=index)).timestamp()) for index in range(7)]
     hour = int(now.replace(minute=0, second=0, microsecond=0).timestamp())
@@ -67,6 +71,7 @@ def exercise(page, context, base, env):
     providers(weather, state, calls)
     try:
         screen = weather.new_page()
+        screen.clock.set_fixed_time(viewing_time())
         screen.on('pageerror', lambda error: errors.append(str(error)))
         screen.goto(base + '/survivor/cover.html')
         expect(screen.locator('#cv-place')).to_have_text('Gardens')
@@ -81,6 +86,9 @@ def exercise(page, context, base, env):
         assert screen.locator('[data-thursday="1"]').count() == 1
         assert screen.locator('.cv-area-chip').count() == 0
         assert screen.locator('body').get_attribute('data-sky') == 'clear'
+        assert screen.locator('.sky-sun').is_visible()
+        assert not screen.locator('.sky-stars').is_visible()
+        assert screen.locator('.cv-sky-scene').evaluate("el => getComputedStyle(el).pointerEvents") == 'none'
         query = parse_qs(urlsplit(next(url for url in calls if 'api.open-meteo.com/' in url)).query)
         assert query['latitude'] == ['-33.94'] and query['longitude'] == ['18.41']
         reverse = parse_qs(urlsplit(next(url for url in calls if 'api.bigdatacloud.net/' in url)).query)
@@ -108,10 +116,29 @@ def exercise(page, context, base, env):
         screen.locator('#cv-modal-close').click()
         weather.set_offline(False)
         for code, day, expected in ((3, 1, 'cloud'), (63, 1, 'rain'), (0, 0, 'night')):
+            screen.clock.set_fixed_time(viewing_time(day))
             state['forecast'] = forecast(code, day)
             screen.locator('#cv-refresh').click()
             expect(screen.locator('body')).to_have_attribute('data-sky', expected)
+            if expected == 'cloud':
+                assert screen.locator('.sky-clouds').is_visible()
+                assert not screen.locator('.sky-moon').is_visible()
+            elif expected == 'rain':
+                assert screen.locator('.sky-rain').is_visible()
+                assert not screen.locator('.sky-stars').is_visible()
+            else:
+                assert screen.locator('.sky-moon').is_visible()
+                assert screen.locator('.sky-stars').is_visible()
+                assert not screen.locator('.sky-sun').is_visible()
             screenshot(screen, 'weather-' + expected)
+        # A night observation must not leave the sky dark when viewed next in daylight.
+        weather.set_offline(True)
+        screen.clock.set_fixed_time(viewing_time(1) + timedelta(days=1))
+        screen.reload()
+        expect(screen.locator('body')).to_have_attribute('data-sky', 'clear')
+        assert screen.locator('.sky-sun').is_visible()
+        assert not screen.locator('.sky-moon').is_visible()
+        weather.set_offline(False)
         state['fail'] = True
         screen.locator('#cv-refresh').click()
         expect(screen.locator('#cv-weather-status')).to_contain_text('showing saved weather')
@@ -129,12 +156,14 @@ def exercise(page, context, base, env):
         assert len([url for url in calls if 'api.bigdatacloud.net' in url]) == 1, 'No reverse lookup of manual or saved coordinates'
         # Real zero readings are not treated as missing, and missing data is never invented.
         state['fail'] = False
+        screen.clock.set_fixed_time(viewing_time(1))
         state['forecast'] = forecast(71, 1)
         state['forecast']['current'].update(temperature_2m=0, apparent_temperature=None, relative_humidity_2m=0)
         state['forecast']['daily'].update(sunrise=[None]*7, sunset=[None]*7, uv_index_max=[None]*7, precipitation_probability_max=[None]*7)
         screen.locator('#cv-refresh').click()
         expect(screen.locator('#cv-temp')).to_have_text('0°')
         expect(screen.locator('#cv-desc')).to_have_text('Snow')
+        assert screen.locator('.sky-snow').is_visible()
         expect(screen.locator('#cv-feels')).to_have_text('—°')
         expect(screen.locator('#cv-hum')).to_have_text('0%')
         expect(screen.locator('#cv-rain')).to_have_text('—')
@@ -151,6 +180,28 @@ def exercise(page, context, base, env):
         assert not errors, errors
     finally:
         weather.close()
+
+    boundary = context.browser.new_context(viewport={'width':390,'height':844},
+        geolocation={'latitude':-33.935123,'longitude':18.409876},permissions=['geolocation'])
+    boundary_calls = []
+    providers(boundary, {'forecast':forecast(0,1)}, boundary_calls)
+    try:
+        screen = boundary.new_page()
+        screen.clock.install(time=viewing_time().replace(hour=18,minute=59,second=50))
+        screen.goto(base + '/survivor/cover.html')
+        expect(screen.locator('#cv-temp')).to_have_text('23°')
+        expect(screen.locator('#cv-place')).to_have_text('Gardens')
+        assert screen.locator('.sky-sun').is_visible()
+        before = len(boundary_calls)
+        screen.clock.fast_forward(12000)
+        expect(screen.locator('body')).to_have_attribute('data-sky','night')
+        assert screen.locator('.sky-moon').is_visible()
+        assert screen.locator('.sky-stars').is_visible()
+        assert len(boundary_calls) == before, 'Sunset scene changes must not make extra provider requests'
+        screen.locator('[data-thursday="1"]').click()
+        expect(screen.locator('#cv-modal')).to_be_visible()
+    finally:
+        boundary.close()
 
     denied = context.browser.new_context(viewport={'width': 320, 'height': 740})
     calls = []
