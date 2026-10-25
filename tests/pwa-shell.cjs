@@ -63,3 +63,14 @@ test('support screens share a small local stylesheet with no remote assets',()=>
   }
   assert.ok(!fs.readFileSync(path.join(root,'cover.html'),'utf8').includes('/survivor/pwa.css'));
 });
+
+test('worker activation requires an explicit public-shell update message', async()=>{
+  const w=worker(); let pending;
+  w.handlers.message({data:{type:'unrelated'},waitUntil:p=>{pending=p;}});
+  assert.equal(w.skipped.length,0);
+  w.handlers.message({data:{type:'ACTIVATE_PUBLIC_SHELL_UPDATE'},waitUntil:p=>{pending=p;}});
+  await pending;
+  assert.equal(w.skipped.length,1);
+  const script=fs.readFileSync(path.join(__dirname,'../static/survivor/update.js'),'utf8');
+  assert.doesNotMatch(script,/localStorage\s*\.|indexedDB\s*\.|document\.cookie|location\.reload/);
+});

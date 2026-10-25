@@ -1,5 +1,5 @@
 /* Only public static shell assets are cached. */
-const CACHE_NAME = 'clear-sky-shell-v14';
+const CACHE_NAME = 'clear-sky-shell-v15';
 const SHELL_ASSETS = [
   '/survivor/device.html', '/survivor/device.js', '/survivor/identity.js',
   '/survivor/install.html', '/survivor/install.css', '/survivor/install.js',
@@ -13,6 +13,12 @@ const SHELL_ASSETS = [
   '/survivor/survivor.css'
 ];
 const PUBLIC_PATHS = new Set(SHELL_ASSETS);
+// Activate only after an explicit update action. Never reload an open form.
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'ACTIVATE_PUBLIC_SHELL_UPDATE') {
+    event.waitUntil(self.skipWaiting());
+  }
+});
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS)));
 });
