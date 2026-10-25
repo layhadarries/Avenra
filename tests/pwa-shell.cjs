@@ -46,6 +46,7 @@ test('installation includes both icons, direct entry and offline script without 
   for(const asset of ['/survivor/index.html','/survivor/shell.js','/survivor/icons/icon-192.png','/survivor/icons/icon-512.png'])
     assert.ok(w.assets.includes(asset),asset);
   assert.ok(w.assets.includes('/survivor/pwa.css'));
+  assert.ok(w.assets.includes('/survivor/theme.js'));
   assert.ok(!w.assets.includes('/static/css/style.css'), 'PWA must not download dashboard CSS');
   assert.equal(w.skipped.length,0);
 });

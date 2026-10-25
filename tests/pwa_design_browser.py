@@ -28,6 +28,16 @@ def exercise(page, context, base, env):
                     if os.environ.get('AVENRA_SCREENSHOT_DIR') and width == 390:
                         screen.screenshot(path=str(Path(os.environ['AVENRA_SCREENSHOT_DIR']) / f'pwa-{name}-{theme}.png'), full_page=True)
 
+        # Explicit light overrides a dark device setting across all screens.
+        screen.get_by_role('button', name='Switch to light theme', exact=True).click()
+        for name in ('index', 'help', 'diary', 'privacy', 'setup', 'device', 'enroll', 'install', 'update'):
+            screen.goto(f'{base}/survivor/{name}.html')
+            expect(screen.get_by_role('button', name='Switch to dark theme', exact=True)).to_be_visible()
+            assert screen.locator('body').evaluate('(el) => getComputedStyle(el).backgroundColor') == 'rgb(245, 242, 235)'
+        # Explicit dark also overrides a light device and survives navigation/offline.
+        screen.get_by_role('button', name='Switch to dark theme', exact=True).click()
+        screen.emulate_media(color_scheme='light')
+        assert screen.locator('body').evaluate('(el) => getComputedStyle(el).backgroundColor') == 'rgb(28, 25, 30)'
         screen.goto(base + '/survivor/#more')
         expect(screen.get_by_role('heading', name='Your settings')).to_be_visible()
         expect(screen.locator('.more-row[href="/survivor/device.html"]')).to_be_visible()
@@ -46,6 +56,11 @@ def exercise(page, context, base, env):
             screen.goto(f'{base}/survivor/{name}.html')
             assert screen.evaluate('document.styleSheets.length > 0'), name
             assert screen.locator('body').evaluate('(el) => getComputedStyle(el).backgroundColor') == 'rgb(28, 25, 30)', name
+            expect(screen.get_by_role('button', name='Switch to light theme', exact=True)).to_be_visible()
+        screen.get_by_role('button', name='Switch to light theme', exact=True).click()
+        assert screen.locator('body').evaluate('(el) => getComputedStyle(el).backgroundColor') == 'rgb(245, 242, 235)'
+        screen.goto(base + '/survivor/cover.html')
+        assert screen.locator('#theme-toggle').count() == 0
         assert not errors, errors
     finally:
         phone.close()

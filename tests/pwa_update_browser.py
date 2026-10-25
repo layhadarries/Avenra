@@ -11,7 +11,9 @@ def exercise(page, context, base, env):
         screen = phone.new_page()
         screen.goto(base + '/survivor/update.html')
         source = (Path(__file__).resolve().parents[1] / 'static/survivor/service-worker.js').read_text()
-        legacy = source.replace('clear-sky-shell-v15', 'clear-sky-shell-v13')
+        import re
+        current_cache = re.search(r"const CACHE_NAME = '([^']+)'", source).group(1)
+        legacy = source.replace(current_cache, 'clear-sky-shell-v13')
         phone.route('**/survivor/service-worker.js', lambda route: route.fulfill(
             status=200, content_type='application/javascript', body=legacy,
             headers={'Service-Worker-Allowed': '/survivor/'}))
@@ -55,7 +57,7 @@ def exercise(page, context, base, env):
                 tx.oncomplete = () => db.close();
             };
         })''') == 123
-        assert await_cache_version(screen) == ['clear-sky-shell-v15']
+        assert await_cache_version(screen) == [current_cache]
         screen.locator('#open-app').click()
         expect(screen.get_by_role('heading', name='Get support', exact=True)).to_be_visible()
     finally:
