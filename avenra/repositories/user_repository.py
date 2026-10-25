@@ -44,3 +44,10 @@ class UserRepository(BaseRepository):
             (user_id,),
         )
         self.conn.commit()
+
+    def update_survivor_name(self, user_id: int, name: str) -> None:
+        """Participate in the caller's transaction; never change another role."""
+        self.conn.execute(
+            "UPDATE users SET name = ? WHERE id = ? AND role = 'survivor'",
+            (name, user_id),
+        )

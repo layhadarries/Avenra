@@ -347,7 +347,7 @@ body.cover {
 
 .cv-date-line { padding: 0 1.2rem; font-size: .84rem; color: #486273; font-weight: 500; }
 
-.cv-main { padding: .35rem 1.15rem 2.2rem; display: grid; gap: .85rem; }
+.cv-main { padding: .35rem 1.15rem 2.2rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: .85rem; }
 
 .cv-now {
   text-align: center; display: grid; justify-items: center; gap: .1rem;
@@ -431,7 +431,7 @@ body.cover {
   background: linear-gradient(90deg, transparent var(--a), #e9b949 var(--a), #e8833a var(--b), transparent var(--b)), rgba(27, 49, 64, .1);
 }
 
-.cv-details { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; }
+.cv-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
 .cv-detail-box {
   background: rgba(255, 255, 255, .55); border-radius: 12px; padding: .6rem .75rem;
 }
@@ -440,7 +440,7 @@ body.cover {
 .cv-detail-box small { display: block; font-size: .75rem; color: #486273; margin-top: .1rem; }
 
 /* Sun & Air quality bottom card */
-.cv-sun-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; align-items: center; }
+.cv-sun-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; align-items: center; }
 .cv-aqi-badge {
   display: inline-block; padding: .12rem .55rem; border-radius: 999px;
   background: var(--green-soft); color: var(--green); font-size: .76rem; font-weight: 700;
@@ -459,6 +459,9 @@ body.cover {
 }
 .cv-sheet {
   width: 100%; max-width: 400px;
+  max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto;
+  --navy: #352b37; --muted: #716773; --teal: #37696b;
+  --teal-dark: #285658; --off-white: #f5f2eb; --line: #ded7dc;
   background: #fdfcfa; color: var(--navy);
   border-radius: 24px; padding: 1.25rem 1.25rem 1.35rem;
   box-shadow: 0 12px 40px rgba(15, 30, 40, .28);
@@ -525,6 +528,14 @@ body.cover {
 }
 .ob-actions { display: flex; justify-content: space-between; gap: .6rem; margin-top: .2rem; }
 .ob-actions .btn { flex: 1; }
+.ob-step { display: grid; gap: 14px; }
+.ob-label { display: grid; gap: 6px; min-width: 0; font-size: .8rem; font-weight: 600; }
+.ob-label span { font-weight: 400; color: var(--muted); }
+.ob-input { min-height: 46px; font-size: 16px; border-radius: 6px; }
+.ob-card { border-radius: 8px; }
+.cv-close { min-width: 44px; min-height: 44px; }
+#view-pin { display: grid; gap: 12px; }
+#ob-skip-save { font-size: .8rem; }
 
 /* =================================== Stage 3-5: Find Help, Diary & More */
 

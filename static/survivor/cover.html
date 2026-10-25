@@ -84,12 +84,14 @@
 
       <!-- Existing user: 4-digit PIN entry -->
       <div id="view-pin" hidden>
-        <p class="cv-sheet-sub">Enter your 4-digit alert code for Thursday weather notifications.</p>
+        <p class="cv-sheet-sub" id="pin-instructions">Enter your 4-digit alert code.</p>
         <div class="pin-dots" id="pin-dots">
           <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
         </div>
         <p class="pin-err" id="pin-err" aria-live="polite"></p>
         <div class="pin-pad" id="pin-pad"></div>
+        <button class="btn btn-quiet" id="device-unlock" type="button" hidden>Use device unlock</button>
+        <p class="cv-sheet-sub" id="unlock-help">Your screen lock is separate from your private account connection.</p>
       </div>
 
       <!-- First-time user: 4-step setup wizard -->
@@ -100,62 +102,74 @@
 
         <!-- Step 1: Create & confirm 4-digit PIN -->
         <div class="ob-step" data-ob="1">
-          <p class="cv-sheet-sub" id="ob-pin-prompt" style="margin-top:.4rem"><strong>Step 1 of 4:</strong> Choose a 4-digit screen PIN (a disguise, not account security). You'll use this whenever you tap Thursday's forecast.</p>
+          <p class="cv-sheet-sub" id="ob-pin-prompt"><strong>Step 1 of 4:</strong> Choose a 4-digit screen PIN, or use device unlock below.</p>
           <div class="pin-dots" id="ob-pin-dots">
             <span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span><span class="pin-dot"></span>
           </div>
           <p class="pin-err" id="ob-pin-err" aria-live="polite"></p>
           <div class="pin-pad" id="ob-pin-pad"></div>
+          <button class="btn btn-quiet" id="ob-device-unlock" type="button" hidden>Use device unlock instead</button>
+          <p class="cv-sheet-sub" id="ob-device-help">On supported devices, your browser can ask for fingerprint, face, or device-PIN verification. Avenra never receives biometric data.</p>
         </div>
 
         <!-- Step 2: Secret entry & Quick Exit explanation -->
         <div class="ob-step" data-ob="2" hidden>
-          <p class="cv-sheet-sub" style="margin:.4rem 0"><strong>Step 2 of 4:</strong> How your disguise works.</p>
+          <p class="cv-sheet-sub"><strong>Step 2 of 4:</strong> What should we call you?</p>
+          <label class="ob-label" for="ob-name">Name or nickname <span>(optional)</span></label>
+          <input class="ob-input" id="ob-name" type="text" maxlength="60" autocomplete="off" placeholder="Use a name you feel safe sharing">
+          <p class="cv-sheet-sub" id="ob-connection" role="status">Checking your private connection…</p>
           <div class="ob-card">
-            <p><strong>🌤️ Opening Avenra:</strong> Clear Sky always opens on this weather screen. Tap <strong>Thursday's forecast</strong> (or press &amp; hold the temperature) and enter your 4-digit PIN.</p>
-            <p><strong>🚪 Quick exit:</strong> Tap <strong>Quick exit</strong> in the top corner at any time to cancel a countdown and jump straight back to the weather screen.</p>
-            <p><strong>🔒 Screen off / Back button:</strong> Leaving during the countdown cancels the unsent attempt. After it ends, a saved alert keeps retrying where your browser supports it.</p>
+            <p>Tap Thursday’s forecast or hold the temperature to open this screen. Quick exit returns to the weather.</p>
+            <p>Your screen lock is a disguise, not account authentication. A private invitation from your support contact is needed to send alerts or save account details.</p>
+            <p>Use fictional details while this app is a demonstration.</p>
           </div>
           <div class="ob-actions">
-            <button class="btn" id="ob-next-2" type="button">Next · Location</button>
+            <button class="btn" id="ob-next-2" type="button">Next · Trusted contacts</button>
           </div>
         </div>
 
         <!-- Step 3: Warm up GPS permission -->
         <div class="ob-step" data-ob="3" hidden>
-          <p class="cv-sheet-sub" style="margin:.4rem 0"><strong>Step 3 of 4:</strong> Allow location now so Android never interrupts you during an emergency.</p>
+          <p class="cv-sheet-sub"><strong>Step 3 of 4:</strong> Add people you trust.</p>
+          <p class="cv-sheet-sub">Optional. Existing contacts are kept. You can manage up to five contacts inside Avenra; notifications require each contact’s opt-in.</p>
+          <p class="cv-sheet-sub" id="ob-existing-contacts"></p>
           <div class="ob-card">
-            <p>Alert location is kept in phone memory only. If you enable sharing, a received alert can store location on the server. The weather area setting is separate.</p>
-            <button class="btn btn-quiet" id="ob-gps-btn" type="button">Grant location permission</button>
-            <p id="ob-gps-status" style="font-size:.8rem;color:var(--muted)">Not checked yet</p>
+            <div class="ob-contact-row">
+              <label class="ob-label">Contact 1 name<input class="ob-input" id="ob-c1-name" type="text" maxlength="60" autocomplete="off" placeholder="Name"></label>
+              <label class="ob-label">Phone number<input class="ob-input" id="ob-c1-phone" type="tel" maxlength="40" autocomplete="off" placeholder="082 123 4567"></label>
+            </div>
+            <div class="ob-contact-row">
+              <label class="ob-label">Contact 2 name<input class="ob-input" id="ob-c2-name" type="text" maxlength="60" autocomplete="off" placeholder="Name"></label>
+              <label class="ob-label">Phone number<input class="ob-input" id="ob-c2-phone" type="tel" maxlength="40" autocomplete="off" placeholder="082 123 4567"></label>
+            </div>
           </div>
           <div class="ob-actions">
-            <button class="btn" id="ob-next-3" type="button">Next · Trusted contacts</button>
+            <button class="btn btn-quiet" id="ob-back-3" type="button">Back</button>
+            <button class="btn" id="ob-next-3" type="button">Next · Location</button>
           </div>
         </div>
 
-        <!-- Step 4: Review or customize trusted contacts -->
         <div class="ob-step" data-ob="4" hidden>
-          <p class="cv-sheet-sub" style="margin:.4rem 0"><strong>Step 4 of 4:</strong> Choose fictional contacts for this demo. SMS delivery is not confirmed.</p>
+          <p class="cv-sheet-sub"><strong>Step 4 of 4:</strong> Location is your choice.</p>
           <div class="ob-card">
-            <div class="ob-contact-row">
-              <input class="ob-input" id="ob-c1-name" type="text" placeholder="Contact 1 name" value="Lerato K">
-              <input class="ob-input" id="ob-c1-phone" type="tel" placeholder="+27 ..." value="+27 00 000 0001">
-            </div>
-            <div class="ob-contact-row">
-              <input class="ob-input" id="ob-c2-name" type="text" placeholder="Contact 2 name" value="Thabo M">
-              <input class="ob-input" id="ob-c2-phone" type="tel" placeholder="+27 ..." value="+27 00 000 0002">
-            </div>
+            <p>You can allow location now or skip it. Permission alone does not enable sharing: you still choose whether to include location with an alert.</p>
+            <button class="btn btn-quiet" id="ob-gps-btn" type="button">Check location permission</button>
+            <p id="ob-gps-status" class="cv-sheet-sub" role="status">Not checked yet</p>
           </div>
+          <p class="pin-err" id="ob-save-status" role="status"></p>
           <div class="ob-actions">
-            <button class="btn" id="ob-finish" type="button">Finish &amp; open SafePath</button>
+            <button class="btn btn-quiet" id="ob-back-4" type="button">Back</button>
+            <button class="btn" id="ob-finish" type="button">Finish &amp; open Avenra</button>
           </div>
+          <button class="btn btn-quiet" id="ob-skip-save" type="button" hidden>Continue without saving account details</button>
         </div>
       </div>
     </div>
   </div>
 
   <script src="/survivor/queue.js"></script>
+  <script src="/survivor/unlock.js"></script>
+  <script src="/survivor/onboarding.js"></script>
   <script>
     (function () {
       "use strict";
@@ -349,239 +363,8 @@
       ["pointerup", "pointercancel", "pointerleave"].forEach(function (t) { temp.addEventListener(t, stopHold); });
       temp.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
-      // ----------------------- Disguised PIN & First-time Onboarding Modal
-      var PIN_KEY = "cs_pin_hash";
-      var modal = $("cv-modal");
-      var viewPin = $("view-pin");
-      var viewSetup = $("view-setup");
-
-      function hashPin(pin) {
-        // Simple deterministic hash so the raw 4 digits aren't sitting in plain text.
-        var h = 2166136261;
-        var s = "safepath:" + pin;
-        for (var i = 0; i < s.length; i++) {
-          h ^= s.charCodeAt(i);
-          h = Math.imul(h, 16777619);
-        }
-        return (h >>> 0).toString(16);
-      }
-
-      function getSavedPinHash() {
-        try { return localStorage.getItem(PIN_KEY); } catch (_) { return null; }
-      }
-
-      function buildKeypad(container, onDigit, onBack, onCancel) {
-        container.innerHTML = "";
-        ["1","2","3","4","5","6","7","8","9","Cancel","0","⌫"].forEach(function (k) {
-          var b = document.createElement("button");
-          b.type = "button";
-          b.className = "pin-key" + (k.length > 1 || k === "⌫" ? " is-muted" : "");
-          b.textContent = k;
-          b.addEventListener("click", function () {
-            if (k === "Cancel") onCancel();
-            else if (k === "⌫") onBack();
-            else onDigit(k);
-          });
-          container.appendChild(b);
-        });
-      }
-
-      function renderDots(dotsContainer, len) {
-        var dots = dotsContainer.querySelectorAll(".pin-dot");
-        dots.forEach(function (d, idx) { d.classList.toggle("is-filled", idx < len); });
-      }
-
-      function closeModal() {
-        modal.hidden = true;
-      }
-      $("cv-modal-close").addEventListener("click", closeModal);
-      modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
-
-      // Existing user PIN flow
-      var enteredPin = "";
-      function startPinEntry() {
-        enteredPin = "";
-        $("cv-sheet-title").textContent = "Weather Alert Code";
-        viewSetup.hidden = true;
-        viewPin.hidden = false;
-        $("pin-err").textContent = "";
-        renderDots($("pin-dots"), 0);
-      }
-
-      buildKeypad(
-        $("pin-pad"),
-        function (d) {
-          if (enteredPin.length >= 4) return;
-          enteredPin += d;
-          $("pin-err").textContent = "";
-          renderDots($("pin-dots"), enteredPin.length);
-          if (enteredPin.length === 4) {
-            if (hashPin(enteredPin) === getSavedPinHash()) {
-              location.replace("/survivor/");
-            } else {
-              var dots = $("pin-dots");
-              dots.classList.add("is-error");
-              $("pin-err").textContent = "Incorrect alert code. Try again.";
-              setTimeout(function () {
-                dots.classList.remove("is-error");
-                enteredPin = "";
-                renderDots(dots, 0);
-              }, 380);
-            }
-          }
-        },
-        function () {
-          enteredPin = enteredPin.slice(0, -1);
-          renderDots($("pin-dots"), enteredPin.length);
-        },
-        closeModal
-      );
-
-      // First-time user 4-step setup wizard
-      var draftPin = "", confirmPin = "", confirming = false;
-      function showSetupStep(step) {
-        document.querySelectorAll("[data-ob]").forEach(function (el) {
-          el.hidden = Number(el.dataset.ob) !== step;
-        });
-        var bars = $("ob-progress").querySelectorAll(".ob-bar");
-        bars.forEach(function (b, idx) { b.classList.toggle("is-active", idx < step); });
-      }
-
-      function startFirstTimeSetup() {
-        draftPin = ""; confirmPin = ""; confirming = false;
-        $("cv-sheet-title").textContent = "First-time setup";
-        viewPin.hidden = true;
-        viewSetup.hidden = false;
-        $("ob-pin-prompt").innerHTML = "<strong>Step 1 of 4:</strong> Choose a 4-digit screen PIN (a disguise, not account security). You'll use this whenever you tap Thursday's forecast.";
-        $("ob-pin-err").textContent = "";
-        renderDots($("ob-pin-dots"), 0);
-        showSetupStep(1);
-        loadContactsForSetup();
-      }
-
-      buildKeypad(
-        $("ob-pin-pad"),
-        function (d) {
-          $("ob-pin-err").textContent = "";
-          if (!confirming) {
-            if (draftPin.length >= 4) return;
-            draftPin += d;
-            renderDots($("ob-pin-dots"), draftPin.length);
-            if (draftPin.length === 4) {
-              confirming = true;
-              setTimeout(function () {
-                $("ob-pin-prompt").innerHTML = "<strong>Step 1 of 4:</strong> Enter the same 4-digit PIN once more to confirm.";
-                renderDots($("ob-pin-dots"), 0);
-              }, 160);
-            }
-          } else {
-            if (confirmPin.length >= 4) return;
-            confirmPin += d;
-            renderDots($("ob-pin-dots"), confirmPin.length);
-            if (confirmPin.length === 4) {
-              if (confirmPin === draftPin) {
-                try { localStorage.setItem(PIN_KEY, hashPin(draftPin)); } catch (_) {}
-                showSetupStep(2);
-              } else {
-                var dots = $("ob-pin-dots");
-                dots.classList.add("is-error");
-                $("ob-pin-err").textContent = "PINs didn't match. Choose a 4-digit PIN again.";
-                setTimeout(function () {
-                  dots.classList.remove("is-error");
-                  draftPin = ""; confirmPin = ""; confirming = false;
-                  $("ob-pin-prompt").innerHTML = "<strong>Step 1 of 4:</strong> Choose a 4-digit screen PIN (a disguise, not account security).";
-                  renderDots(dots, 0);
-                }, 400);
-              }
-            }
-          }
-        },
-        function () {
-          if (!confirming) {
-            draftPin = draftPin.slice(0, -1);
-            renderDots($("ob-pin-dots"), draftPin.length);
-          } else {
-            confirmPin = confirmPin.slice(0, -1);
-            renderDots($("ob-pin-dots"), confirmPin.length);
-          }
-        },
-        closeModal
-      );
-
-      $("ob-next-2").addEventListener("click", function () { showSetupStep(3); });
-      $("ob-gps-btn").addEventListener("click", function () {
-        if (!("geolocation" in navigator)) {
-          $("ob-gps-status").textContent = "Geolocation not supported on this browser";
-          return;
-        }
-        $("ob-gps-status").textContent = "Requesting permission…";
-        navigator.geolocation.getCurrentPosition(
-          function () { $("ob-gps-status").textContent = "✓ Location ready"; },
-          function () { $("ob-gps-status").textContent = "Skipped (alerts still work without GPS)"; },
-          { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
-        );
-      });
-      $("ob-next-3").addEventListener("click", function () { showSetupStep(4); });
-
-      function loadContactsForSetup() {
-        fetch("/api/contacts", { headers: { "X-Device-Token": "demo-device" } })
-          .then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (d) {
-            if (!d || !d.contacts || !d.contacts.length) return;
-            if (d.contacts[0]) {
-              $("ob-c1-name").value = d.contacts[0].name;
-              $("ob-c1-phone").value = d.contacts[0].phone;
-            }
-            if (d.contacts[1]) {
-              $("ob-c2-name").value = d.contacts[1].name;
-              $("ob-c2-phone").value = d.contacts[1].phone;
-            }
-          })
-          .catch(function () {});
-      }
-
-      $("ob-finish").addEventListener("click", function () {
-        var list = [
-          { name: $("ob-c1-name").value.trim(), phone: $("ob-c1-phone").value.trim() },
-          { name: $("ob-c2-name").value.trim(), phone: $("ob-c2-phone").value.trim() },
-        ].filter(function (c) { return c.name && c.phone; });
-        $("ob-finish").disabled = true;
-        fetch("/api/contacts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Device-Token": "demo-device" },
-          body: JSON.stringify({ contacts: list }),
-          keepalive: true,
-        }).then(function (response) {
-          if (!response.ok) throw new Error("Save failed");
-          try { localStorage.setItem("cs_contacts", JSON.stringify(list)); } catch (_) {}
-          location.replace("/survivor/");
-        }).catch(function () {
-          $("ob-finish").textContent = "Not saved — connect and retry";
-          $("ob-finish").disabled = false;
-        });
-      });
-
-      function openSecretModal() {
-        modal.hidden = false;
-        if (getSavedPinHash()) startPinEntry();
-        else startFirstTimeSetup();
-      }
-
-      // Keyboard support when PIN modal is open
-      document.addEventListener("keydown", function (e) {
-        if (modal.hidden) return;
-        if (e.key === "Escape") { closeModal(); return; }
-        var pad = !viewPin.hidden ? $("pin-pad") : (!viewSetup.hidden && !$("ob-pin-pad").closest(".ob-step").hidden ? $("ob-pin-pad") : null);
-        if (!pad) return;
-        var btns = Array.prototype.slice.call(pad.querySelectorAll("button"));
-        if (/^[0-9]$/.test(e.key)) {
-          var match = btns.find(function (b) { return b.textContent === e.key; });
-          if (match) match.click();
-        } else if (e.key === "Backspace") {
-          var back = btns.find(function (b) { return b.textContent === "⌫"; });
-          if (back) back.click();
-        }
-      });
+      // Weather triggers open the separate, locally verified screen-lock flow.
+      function openSecretModal() { window.CWOnboarding.open(); }
 
       // Boot
       selectArea(currentArea, false);

@@ -39,7 +39,7 @@ class Stage6PWAReadinessTests(unittest.TestCase):
         self.assertEqual(manifest['name'], 'Clear Sky')
         self.assertEqual(manifest['short_name'], 'Clear Sky')
         self.assertEqual(manifest['scope'], '/survivor/')
-        self.assertEqual(manifest['start_url'], '/survivor/')
+        self.assertEqual(manifest['start_url'], '/survivor/cover.html')
         self.assertEqual(manifest['display'], 'standalone')
         self.assertEqual(manifest['theme_color'], '#1d6f72')
         self.assertGreaterEqual(len(manifest['icons']), 2)

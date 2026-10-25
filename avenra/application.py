@@ -37,6 +37,8 @@ class AvenraApplication:
 
         from avenra.controllers.device_controller import register_devices
         register_devices(app)
+        from avenra.controllers.onboarding_controller import register_onboarding
+        register_onboarding(app)
         from avenra.controllers.worker_controller import register_worker
         register_worker(app)
 
@@ -76,6 +78,7 @@ class AvenraApplication:
         'worker_tick',
         'device_disconnect',
         'device_enroll',
+        'complete_survivor_onboarding',
         'api_update_consent',
         'create_alert',
         'create_diary_entry',

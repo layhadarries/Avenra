@@ -2,7 +2,7 @@
   "name": "Clear Sky",
   "short_name": "Clear Sky",
   "description": "A lightweight weather page.",
-  "start_url": "/survivor/",
+  "start_url": "/survivor/cover.html",
   "scope": "/survivor/",
   "display": "standalone",
   "background_color": "#f8f6f2",
