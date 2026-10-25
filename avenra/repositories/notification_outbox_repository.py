@@ -30,7 +30,7 @@ class NotificationOutboxRepository(BaseRepository):
     def claim_next(self, channel=None):
         cursor = self.conn.execute("""UPDATE notification_outbox SET status='processing',
             claim_token=?,claimed_at=strftime('%Y-%m-%dT%H:%M:%SZ','now')
-            WHERE id=(SELECT id FROM notification_outbox WHERE status='pending' AND (? IS NULL OR EXISTS(SELECT 1 FROM contacts c WHERE c.id=notification_outbox.contact_id AND c.channel=?)) ORDER BY id LIMIT 1)
+            WHERE id=(SELECT id FROM notification_outbox WHERE status='pending' AND (CAST(? AS TEXT) IS NULL OR EXISTS(SELECT 1 FROM contacts c WHERE c.id=notification_outbox.contact_id AND c.channel=?)) ORDER BY id LIMIT 1)
             AND status='pending' RETURNING id,alert_id,contact_id,status,claim_token,claimed_at""",
             (secrets.token_hex(32),channel,channel))
         rows = cursor.fetchall()
