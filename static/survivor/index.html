@@ -8,7 +8,6 @@
     <link rel="manifest" href="/survivor/manifest.json">
     <link rel="icon" href="/survivor/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
-    <link rel="stylesheet" href="/static/css/style.css">
     <style>
         body {
             display: flex;
@@ -122,6 +121,7 @@
             margin-top: 0.5rem;
         }
     </style>
+    <link rel="stylesheet" href="/survivor/pwa.css">
 </head>
 <body>
     <header class="pwa-header">
@@ -131,6 +131,8 @@
 
     <main class="pwa-main">
         <section id="view-ready" class="view">
+            <h1 class="home-heading">Get support</h1>
+            <p class="home-intro">Send an alert to your support team and opted-in contacts.</p>
             <button type="button" id="panic-btn" class="panic-btn" aria-label="Send emergency alert">
                 <span class="panic-btn-inner">HELP</span>
             </button>
@@ -138,7 +140,7 @@
                 <input type="checkbox" id="share-alert-location">
                 <span>Share location with responders</span>
             </label>
-            <p class="panic-caption">Tap HELP to notify the responders and your contacts</p>
+            <p class="panic-caption">Hold HELP for one second. You’ll have five seconds to undo.</p>
             <p class="queue-note" id="queue-note" hidden></p>
         </section>
 
@@ -172,8 +174,10 @@
         </section>
 
         <section id="view-more" class="more-panel" hidden>
+            <h1 class="home-heading">Your settings</h1>
             <a href="/survivor/setup.html" class="more-row">Trusted contacts</a>
             <a href="/survivor/privacy.html" class="more-row">Privacy &amp; sharing</a>
+            <a href="/survivor/device.html" class="more-row">Device connection</a>
         </section>
         
         <div class="section-gap" aria-live="polite">
@@ -221,6 +225,11 @@
                     }
                 });
             });
+
+            // Other app pages link directly to the More tab.
+            if (location.hash === "#more") {
+                document.querySelector('[data-nav="more"]').click();
+            }
 
             function refreshQueueNote() {
                 if (!window.CWQueue) return;

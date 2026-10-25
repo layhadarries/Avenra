@@ -1,1 +1,17 @@
-*{box-sizing:border-box}body{margin:0;background:#f5f2eb;color:#293632;font:16px/1.6 system-ui,sans-serif}main{max-width:480px;margin:12vh auto;padding:24px}h1{font-size:30px;line-height:1.2;letter-spacing:-.03em}.eyebrow{color:#1d6f72;font-weight:600}button,a{font:inherit}button{background:#1d6f72;color:white;border:0;border-radius:6px;padding:12px 18px;cursor:pointer}a{color:#1d6f72}button:disabled{opacity:.6}[hidden]{display:none!important}:focus-visible{outline:3px solid #a95524;outline-offset:4px}@media(prefers-color-scheme:dark){body{background:#1c2422;color:#e7f0eb}.eyebrow,a{color:#98d1cc}}
+/* Neutral public install and private connection screens. No remote assets. */
+:root{color-scheme:light;--page:#f5f2eb;--surface:#fffdf9;--text:#352b37;--muted:#716773;--border:#ded7dc;--accent:#37696b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+main{max-width:480px;margin:8vh auto;padding:24px}
+h1{font-size:28px;line-height:1.2;letter-spacing:-.035em;font-weight:650}
+p{margin:20px 0;color:var(--muted)}
+.eyebrow{color:var(--text);font-weight:650;letter-spacing:-.02em}
+button,a{font:inherit}
+button{min-height:46px;background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:6px;padding:10px 18px;cursor:pointer}
+a{color:var(--accent);text-underline-offset:3px}
+label{display:flex;align-items:flex-start;gap:12px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+input[type=checkbox]{width:20px;height:20px;flex-shrink:0;accent-color:var(--accent)}
+button:disabled{opacity:.6;cursor:not-allowed}
+[hidden]{display:none!important}
+:focus-visible{outline:3px solid var(--accent);outline-offset:4px}
+@media(prefers-color-scheme:dark){:root{color-scheme:dark;--page:#1c191e;--surface:#262127;--text:#f3ecef;--muted:#b9acb8;--border:#493c49;--accent:#91bdbe}button{color:#1c191e}}

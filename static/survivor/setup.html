@@ -7,7 +7,6 @@
     <title>Clear Sky</title>
     <link rel="manifest" href="/survivor/manifest.json">
     <link rel="icon" href="/survivor/icons/icon-192.png">
-    <link rel="stylesheet" href="/static/css/style.css">
     <style>
         body { background: var(--warm-bg); }
         .setup-wrap { max-width: 420px; margin: 0 auto; padding: 1.25rem 1.25rem 2.5rem; }
@@ -29,8 +28,13 @@
             border-radius: var(--radius); font-size: 1rem; box-sizing: border-box;
         }
     </style>
+    <link rel="stylesheet" href="/survivor/pwa.css">
 </head>
 <body>
+    <header class="pwa-header">
+        <span class="pwa-title">Clear Sky</span>
+        <button type="button" class="quick-exit-pill" onclick="location.replace('/survivor/cover.html')">Quick exit</button>
+    </header>
     <main class="setup-wrap">
         <a href="/survivor/" class="back-link">&larr; Back</a>
         <h1 class="setup-title">Trusted contacts</h1>

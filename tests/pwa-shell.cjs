@@ -45,5 +45,21 @@ test('installation includes both icons, direct entry and offline script without 
   w.handlers.install({waitUntil:p=>{pending=p;}});await pending;
   for(const asset of ['/survivor/index.html','/survivor/shell.js','/survivor/icons/icon-192.png','/survivor/icons/icon-512.png'])
     assert.ok(w.assets.includes(asset),asset);
+  assert.ok(w.assets.includes('/survivor/pwa.css'));
+  assert.ok(!w.assets.includes('/static/css/style.css'), 'PWA must not download dashboard CSS');
   assert.equal(w.skipped.length,0);
+});
+
+test('support screens share a small local stylesheet with no remote assets',()=>{
+  const root=path.join(__dirname,'../static/survivor');
+  const css=fs.readFileSync(path.join(root,'pwa.css'),'utf8');
+  assert.ok(require('node:zlib').gzipSync(css).length < 4096, 'Shared CSS budget: 4 KiB gzipped');
+  assert.doesNotMatch(css, /@import|url\(|@font-face/i);
+  for(const name of ['index','diary','help','privacy','setup']) {
+    const html=fs.readFileSync(path.join(root,name+'.html'),'utf8');
+    assert.ok(html.includes('href="/survivor/pwa.css"'), name);
+    assert.ok(!html.includes('href="/static/css/style.css"'), name);
+    assert.ok(html.includes('Quick exit'), name);
+  }
+  assert.ok(!fs.readFileSync(path.join(root,'cover.html'),'utf8').includes('/survivor/pwa.css'));
 });

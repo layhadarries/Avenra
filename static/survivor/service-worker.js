@@ -1,5 +1,5 @@
 /* Only public static shell assets are cached. */
-const CACHE_NAME = 'clear-sky-shell-v13';
+const CACHE_NAME = 'clear-sky-shell-v14';
 const SHELL_ASSETS = [
   '/survivor/device.html', '/survivor/device.js', '/survivor/identity.js',
   '/survivor/install.html', '/survivor/install.css', '/survivor/install.js',
@@ -9,7 +9,7 @@ const SHELL_ASSETS = [
   '/survivor/help.html', '/survivor/help.js',
   '/survivor/privacy.html', '/survivor/privacy.js',
   '/survivor/diary.html', '/survivor/diary.js',
-  '/survivor/icons/icon-192.png', '/survivor/icons/icon-512.png', '/static/css/style.css',
+  '/survivor/icons/icon-192.png', '/survivor/icons/icon-512.png', '/survivor/pwa.css',
   '/survivor/survivor.css'
 ];
 const PUBLIC_PATHS = new Set(SHELL_ASSETS);

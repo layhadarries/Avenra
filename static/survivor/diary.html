@@ -8,7 +8,6 @@
     <link rel="manifest" href="/survivor/manifest.json">
     <link rel="icon" href="/survivor/icons/icon-192.png">
     <link rel="apple-touch-icon" href="/survivor/icons/icon-192.png">
-    <link rel="stylesheet" href="/static/css/style.css">
     <style>
         body {
             background-color: var(--warm-bg);
@@ -344,6 +343,7 @@
             color: var(--teal);
         }
     </style>
+    <link rel="stylesheet" href="/survivor/pwa.css">
 </head>
 <body>
     <header class="pwa-header">
@@ -368,7 +368,7 @@
             <input type="file" id="diary-photo-input" accept="image/jpeg,image/png,image/webp" style="display:none">
             
             <div class="photo-controls">
-                <button type="button" id="add-photo-btn" class="btn btn-outline">📷 Attach photo</button>
+                <button type="button" id="add-photo-btn" class="btn btn-outline">Attach photo</button>
                 <span class="photo-helper">Selecting an image keeps the original safe in your gallery. Metadata is stripped before save.</span>
             </div>
 
