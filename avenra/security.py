@@ -141,6 +141,12 @@ def validate_json_body():
 
 def apply_security_headers(resp):
     """After-request hook to attach hardened HTTP security headers."""
+    from avenra.browser_policy import policy
+    csp=policy()
+    if request.is_secure:
+        csp+='; upgrade-insecure-requests'
+        resp.headers.setdefault('Strict-Transport-Security','max-age=31536000')
+    resp.headers.setdefault('Content-Security-Policy',csp)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("Referrer-Policy", "same-origin")
     resp.headers.setdefault("X-Frame-Options", "DENY")

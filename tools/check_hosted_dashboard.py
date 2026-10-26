@@ -10,14 +10,13 @@ from avenra.repositories.user_repository import UserRepository
 from avenra.repositories.portal_repository import PortalRepository
 from types import SimpleNamespace
 with db.connect() as conn:
-    assert conn.execute('SELECT MAX(version) FROM schema_migrations').fetchone()[0]==6
+    if conn.execute('SELECT MAX(version) FROM schema_migrations').fetchone()[0]!=9:
+        raise SystemExit('Hosted schema upgrade required; no changes were made.')
     user=UserRepository(conn).get_by_email('nonexistent-check@example.invalid')
-    assert user is None
+    if user is not None:
+        raise SystemExit('Reserved fictional probe identifier is not available; no changes were made.')
     portal=PortalRepository(conn)
     portal.cases(-1)
     portal.audit_page(SimpleNamespace(id=-1),{})
     portal.access_signature(SimpleNamespace(id=-1,role='admin',shelter_id=None))
-    counts={table:conn.execute('SELECT COUNT(*) FROM '+table).fetchone()[0]
-            for table in ('users','alerts','shelters','diary_entries')}
 print('PASS: hosted connection, schema, account lookup, case/audit queries and permission signature.')
-print('Record counts:',counts)

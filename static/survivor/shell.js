@@ -1,6 +1,15 @@
 /* Public connection/cache status only. No identity, alerts or private storage. */
 (function () {
   'use strict';
+  const destinations = new Set(['/survivor/','/survivor/help.html','/survivor/diary.html','/survivor/#more']);
+  document.querySelectorAll('[data-shell-href]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      if (destinations.has(button.dataset.shellHref)) location.href = button.dataset.shellHref;
+    });
+  });
+  document.querySelectorAll('[data-shell-exit]').forEach(function (button) {
+    button.addEventListener('click', function () { location.replace('/survivor/cover.html'); });
+  });
   const connection = document.getElementById('connection-state');
   const offline = document.getElementById('offline-state');
   if (!connection || !offline) return;

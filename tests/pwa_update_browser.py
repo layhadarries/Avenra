@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, wait_for_async
 
 
 def exercise(page, context, base, env):
@@ -18,7 +18,7 @@ def exercise(page, context, base, env):
             status=200, content_type='application/javascript', body=legacy,
             headers={'Service-Worker-Allowed': '/survivor/'}))
         screen.evaluate("navigator.serviceWorker.register('/survivor/service-worker.js', {scope:'/survivor/'})")
-        screen.wait_for_function('navigator.serviceWorker.controller !== null')
+        wait_for_async(screen,'navigator.serviceWorker.controller !== null')
         screen.evaluate('''async () => {
             const cache = await caches.open('clear-sky-shell-v13');
             await cache.put('/survivor/', new Response('<h1>Old cached screens</h1>', {

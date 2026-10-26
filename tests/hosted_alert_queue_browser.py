@@ -1,6 +1,6 @@
 """Synthetic browser tests for persistent alert ownership."""
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, wait_for_async
 
 
 def exercise(page, context, base, env):
@@ -30,7 +30,7 @@ def exercise(page, context, base, env):
         # Keep records local while checking their saved ownership.
         phone.route("**/api/alerts", lambda route: route.abort())
         phone.goto(base + "/survivor/")
-        phone.wait_for_function("Boolean(window.CWQueue)")
+        wait_for_async(phone,"Boolean(window.CWQueue)")
 
         async_read = """async () => {
             return new Promise((resolve, reject) => {

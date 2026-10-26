@@ -1,0 +1,27 @@
+[
+  {
+    "fingerprint": "a98d00185e5e2c202823519e254d0c3c78e6eb9004f81f64852f46b0bd4e625e",
+    "reason": "seed.py counts only a literal tuple of application tables to refuse nonempty evaluation databases. No request or environment selector reaches the identifier.",
+    "expires": "2026-11-25"
+  },
+  {
+    "fingerprint": "76b29c843d8e108794c4c8e33f88b443a00e756eb6c172e8e1d36eafc07a67c3",
+    "reason": "AuditRepository validates Config.COUNT_TABLES against its fixed identifier allowlist before interpolation. Stage 7 dynamic-identifier/injection tests exercise rejection.",
+    "expires": "2026-11-25"
+  },
+  {
+    "fingerprint": "8098e2b9a46c60f7d9c871b78a3037ea2179e749760f3a7b94a26222de395b5c",
+    "reason": "Optional historical local smoke tool reads only its literal HTTP loopback origin at a socket-selected port. No user URL/scheme enters this call; it is not the current CI browser acceptance runner.",
+    "expires": "2026-11-25"
+  },
+  {
+    "fingerprint": "4e05eca5a7fcbceecf6bfd8a05afc5506458071c0be95ae41d0a4814334096d8",
+    "reason": "Optional historical smoke tool fetches a fixed public service-worker path at its loopback fixture origin. No remote selector or credential is included.",
+    "expires": "2026-11-25"
+  },
+  {
+    "fingerprint": "073fdcd8074673525ed0cdbaad53b44a2308456e3f15ab392e46359c27b79bdb",
+    "reason": "Local dashboard preparation interpolates only a literal tuple of eight application table names to check that its new database is empty. No caller-controlled identifier is used.",
+    "expires": "2026-11-25"
+  }
+]

@@ -52,7 +52,8 @@ def complete_staff_mfa(page, env, email='nomsa@avenra.demo'):
 def wait_for_async(page, expression, *, arg=None, timeout=30000):
     """Poll resolved values: wait_for_function can treat a Promise as truthy.
 
-    Page.evaluate awaits each Promise. Pump Playwright events between attempts.
+    Page.evaluate awaits each Promise and avoids wait_for_function's CSP-blocked
+    string evaluation in a service-worker-controlled document. Pump events.
     Never infer successful storage from an unresolved/false predicate handle.
     """
     deadline = time.monotonic() + timeout / 1000
@@ -139,8 +140,8 @@ def main(staff_check=None, browser_name='chromium'):
                 page.on('pageerror', lambda error: print(f"\nBROWSER ERROR: {error.stack}", flush=True))
                 identity = mobile.request.get(base + '/survivor/manifest.json').json()
                 page.goto(base + '/survivor/')
-                page.wait_for_function('navigator.serviceWorker.controller !== null')
-                page.wait_for_function("document.querySelector('#offline-state').textContent.includes('ready to open offline')")
+                wait_for_async(page,'navigator.serviceWorker.controller !== null')
+                wait_for_async(page,"document.querySelector('#offline-state').textContent.includes('ready to open offline')")
                 assert page.locator('html').evaluate('(el) => el.scrollWidth <= innerWidth')
                 if os.environ.get('AVENRA_SCREENSHOT_DIR'):
                     page.screenshot(path=str(Path(os.environ['AVENRA_SCREENSHOT_DIR']) / 'pwa.png'), full_page=True)

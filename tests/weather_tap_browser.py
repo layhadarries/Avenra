@@ -66,7 +66,7 @@ def exercise(page, staff, base, env):
         phone.bring_to_front()
         phone.evaluate('() => CWQueue.ready')
         if armed:
-            phone.wait_for_function("document.body.classList.contains('weather-tap-enabled') && document.hasFocus()")
+            wait_for_async(phone,"document.body.classList.contains('weather-tap-enabled') && document.hasFocus()")
 
     def taps(phone, number=4):
         for _ in range(number):
@@ -165,7 +165,7 @@ def exercise(page, staff, base, env):
         phone.evaluate("Object.defineProperty(document,'hidden',{configurable:true,get:()=>true}); Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'}); document.dispatchEvent(new Event('visibilitychange'))")
         taps(phone); unchanged(phone,before)
         phone.evaluate("delete document.hidden; delete document.visibilityState; document.dispatchEvent(new Event('visibilitychange'))")
-        phone.wait_for_function("document.body.classList.contains('weather-tap-enabled')")
+        wait_for_async(phone,"document.body.classList.contains('weather-tap-enabled')")
         taps(phone,1); unchanged(phone,before); reset(phone)
         taps(phone,3); phone.goto(base + '/survivor/install.html'); cover(phone)
         taps(phone,1); unchanged(phone,before); reset(phone)
@@ -200,7 +200,7 @@ def exercise(page, staff, base, env):
         settings = ctx.new_page(); settings.goto(base + '/survivor/tap-setup.html')
         settings.locator('#tap-disable').click()
         phone.bring_to_front()
-        phone.wait_for_function("!document.body.classList.contains('weather-tap-enabled')")
+        wait_for_async(phone,"!document.body.classList.contains('weather-tap-enabled')")
         taps(phone); unchanged(phone,before+1)
         # Disabling must win over an in-flight enable verification.
         expect(settings.locator('#tap-understood')).to_be_enabled()
@@ -229,7 +229,7 @@ def exercise(page, staff, base, env):
         expect(phone.locator('#tap-setup-status')).to_contain_text('are ON')
         cover(phone); taps(phone)
         expect(phone.locator('#weather-tap-status')).to_contain_text('Received by Avenra')
-        phone.wait_for_function("typeof finishGPS === 'function'")
+        wait_for_async(phone,"typeof finishGPS === 'function'")
         client_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).client_id")
         def row():
             with sqlite3.connect(env['DATABASE_PATH']) as conn:
@@ -249,7 +249,7 @@ def exercise(page, staff, base, env):
         # Reload removes all in-memory fixes. Withdrawal and regrant must defeat
         # a pending callback, even though both happen in the same second.
         cover(phone); phone.wait_for_timeout(1600); taps(phone)
-        phone.wait_for_function("typeof finishGPS === 'function'")
+        wait_for_async(phone,"typeof finishGPS === 'function'")
         until(phone,lambda:count(gps_owner)==before+2)
         client_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).client_id")
         for active in (False,True):
@@ -263,7 +263,7 @@ def exercise(page, staff, base, env):
     offline, phone, first_owner = new_phone(offline_shell=True)
     try:
         enable(phone); cover(phone)
-        phone.wait_for_function('navigator.serviceWorker.controller !== null')
+        wait_for_async(phone,'navigator.serviceWorker.controller !== null')
         before = count()
         offline.set_offline(True)
         taps(phone)
@@ -300,7 +300,7 @@ def exercise(page, staff, base, env):
             phone.close(); phone = offline.new_page(); cover(phone)
             count_before = count()
             offline.set_offline(False)
-            phone.wait_for_function("!document.body.classList.contains('weather-tap-enabled')")
+            wait_for_async(phone,"!document.body.classList.contains('weather-tap-enabled')")
             phone.evaluate('CWQueue.flushQueue()')
             assert phone.evaluate('CWQueue.queueSize()') == 1
             assert count() == count_before and count(second_owner) == 0
@@ -317,7 +317,7 @@ def exercise(page, staff, base, env):
         expect(phone.locator('#tap-enable')).to_be_disabled()
         phone.evaluate(f"localStorage.setItem('{PREF}',JSON.stringify({{version:1,setup_version:1,enabled:true,owner_id:1}}))")
         before = count(); cover(phone,False)
-        phone.wait_for_function(f"localStorage.getItem('{PREF}') === null")
+        wait_for_async(phone,f"localStorage.getItem('{PREF}') === null")
         taps(phone); unchanged(phone,before)
         passed.append('unpaired browser cannot opt in, including in the local demo environment')
     finally: anonymous.close()

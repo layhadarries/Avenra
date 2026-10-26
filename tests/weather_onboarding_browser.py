@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, wait_for_async
 
 
 def secret(screen, base):
@@ -77,7 +77,7 @@ def exercise(page, context, base, env):
         enter_pin(screen, '1357')
         screen.wait_for_url('**/survivor/')
         assert screen.evaluate("JSON.parse(localStorage.getItem('cs_pin_hash')).version") == 2
-        screen.wait_for_function('navigator.serviceWorker.controller !== null')
+        wait_for_async(screen,'navigator.serviceWorker.controller !== null')
         phone.set_offline(True)
         secret(screen, base)
         enter_pin(screen, '1357')

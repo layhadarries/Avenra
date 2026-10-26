@@ -6,7 +6,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, wait_for_async
 
 
 def viewing_time(is_day=1):
@@ -102,9 +102,9 @@ def exercise(page, context, base, env):
         screen.reload()
         expect(screen.locator('#cv-temp')).to_have_text('23°')
         expect(screen.locator('#cv-place')).to_have_text('Gardens')
-        screen.wait_for_function("document.getElementById('cv-weather-status').textContent === ''")
+        wait_for_async(screen,"document.getElementById('cv-weather-status').textContent === ''")
         assert len(calls) == initial_count, 'Fresh forecasts/names must be reused'
-        screen.wait_for_function('navigator.serviceWorker.controller !== null')
+        wait_for_async(screen,'navigator.serviceWorker.controller !== null')
         weather.set_offline(True)
         screen.reload()
         expect(screen.locator('#cv-weather-status')).to_contain_text('Offline')

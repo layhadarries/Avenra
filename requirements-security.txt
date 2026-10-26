@@ -1,0 +1,3 @@
+# Tooling only; keep outside the deployed application environment.
+bandit==1.9.4
+pip-audit==2.9.0

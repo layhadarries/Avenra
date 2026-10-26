@@ -150,7 +150,7 @@
 <body>
     <header class="pwa-header">
         <span class="pwa-title">Clear Sky</span>
-        <button type="button" onclick="location.replace('/survivor/cover.html')" class="quick-exit-pill">Quick exit</button>
+        <button type="button" data-shell-exit class="quick-exit-pill">Quick exit</button>
     </header>
 
     <main class="help-wrap">
@@ -175,10 +175,10 @@
     </main>
 
     <nav class="bottom-nav">
-        <button type="button" onclick="location.href='/survivor/'">Home</button>
+        <button type="button" data-shell-href="/survivor/">Home</button>
         <button type="button" class="active" aria-current="page">Find help</button>
-        <button type="button" onclick="location.href='/survivor/diary.html'">Diary</button>
-        <button type="button" onclick="location.href='/survivor/#more'">More</button>
+        <button type="button" data-shell-href="/survivor/diary.html">Diary</button>
+        <button type="button" data-shell-href="/survivor/#more">More</button>
     </nav>
 
     <script src="/survivor/shell.js" defer></script>

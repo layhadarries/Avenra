@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 from playwright.sync_api import expect
-from stage0_browser import main
+from stage0_browser import main, wait_for_async
 
 
 def exercise(page, context, base, env):
@@ -57,7 +57,7 @@ def exercise(page, context, base, env):
         screen.keyboard.up('Enter')
         screen.get_by_role('button', name='Undo', exact=True).click()
         expect(screen.locator('#view-ready')).to_be_visible()
-        screen.wait_for_function('navigator.serviceWorker.controller !== null')
+        wait_for_async(screen,'navigator.serviceWorker.controller !== null')
         phone.set_offline(True)
         for name in ('index', 'help', 'diary', 'privacy', 'setup', 'device', 'install'):
             screen.goto(f'{base}/survivor/{name}.html')

@@ -34,7 +34,7 @@
 <body>
     <header class="pwa-header">
         <span class="pwa-title">Clear Sky</span>
-        <button type="button" class="quick-exit-pill" onclick="location.replace('/survivor/cover.html')">Quick exit</button>
+        <button type="button" class="quick-exit-pill" data-shell-exit>Quick exit</button>
     </header>
     <main class="setup-wrap">
         <a href="/survivor/" class="back-link">&larr; Back</a>
@@ -182,6 +182,7 @@
         load();
     })();
     </script>
+<script src="/survivor/shell.js" defer></script>
 <script src="/survivor/identity.js" defer></script>
 </body>
 </html>

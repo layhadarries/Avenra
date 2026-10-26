@@ -28,7 +28,7 @@ def exercise(page, staff_context, base, env):
         phone.goto(base + '/survivor/')
         phone.evaluate("() => CWQueue.ready")
         if offline_shell:
-            phone.wait_for_function('navigator.serviceWorker.controller !== null')
+            wait_for_async(phone,'navigator.serviceWorker.controller !== null')
         return context, phone
 
     def queued(phone):

@@ -28,7 +28,7 @@ def exercise(page,context,base,env):
         phone.route('**/api/diary',lambda route:route.abort())
         phone.goto(base+'/survivor/diary.html')
         unlock(phone)
-        phone.wait_for_function('Boolean(window.CWDiary)')
+        wait_for_async(phone,'Boolean(window.CWDiary)')
         phone.locator('#diary-note').fill('Fictional online ownership test')
         phone.locator('#diary-save-btn').click()
         wait_for_async(phone, 'CWDiary.getQueuedItems().then(x=>x.length===1)')

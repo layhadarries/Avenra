@@ -9,7 +9,7 @@ def exercise(page, staff, base, env):
     try:
         phone=context.new_page(); phone.goto(base+'/survivor/cover.html')
         phone.evaluate('()=>CWQueue.ready')
-        phone.wait_for_function('navigator.serviceWorker.controller !== null')
+        wait_for_async(phone,'navigator.serviceWorker.controller !== null')
         owner=phone.evaluate('CWQueue.captureOwner()')
         assert context.request.post(base+'/api/consents',headers={'X-Device-Token':'demo-device'},data={'item':'location_sharing','active':True}).ok
         context.set_offline(True)

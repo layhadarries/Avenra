@@ -103,7 +103,7 @@ def exercise(page, staff, base, env):
     tab.get_by_role('button', name='Refresh privacy settings').click()
     expect(tab.locator('#access-list [data-event-id]')).to_have_count(20)
     tab.get_by_role('button', name='Load older activity').click()
-    tab.wait_for_function("document.querySelectorAll('#access-list [data-event-id]').length > 20")
+    wait_for_async(tab,"document.querySelectorAll('#access-list [data-event-id]').length > 20")
     event_ids = tab.locator('#access-list [data-event-id]').evaluate_all('(rows) => rows.map(r => r.dataset.eventId)')
     assert len(event_ids) == len(set(event_ids))
     assert 'PRIVATE-DETAIL-' not in tab.locator('#access-list').inner_text()
@@ -232,7 +232,7 @@ def exercise(page, staff, base, env):
       }
     }''')
     tab.goto(base + '/survivor/')
-    tab.wait_for_function('navigator.serviceWorker.controller !== null')
+    wait_for_async(tab,'navigator.serviceWorker.controller !== null')
     names = tab.evaluate('caches.keys()')
     assert 'cape-weather-data-v1' not in names and 'clear-sky-data-v1' not in names
     assert 'unrelated-app-cache' in names

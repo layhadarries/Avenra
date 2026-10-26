@@ -31,7 +31,7 @@ def exercise(page, staff, base, env):
             !JSON.stringify(localStorage).includes(token) && !JSON.stringify(sessionStorage).includes(token) &&
             !document.cookie.includes(token);
         }""")
-        p.wait_for_function('navigator.serviceWorker.controller !== null')
+        wait_for_async(p,'navigator.serviceWorker.controller !== null')
         phone.set_offline(True)
         p.locator('#diary-note').fill('Fictional encrypted offline note')
         p.locator('#diary-save-btn').click()

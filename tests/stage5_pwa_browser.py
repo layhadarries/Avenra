@@ -46,7 +46,7 @@ def exercise(page, staff, base, env):
     offline_tab.goto(base + '/survivor/diary.html')
     unlock(offline_tab)
     offline_tab.evaluate('() => CWQueue.ready')
-    offline_tab.wait_for_function('navigator.serviceWorker.controller !== null')
+    wait_for_async(offline_tab,'navigator.serviceWorker.controller !== null')
     wait_for_async(offline_tab, "caches.match('/survivor/diary.html').then(Boolean)")
     offline_context.set_offline(True)
     offline_tab.fill('#diary-note', 'Fictional airplane mode entry')
@@ -70,7 +70,7 @@ def exercise(page, staff, base, env):
     context, tab = phone()
     tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
     unlock(tab)
-    tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
+    wait_for_async(tab,'Boolean(window.CWDiary && window.CWQueue)')
     tab.evaluate('() => CWQueue.ready')
     assert tab.title() == 'Clear Sky'
     assert tab.evaluate('Boolean(window.CWDiary && window.CWDiary.canonicalNote)')
@@ -135,7 +135,7 @@ def exercise(page, staff, base, env):
     tab.on('pageerror', lambda error: errors.append(str(error)))
     tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
     unlock(tab)
-    tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
+    wait_for_async(tab,'Boolean(window.CWDiary && window.CWQueue)')
     tab.evaluate('() => CWQueue.ready')
     expect(tab.locator('#diary-entries-list')).to_contain_text('Café — naïve façade 🌍')
 
@@ -163,7 +163,7 @@ def exercise(page, staff, base, env):
     tab.click('.btn-view-entry')
     expect(tab.locator('#diary-entry-detail')).to_be_visible()
     expect(tab.locator('#diary-entry-detail')).to_contain_text('Café — naïve façade 🌍')
-    tab.wait_for_function(
+    wait_for_async(tab,
         'document.getElementById("detail-photo-img").src.startsWith("blob:")'
     )
 
@@ -215,7 +215,7 @@ def exercise(page, staff, base, env):
 
     tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
     unlock(tab)
-    tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
+    wait_for_async(tab,'Boolean(window.CWDiary && window.CWQueue)')
     tab.evaluate('() => CWQueue.ready')
     surviving_queue = tab.evaluate('window.CWDiary.getQueuedItems()')
     assert len(surviving_queue) == 1
