@@ -29,6 +29,9 @@ CONTACTS = [
 
 def seed(password=None):
     """Insert demo data. Returns a small summary dictionary."""
+    from avenra.services.environment_isolation_service import EnvironmentIsolationService
+    if EnvironmentIsolationService.operational_runtime():
+        raise RuntimeError('Fictional seeding is forbidden in operational environments')
     conn = db.connect()
     try:
         with conn:  # one transaction

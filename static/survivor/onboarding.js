@@ -5,6 +5,12 @@
   var modal = $('cv-modal'), lock = window.CWUnlock;
   var run = 0, entered = '', draft = '', confirmation = '', confirming = false;
   var device = null, busy = false, abort = null, previousFocus = null;
+  function enterApp() {
+    // Display-only re-entry after the existing PIN/device verification. Evidence
+    // still requires its separate server-verified vault grant.
+    try { localStorage.removeItem('clear-sky-exited-v1'); } catch (_) {}
+    location.replace('/survivor/');
+  }
   function active(version) { return version === run && !modal.hidden; }
   function headers() {
     return /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? {'X-Device-Token':'demo-device'} : {};
@@ -53,7 +59,7 @@
     try {
       var valid = await lock.verifyPin(entered);
       if (!active(version)) return;
-      if (valid) { location.replace('/survivor/'); return; }
+      if (valid) { enterApp(); return; }
       $('pin-err').textContent = 'Incorrect alert code. Try again.';
     } catch (error) {
       if (active(version)) $('pin-err').textContent = error.message || 'Screen lock could not be checked.';
@@ -102,7 +108,7 @@
         step(2);
       } else {
         await lock.unlockDevice(abort.signal);
-        if (active(version)) location.replace('/survivor/');
+        if (active(version)) enterApp();
       }
       if (active(version)) $(errorId).textContent = '';
     } catch (_) {
@@ -162,7 +168,7 @@
       if (draft) await lock.setPin(draft, function () { return active(version); });
       if (!active(version)) return;
       if (device) lock.saveDevice(device);
-      location.replace('/survivor/');
+      enterApp();
     } catch (error) {
       if (active(version)) {
         $('ob-save-status').textContent = error.message || 'Setup could not finish. Check your connection and retry.';

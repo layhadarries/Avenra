@@ -18,6 +18,9 @@ class NotificationWorker:
         self.audit=AuditRepository(connection)
 
     def _disabled(self):
+        from avenra.services.environment_isolation_service import EnvironmentIsolationService
+        if not EnvironmentIsolationService(self.conn).compatible():
+            return True
         marked=self.conn.execute(
             "SELECT 1 FROM app_metadata WHERE key='evaluation_fixture'"
         ).fetchone()

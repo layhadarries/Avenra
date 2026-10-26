@@ -1,6 +1,7 @@
 /* Prototype device authority; individual enrolment remains a release gate. */
 (function () {
   'use strict';
+  if (window.CWExit && window.CWExit.blocked()) return;
   var keys = ['location_sharing', 'shelter_referral_sharing', 'diary_sharing'];
   var labels = {case_viewed: 'Viewed your case', diary_viewed: 'Viewed shared diary entries', diary_photo_viewed: 'Viewed a shared photo'};
   var banner = document.getElementById('status-banner'), list = document.getElementById('access-list');
@@ -108,7 +109,10 @@
   if (qeBtn) qeBtn.addEventListener('click', quickExit);
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape') quickExit(event); });
   window.addEventListener('pagehide', function () { departed = true; clearPrivate(); });
-  window.addEventListener('pageshow', function (event) { if (event.persisted) { departed = false; reload(); } });
+  window.addEventListener('pageshow', function (event) {
+    if (window.CWExit && window.CWExit.blocked()) { departed = true; clearPrivate(); return; }
+    if (event.persisted) { departed = false; reload(); }
+  });
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') clearPrivate(); else if (!departed) reload(); });
   window.addEventListener('online', reload);
   window.addEventListener('offline', function () { clearPrivate(); message('Connection unavailable. Current sharing status has not been confirmed.'); });

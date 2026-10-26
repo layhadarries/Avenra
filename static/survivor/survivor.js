@@ -127,8 +127,12 @@
   });
   function quickExit(event) {
     if (event) event.preventDefault();
-    exited = true; clearTimers(); pending = null;
+    clearPrivate();
     location.replace('/survivor/cover.html');
+  }
+  function clearPrivate() {
+    exited = true; clearTimers(); pending = null; setState('ready', true);
+    ['help-status','queue-message','save-error'].forEach(function (id) { if ($(id)) $(id).textContent = ''; });
   }
   $('panic-btn').addEventListener('pointerdown', startHold);
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (name) { $('panic-btn').addEventListener(name, cancelHold); });
@@ -142,7 +146,7 @@
   var qeBtn = $('quick-exit') || $('quick-exit-btn');
   if (qeBtn) qeBtn.addEventListener('click', quickExit);
   document.addEventListener('keydown', function (event) { if (event.key === 'Escape') quickExit(event); });
-  window.addEventListener('pagehide', function () { exited = true; clearTimers(); pending = null; });
+  window.addEventListener('pagehide', clearPrivate);
   window.addEventListener('pageshow', function (event) { if (event.persisted && exited) location.replace('/survivor/cover.html'); });
   window.CWPanic = {showHome: function () { if (!exited) setState(state, true); }};
   setState('ready');

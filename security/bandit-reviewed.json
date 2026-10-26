@@ -1,7 +1,7 @@
 [
   {
-    "fingerprint": "a98d00185e5e2c202823519e254d0c3c78e6eb9004f81f64852f46b0bd4e625e",
-    "reason": "seed.py counts only a literal tuple of application tables to refuse nonempty evaluation databases. No request or environment selector reaches the identifier.",
+    "fingerprint": "d6356a3fad01af28621af7735249234b60868f3fa9b737aa95272e982c218de2",
+    "reason": "Re-reviewed after the production seed guard moved line numbers: the unchanged seed.py query counts only a literal tuple of application tables to refuse nonempty evaluation databases. No request or environment selector reaches the identifier.",
     "expires": "2026-11-25"
   },
   {

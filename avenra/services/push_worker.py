@@ -11,6 +11,8 @@ class PushWorker:
         self.conn,self.sender,self.settings,self.evaluation_mode=connection,sender,settings,evaluation_mode
         self.repo=NotificationOutboxRepository(connection)
     def run_once(self):
+        from avenra.services.environment_isolation_service import EnvironmentIsolationService
+        if not EnvironmentIsolationService(self.conn).compatible():return False
         # The separate browser self-test is explicit; fictional alert jobs never send.
         if self.evaluation_mode or self.conn.execute("SELECT 1 FROM app_metadata WHERE key='evaluation_fixture'").fetchone():return False
         if self.conn.in_transaction:raise RuntimeError('Worker requires an idle connection.')

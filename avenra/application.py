@@ -1,5 +1,6 @@
 """avenra Application Factory and Lifecycle Orchestration."""
 import os
+from contextlib import closing
 from flask import Flask, jsonify, request, session
 from flask_wtf.csrf import CSRFProtect, CSRFError
 import db
@@ -52,6 +53,9 @@ class AvenraApplication:
 
         # All entrypoints, including gunicorn app:app, initialise the same schema.
         db.init_db()
+        from avenra.services.environment_isolation_service import EnvironmentIsolationService
+        with app.app_context(), closing(db.connect()) as conn:
+            EnvironmentIsolationService(conn).require_compatible()
         if not os.environ.get("VERCEL"):
             os.makedirs(self.config_class.UPLOADS_DIR, mode=0o700, exist_ok=True)
         if app.config['EVALUATION_MODE']:
@@ -113,6 +117,14 @@ class AvenraApplication:
     ))
 
     def _register_middleware(self, app: Flask) -> None:
+        @app.before_request
+        def enforce_environment_separation():
+            from avenra.services.environment_isolation_service import EnvironmentIsolationService
+            if EnvironmentIsolationService.operational_runtime() and not EnvironmentIsolationService(db.get_db()).compatible():
+                response = jsonify(error='environment_separation_required')
+                response.headers['Cache-Control'] = 'private, no-store'
+                return response, 503
+
         @app.errorhandler(CSRFError)
         def handle_csrf_error(error):
             if request.path.startswith("/api/"):

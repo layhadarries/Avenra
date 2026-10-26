@@ -39,6 +39,36 @@ class VaultAccessTests(unittest.TestCase):
             self.assertIn('no-store',response.headers['Cache-Control'])
         self.assertEqual(self.client.get('/api/vault').status_code,401)
 
+    def test_real_photo_bytes_require_current_own_server_grant_on_every_request(self):
+        import base64
+        import io
+        from PIL import Image
+        phone, owner = self.phone()
+        image = io.BytesIO()
+        Image.new('RGB', (2, 2), 'white').save(image, format='JPEG')
+        response = phone.post('/api/diary', json={
+            'client_id':'fictional-direct-photo', 'note':'Fictional protected photo note',
+            'photo_data':'data:image/jpeg;base64,'+base64.b64encode(image.getvalue()).decode()
+        }, headers={'Origin':'http://localhost','X-Queue-Owner':str(owner)})
+        self.assertEqual(response.status_code, 201)
+        url = f"/api/diary/{response.json['id']}/photo"
+        self.assertEqual(self.client.get(url).status_code, 401)
+        self.assertEqual(phone.get(url).status_code, 423)
+        self.setup_vault(phone)
+        with phone.get(url) as photo:
+            self.assertEqual(photo.status_code, 200)
+            self.assertEqual(photo.mimetype, 'image/jpeg')
+            self.assertTrue(photo.data.startswith(b'\xff\xd8'))
+            self.assertIn('no-store', photo.headers['Cache-Control'])
+        other, _ = self.phone(); self.setup_vault(other)
+        self.assertEqual(other.get(url).status_code, 404)
+        with closing(fixtures.db.connect()) as conn, conn:
+            conn.execute('UPDATE evidence_unlocks SET expires_at=0 WHERE user_id=?', (owner,))
+        locked = phone.get(url)
+        self.assertEqual(locked.status_code, 423)
+        self.assertNotEqual(locked.mimetype, 'image/jpeg')
+        self.assertIn('no-store', locked.headers['Cache-Control'])
+
     def test_setup_unlock_expiry_and_lock_are_server_verified(self):
         phone,owner=self.phone(); entry=self.entry(phone,owner)
         self.setup_vault(phone)

@@ -127,6 +127,10 @@ def exercise(page, context, base, env):
                 assert screen.locator('.sky-rain').is_visible()
                 assert not screen.locator('.sky-stars').is_visible()
             else:
+                # Advancing the clock can repaint the previous rain snapshot as
+                # night before the new clear forecast arrives. Wait for both
+                # attributes; night alone does not establish refresh completion.
+                expect(screen.locator('body')).to_have_attribute('data-atmosphere', 'clear')
                 assert screen.locator('.sky-moon').is_visible()
                 assert screen.locator('.sky-stars').is_visible()
                 assert not screen.locator('.sky-sun').is_visible()

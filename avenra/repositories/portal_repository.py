@@ -53,6 +53,13 @@ class PortalRepository(BaseRepository):
             'INSERT INTO alert_history(alert_id,actor_id,action,detail) VALUES (?,?,?,?)',
             (alert_id, actor_id, action, detail))
 
+    def accidental_followup(self, alert_id, actor_id):
+        row = self.conn.execute(
+            """SELECT id, detail, created_at FROM alert_history
+               WHERE alert_id=? AND actor_id=? AND action='accidental' ORDER BY id LIMIT 1""",
+            (alert_id, actor_id)).fetchone()
+        return dict(row) if row else None
+
     def update_workflow(self, alert_id, assigned_to, escalated_at):
         self.conn.execute(
             '''INSERT INTO alert_workflow(alert_id,assigned_to,escalated_at,revision) VALUES (?,?,?,1)

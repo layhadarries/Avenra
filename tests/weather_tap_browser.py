@@ -5,6 +5,7 @@ All accounts/data are fictional; external providers are blocked; no messages sen
 """
 import json
 import os
+import re
 import sqlite3
 import time
 
@@ -186,14 +187,26 @@ def exercise(page, staff, base, env):
         with sqlite3.connect(env['DATABASE_PATH']) as conn:
             assert conn.execute('SELECT lat,lng FROM alerts WHERE client_id=?',(sent[0]['client_id'],)).fetchone() == (None,None)
         assert phone.url.split('#')[0].endswith('/survivor/cover.html')
-        alert_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).alert_id")
-        page.goto(base + '/dashboard')
-        csrf = page.locator('meta[name="csrf-token"]').get_attribute('content')
+        assert phone.evaluate(f"localStorage.getItem('{STATUS}')") is None
+        with sqlite3.connect(env['DATABASE_PATH']) as conn:
+            alert_id = conn.execute('SELECT id FROM alerts WHERE client_id=?',(sent[0]['client_id'],)).fetchone()[0]
+        # An API acknowledgement need not move focus away from the active flow.
+        dashboard = staff.request.get(base + '/dashboard').text()
+        csrf = re.search(r'name="csrf-token" content="([^"]+)"', dashboard).group(1)
         response = staff.request.post(base + f'/api/alerts/{alert_id}/acknowledge',headers={'X-CSRFToken':csrf},data={})
         assert response.status == 200
         phone.bring_to_front()
         expect(phone.locator('#weather-tap-status')).to_contain_text('Acknowledged by a responder',timeout=15000)
         assert 'help is not guaranteed' in phone.locator('#weather-tap-status').inner_text()
+        # The explicit weather refresh may request its own GPS. The earlier
+        # throwing stub asserted only that the emergency gesture did not do so.
+        phone.evaluate("navigator.geolocation.getCurrentPosition = (_,fail) => { if(fail) fail({code:1}); }")
+        phone.locator('#cv-refresh').click()
+        expect(phone.locator('#weather-tap-status')).to_be_hidden()
+        phone.reload()
+        expect(phone.locator('#weather-tap-status')).to_be_hidden()
+        with sqlite3.connect(env['DATABASE_PATH']) as conn:
+            assert conn.execute('SELECT status FROM alerts WHERE id=?',(alert_id,)).fetchone()[0] == 'acknowledged'
         passed.append('eight quick trusted taps create exactly one GPS-free alert; real receipt and real responder acknowledgement are distinct')
 
         # Opting out in another tab takes effect without deleting existing alerts.
@@ -230,7 +243,8 @@ def exercise(page, staff, base, env):
         cover(phone); taps(phone)
         expect(phone.locator('#weather-tap-status')).to_contain_text('Received by Avenra')
         wait_for_async(phone,"typeof finishGPS === 'function'")
-        client_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).client_id")
+        with sqlite3.connect(env['DATABASE_PATH']) as conn:
+            client_id = conn.execute('SELECT client_id FROM alerts WHERE user_id=? ORDER BY id DESC LIMIT 1',(gps_owner,)).fetchone()[0]
         def row():
             with sqlite3.connect(env['DATABASE_PATH']) as conn:
                 return conn.execute('SELECT id,lat,lng,location_accuracy,location_recorded_at FROM alerts WHERE client_id=?',(client_id,)).fetchone()
@@ -251,7 +265,8 @@ def exercise(page, staff, base, env):
         cover(phone); phone.wait_for_timeout(1600); taps(phone)
         wait_for_async(phone,"typeof finishGPS === 'function'")
         until(phone,lambda:count(gps_owner)==before+2)
-        client_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).client_id")
+        with sqlite3.connect(env['DATABASE_PATH']) as conn:
+            client_id = conn.execute('SELECT client_id FROM alerts WHERE user_id=? ORDER BY id DESC LIMIT 1',(gps_owner,)).fetchone()[0]
         for active in (False,True):
             assert gps.request.post(base+'/api/consents',headers={'Origin':base},data={'item':'location_sharing','active':active}).ok
         phone.evaluate('finishGPS()'); phone.wait_for_timeout(500)
@@ -269,10 +284,18 @@ def exercise(page, staff, base, env):
         taps(phone)
         expect(phone.locator('#weather-tap-status')).to_contain_text('Saved on this phone')
         assert phone.evaluate('CWQueue.queueSize()') == 1 and count() == before
-        client_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).client_id")
+        queued = phone.evaluate("""()=>new Promise(resolve=>{const r=indexedDB.open('clear-sky-queue',1);r.onsuccess=()=>{const q=r.result.transaction('alerts').objectStore('alerts').getAll();q.onsuccess=()=>resolve(q.result);};})""")
+        client_id = queued[0]['client_id']
         phone.close(); phone = offline.new_page(); phone.on('pageerror',lambda error:errors.append(str(error)))
         cover(phone)
+        expect(phone.locator('#weather-tap-status')).to_be_hidden()
+        assert phone.evaluate("""()=>new Promise(resolve=>{const r=indexedDB.open('clear-sky-queue',1);r.onsuccess=()=>{const q=r.result.transaction('alerts').objectStore('alerts').getAll();q.onsuccess=()=>resolve(q.result);};})""") == queued
+        taps(phone)
         expect(phone.locator('#weather-tap-status')).to_contain_text('Saved on this phone')
+        assert phone.evaluate('CWQueue.queueSize()') == 1, 'A reopened queued attempt must not duplicate on a new gesture'
+        phone.reload()
+        expect(phone.locator('#weather-tap-status')).to_be_hidden()
+        assert phone.evaluate('CWQueue.queueSize()') == 1
         posts = []
         def lost_receipt(route):
             if route.request.method != 'POST': route.continue_(); return
@@ -284,7 +307,8 @@ def exercise(page, staff, base, env):
         offline.set_offline(False)
         until(phone,lambda:len(posts)>=1)
         phone.evaluate('CWQueue.flushQueue()')
-        expect(phone.locator('#weather-tap-status')).to_contain_text('Received by Avenra',timeout=15000)
+        until(phone, lambda:phone.evaluate('CWQueue.queueSize()') == 0)
+        expect(phone.locator('#weather-tap-status')).to_be_hidden()
         assert len(posts) >= 2 and all(value == client_id for value in posts)
         assert count(first_owner) == 1 and phone.evaluate('CWQueue.queueSize()') == 0
         passed.append('offline queue survives page close; lost server receipt retries the same client ID without duplicate alerts')

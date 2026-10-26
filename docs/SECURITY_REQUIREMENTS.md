@@ -30,11 +30,14 @@ confidentiality loss; an alert receipt is not emergency dispatch.
    evidence of the survivor's current emergency position.
 2. **Local UI → local storage:** IndexedDB queues carry an explicit owner and stable
    client ID; receipts must match before removal. Local PIN/WebAuthn entry controls
-   are currently UI controls, **not server-verified evidence authorization**. An
-   already paired unlocked phone or same-origin script can read private APIs.
-   Existing offline notes/photos and queues are not meaningfully encrypted against
-   browser-profile theft. Stage 9 must resolve keys/offline availability, not put a
-   key next to ciphertext and claim protection. Quick Exit cannot erase OS snapshots.
+   remain UI controls, **not evidence authorization**. Since Stage 9, protected
+   survivor diary reads, photos and sharing require an additional server-verified
+   vault passphrase grant: hashed server-side, bound to owner/device/credential
+   version, expiring after 900 seconds and held only in page RAM. Offline vault
+   unlock cannot mint that grant. Queues use the separate encryption described in
+   the Stage 9 design; legacy plaintext remains exposed until successful migration.
+   Same-origin compromise/unlocked memory remain risks. Quick Exit cannot erase
+   OS snapshots, screenshots or copies outside the app.
 3. **Browser → Flask:** device authority comes from an opaque HttpOnly cookie, not
    `X-Queue-Owner`; that header only detects wrong-owner retries. Staff authority is
    a signed, expiring session checked against active account/auth version. Device
@@ -77,7 +80,7 @@ inferred from URL naming. GET implies HEAD; OPTIONS has no record mutation.
 | `/api/onboarding`, `/api/contacts*`, `/api/consents`, `/api/my-access` | Paired survivor scoped repositories; masked contacts; atomic consent/audit writes and owner-bound cursor/history. Push invitation subroute has separate recipient limits. |
 | `/api/alerts`, `/<id>/status`, `/location-permission`, `/by-client/<id>/location` | Paired survivor + queue-owner match on creation and late updates; idempotent IDs, immutable retries; late fixes reauthorize inside transaction and cannot dispatch or change workflow. |
 | `/api/alerts` GET, `/<id>/acknowledge`, `/<id>/workflow`, `/<id>/nearby-services`, `/cases*`, `/api/cases/<code>/access`, `/dashboard` | Staff roles and CaseAccessRepository; assignment-revocation checks on requests; consent redaction; optimistic workflow revision. Admin can manage grants but cannot read unassigned cases. All private HTML/API/photo responses no-store. |
-| `/api/diary`, `/<id>`, `/<id>/photo`, `/<id>/share`, `/cases/diary-photo/<id>` | Survivor owner or staff role + assignment + active diary consent + per-entry share. Strict v2 JPEG/hash/field contracts, signed owner cursor. A local PIN is not an additional server boundary (known Stage 9 product/key issue). |
+| `/api/diary`, `/<id>`, `/<id>/photo`, `/<id>/share`, `/cases/diary-photo/<id>` | Survivor owner plus current server-verified vault grant on reads/photos/sharing, or staff role + assignment + active diary consent + per-entry share. Strict v2 JPEG/hash/field contracts, signed owner cursor. Capture remains authenticated/owner-bound without requiring an evidence-read grant. Local PIN/WebAuthn flags do not grant evidence access. |
 | `/api/referrals*`, `/referrals`, `/api/shelters*`, `/shelters` | ReferralService uses staff case assignment or exact shelter association and current referral consent; allowlisted transitions; capacity operations constrain shelter authority. Directory is not a placement promise. |
 | `/api/audit-log`, `/audit-log` | Survivor scoped access history or authorized assigned staff filtering; no cross-case global audit dump. Untrusted search bound as values. |
 | `/contact-push/*`, `/api/contact-push/*` | Capability acceptance + CSRF, contact browser binding for subscription management; ack token is narrow and expiring. Neutral payload, no case API authority. |
@@ -120,11 +123,11 @@ Existing Stage 4/5 ownership, consent, cursor, JPEG and CSRF tests remain requir
 JavaScript service-worker checks exclude private APIs, media, staff pages and
 authenticated/query/write requests from shell caching.
 
-Residual risks remain explicit: password-only staff authentication until Stage 8;
-readable paired-browser APIs/offline profile until an appropriate Stage 9 key
-design; notification uncertainty/retry/availability work in Stage 10; CSP/CI and
-hosted configuration review in Stage 11; load/accessibility, external review and
-physical-device release gates in Stage 12. Application checks cannot prevent an
+The gaps identified during the historical Stage 7 review were subsequently
+addressed in bounded Stage 8–11 engineering work; see those stage documents for
+current controls and their verification limits. Hosted rollout/source identity,
+independent review, physical-device acceptance and Stage 12 remain separate gates.
+Application checks cannot prevent an
 authorized malicious staff member photographing disclosed data, a compromised
 origin, OS-level access or volumetric upstream denial of service. No stage tag
 authorizes real-data operation.

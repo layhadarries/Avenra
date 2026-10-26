@@ -62,6 +62,11 @@ class BrowserPolicyTests(unittest.TestCase):
 
 
 class ReleaseGateTests(unittest.TestCase):
+    def test_followup_browser_checks_run_without_removing_csp_acceptance(self):
+        workflow = Path('.github/workflows/verify.yml').read_text()
+        for name in ('stage11_csp_browser.py','followup_privacy_browser.py','weather_data_boundary_browser.py'):
+            self.assertIn('python tests/'+name, workflow)
+
     def test_scanner_error_or_unreviewed_finding_fails_even_when_process_succeeded(self):
         from tools.security_gate import bandit_findings
         with self.assertRaises(ValueError): bandit_findings({'errors':[{'filename':'synthetic'}],'results':[]},[])

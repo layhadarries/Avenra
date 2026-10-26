@@ -1,6 +1,30 @@
-/* Public connection/cache status only. No identity, alerts or private storage. */
+/* Public shell and display-only exit guard. Never grants API/evidence authority. */
 (function () {
   'use strict';
+  const exitKey = 'clear-sky-exited-v1';
+  function blocked() {
+    try { return localStorage.getItem(exitKey) === '1'; } catch (_) { return true; }
+  }
+  function markExit() {
+    try { localStorage.setItem(exitKey, '1'); } catch (_) {}
+    if (window.CWVault) window.CWVault.lock();
+  }
+  function guardPrivacy() {
+    if (location.pathname === '/survivor/privacy.html' && blocked()) {
+      document.documentElement.style.visibility = 'hidden';
+      location.replace('/survivor/cover.html');
+      return true;
+    }
+    return false;
+  }
+  window.CWExit = {blocked: blocked};
+  document.addEventListener('click', function (event) {
+    if (event.target.closest('#quick-exit,#quick-exit-btn,[data-shell-exit]')) markExit();
+  }, true);
+  document.addEventListener('keydown', function (event) { if (event.key === 'Escape') markExit(); }, true);
+  window.addEventListener('pageshow', guardPrivacy);
+  window.addEventListener('storage', function (event) { if (event.key === exitKey) guardPrivacy(); });
+  guardPrivacy();
   const destinations = new Set(['/survivor/','/survivor/help.html','/survivor/diary.html','/survivor/#more']);
   document.querySelectorAll('[data-shell-href]').forEach(function (button) {
     button.addEventListener('click', function () {

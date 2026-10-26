@@ -4,7 +4,7 @@
   if (!document.body.classList.contains('cover') || !window.CWQueue || !window.CWTapDetector || typeof window.PointerEvent !== 'function') return;
   var PREF = 'clear-sky-weather-tap-v1', STATUS = 'clear-sky-weather-tap-status-v1';
   var OWNER = 'clear-sky-alert-owner-v1', queue = window.CWQueue;
-  var owner = null, armed = false, current = null, submitting = false, bufferedReceipt = null;
+  var owner = null, armed = false, current = null, submitting = false, bufferedReceipt = null, activeFlow = false;
   var pollTimer = null, pollController = null, verifyController = null, verification = 0;
   var output = document.getElementById('weather-tap-status');
   function read(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { return null; } }
@@ -16,15 +16,26 @@
   function savedOwner() { try { var value = localStorage.getItem(OWNER); return /^[1-9][0-9]*$/.test(value || '') ? Number(value) : null; } catch (_) { return null; } }
   function pairedPreference() { var pref = preference(); return pref && pref.owner_id === owner && savedOwner() === owner; }
   function foreground() { return !document.hidden && document.visibilityState === 'visible' && document.hasFocus(); }
-  function show(message) { output.textContent = message; output.hidden = !message; }
+  function show(message) { message = activeFlow ? message : ''; output.textContent = message; output.hidden = !message; }
   function remember() {
-    try { localStorage.setItem(STATUS, JSON.stringify(current)); } catch (_) { /* Queue durability does not depend on this display metadata. */ }
+    // Retain only the existing queued-attempt identity for retry suppression.
+    // Completed receipts/times are not needed on the ordinary weather screen.
+    try {
+      if (current && current.phase === 'queued') localStorage.setItem(STATUS, JSON.stringify({
+        owner_id:current.owner_id, client_id:current.client_id, phase:'queued'
+      }));
+      else localStorage.removeItem(STATUS);
+    } catch (_) { /* Queue durability does not depend on this hint. */ }
   }
-  function restore() {
+  function restorePending() {
     var value = read(STATUS);
-    current = value && value.owner_id === owner && /^tap-[a-f0-9]{32}$/.test(value.client_id || '') &&
-      ['queued','received','acknowledged','resolved'].includes(value.phase) &&
-      (value.phase === 'queued' || Number.isSafeInteger(value.alert_id) && value.alert_id > 0) ? value : null;
+    if (value && value.owner_id === owner && value.phase === 'queued' && /^tap-[a-f0-9]{32}$/.test(value.client_id || '')) {
+      current = {owner_id:owner, client_id:value.client_id, phase:'queued'};
+    }
+    remember();
+  }
+  function hideFlow() {
+    activeFlow = false; show(''); detector.reset(); stopPoll();
   }
   function describe() {
     if (!armed || !pairedPreference() || !current) { show(''); return; }
@@ -61,7 +72,7 @@
   }
   async function poll() {
     stopPoll();
-    if (!armed || !pairedPreference() || !foreground() || !current || current.phase !== 'received' || navigator.onLine === false) return;
+    if (!activeFlow || !armed || !pairedPreference() || !foreground() || !current || current.phase !== 'received' || navigator.onLine === false) return;
     var attempt = current, requestOwner = owner, controller = new AbortController(); pollController = controller;
     var timeout = setTimeout(function () { controller.abort(); },5000);
     try {
@@ -92,6 +103,7 @@
   }
   async function trigger() {
     if (submitting || !armed || !pairedPreference() || !foreground() || modalOpen()) return;
+    activeFlow = true;
     if (current && current.owner_id === owner && current.phase === 'queued') { describe(); queue.flushQueue(); return; }
     var attempt = current && current.phase === 'error' && current.owner_id === owner ? current : {
       owner_id:owner, client_id:'tap-' + Array.from(crypto.getRandomValues(new Uint8Array(16)),function (byte) { return byte.toString(16).padStart(2,'0'); }).join(''),
@@ -126,9 +138,12 @@
     }, {capture:true,passive:true});
   });
   ['scroll','wheel'].forEach(function (name) { document.addEventListener(name,function () { detector.reset(); },{capture:true,passive:true}); });
-  ['blur','pagehide','hashchange','popstate'].forEach(function (name) { window.addEventListener(name,function () { detector.reset(); stopPoll(); }); });
+  document.addEventListener('click',function (event) {
+    if (event.target && event.target.closest && event.target.closest(excluded)) hideFlow();
+  }, {capture:true,passive:true});
+  ['blur','pagehide','hashchange','popstate'].forEach(function (name) { window.addEventListener(name,hideFlow); });
   new MutationObserver(function (records) {
-    if (records.some(function (record) { return record.target.matches('dialog,[role="dialog"],[aria-modal="true"],#cv-modal'); })) detector.reset();
+    if (records.some(function (record) { return record.target.matches('dialog,[role="dialog"],[aria-modal="true"],#cv-modal'); })) hideFlow();
   }).observe(document.body,{subtree:true,attributes:true,attributeFilter:['hidden','open']});
   queue.onFlushed(function (event) {
     if (event.type === 'sent') received(event.receipt);
@@ -158,17 +173,19 @@
     if (revision !== verification || !preference() || preference().owner_id !== pref.owner_id) return;
     if (verified !== pref.owner_id || savedOwner() !== pref.owner_id) { disarm(false); return; }
     owner = verified; armed = true; document.body.classList.add('weather-tap-enabled');
-    if (!current || current.owner_id !== owner) restore();
+    if (current && current.owner_id !== owner) current = null;
+    if (!current) restorePending();
     describe();
     if (bufferedReceipt) { var receipt = bufferedReceipt; bufferedReceipt = null; received(receipt); }
     else poll();
   }
-  document.addEventListener('visibilitychange',function () { detector.reset(); if (document.hidden) stopPoll(); else verify(); });
+  document.addEventListener('visibilitychange',function () { detector.reset(); if (document.hidden) hideFlow(); else verify(); });
   ['focus','pageshow','online','offline'].forEach(function (name) { window.addEventListener(name,verify); });
   window.addEventListener('storage',function (event) {
     if ([PREF,OWNER].includes(event.key) || event.key === null) verify();
   });
   var pref = preference();
-  if (pref) { owner = pref.owner_id; restore(); }
+  if (pref) { owner = pref.owner_id; restorePending(); }
+  else remember();
   Promise.resolve(queue.ready).then(verify);
 })();

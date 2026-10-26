@@ -1,5 +1,6 @@
 """Staff portal queries and validated alert transitions."""
 from datetime import date, timedelta
+import sqlite3
 from avenra.repositories.portal_repository import PortalRepository
 from avenra.repositories.case_access_repository import CaseAccessRepository
 from avenra.repositories.alert_repository import AlertRepository
@@ -53,6 +54,8 @@ class PortalService:
                 'has_next': filters['page'] * filters['per_page'] < total}, 200
 
     def change_alert(self, alert_id, user, data):
+        if data.get('action') == 'accidental':
+            return self.record_accidental(alert_id, user, data)
         conn = self.repo.conn
         with conn:
             conn.execute('BEGIN IMMEDIATE')
@@ -94,3 +97,39 @@ class PortalService:
             conn.execute('INSERT INTO audit_log(actor,action,case_code,detail) VALUES (?,?,?,?)',
                          (f'user:{user.id}', 'alert_' + action, alert.case_code, f'alert {alert_id}'))
         return {'ok': True, 'revision': workflow['revision'] + 1}, 200
+
+    def record_accidental(self, alert_id, user, data):
+        """One immutable annotation per staff/alert; never a workflow transition.
+
+        The writer reservation serializes retries on SQLite and PostgreSQL. Access
+        is checked before replay lookup, including after assignment revocation.
+        """
+        from avenra.repositories.user_repository import UserRepository
+        from avenra.repositories.audit_repository import AuditRepository
+        if not valid_identifier(alert_id):
+            return {'error': 'not_found'}, 404
+        reason = data.get('reason')
+        if not isinstance(reason, str) or not reason.strip() or len(reason) > 500:
+            return {'error': 'invalid_reason'}, 400
+        reason = reason.strip()
+        conn = self.repo.conn
+        try:
+            with conn:
+                conn.execute('BEGIN IMMEDIATE')
+                actor = UserRepository(conn).get_by_id(user.id)
+                if actor is None or not actor.is_active or actor.role not in ('responder', 'admin'):
+                    return {'error': 'forbidden'}, 403
+                alert = AlertRepository(conn).get_by_id(alert_id)
+                if alert is None or not CaseAccessRepository(conn).allows(actor.id, alert.user_id):
+                    return {'error': 'not_found'}, 404
+                event = self.repo.accidental_followup(alert_id, actor.id)
+                if event and event['detail'] != reason:
+                    return {'error': 'followup_already_recorded'}, 409
+                if event is None:
+                    self.repo.record(alert_id, actor.id, 'accidental', reason)
+                    event = self.repo.accidental_followup(alert_id, actor.id)
+                    AuditRepository(conn).log(f'user:{actor.id}', 'alert_accidental', alert.case_code,
+                                              f"alert {alert_id}; history {event['id']}", commit=False)
+                return {'ok': True, 'followup_id': event['id'], 'created_at': event['created_at']}, 200
+        except sqlite3.Error:
+            return {'error': 'followup_unavailable'}, 503

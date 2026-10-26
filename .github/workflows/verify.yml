@@ -33,6 +33,8 @@ jobs:
           python tests/pwa_design_browser.py
           python tests/stage11_csp_browser.py
           python tests/weather_tap_browser.py
+          python tests/followup_privacy_browser.py
+          python tests/weather_data_boundary_browser.py
           python tests/stage2_pwa_browser.py
           python tests/stage5_pwa_browser.py
           python tests/stage9_vault_browser.py
