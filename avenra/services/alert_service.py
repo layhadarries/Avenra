@@ -76,6 +76,26 @@ class AlertService:
         self.referral_repo = referral_repo or ReferralRepository()
         self.audit_repo = audit_repo or AuditRepository()
 
+    def unwrap_queue_payload(self, survivor, data, keys):
+        """Decode only authenticated, owner-bound transport; never grant consent."""
+        if 'sealed_alert' not in data:
+            if 'sealed_location' in data: raise ValueError('invalid_sealed_alert')
+            return data
+        if set(data)-{'client_id','sealed_alert','sealed_location','suppress_location'}:
+            raise ValueError('invalid_sealed_alert')
+        suppress=data.get('suppress_location')
+        if suppress is not None and type(suppress) is not bool: raise ValueError('invalid_sealed_alert')
+        client_id=data.get('client_id')
+        payload=keys.decrypt(survivor.id,client_id,data['sealed_alert'])
+        fields={'lat','lng','location_accuracy','location_recorded_at','location_consent_token'}
+        if suppress or not self.consent_repo.is_active(survivor.id,'location_sharing'):
+            return dict(payload,**{name:None for name in fields})
+        if 'sealed_location' in data:
+            location=keys.decrypt(survivor.id,client_id,data['sealed_location'],purpose='alert-location')
+            if set(location)-fields-{'client_id'}: raise ValueError('invalid_sealed_alert')
+            payload.update({name:location.get(name) for name in fields})
+        return payload
+
     def create_alert(
         self,
         survivor: User,

@@ -1,12 +1,77 @@
-/* Evaluation queue. Retries while a page is open, or when it is reopened.
-   IndexedDB contains sensitive pending payloads: individual auth and storage
-   protection remain release requirements. No closed-app delivery guarantee. */
+/* Durable owner-bound queue. Public-key sealed payloads never need a vault PIN.
+   Without a cached key, new capture stores only minimal, GPS-free metadata.
+   No closed-app delivery guarantee; IDs/ownership/activity metadata remain visible. */
 (function (global) {
   'use strict';
   var DB_NAME = 'clear-sky-queue', STORE = 'alerts';
   var DEVICE_TOKEN = ((typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) ? 'demo-device' : ''); // Evaluation only; never a production credential.
   var dbPromise = null, flushPromise = null, flushAgain = false, retryTimer = null, retryIndex = 0;
   var listeners = [], BACKOFF = [5000, 15000, 30000];
+  var PUBLIC_KEY = 'clear-sky-alert-public-key-v1', publicKey = null;
+  function rememberPublic(value) {
+    if (!value || !/^[a-f0-9]{64}$/.test(value.kid || '') || typeof value.spki !== 'string' || value.spki.length > 2048) return;
+    publicKey = {kid:value.kid,spki:value.spki};
+    try { localStorage.setItem(PUBLIC_KEY,JSON.stringify(publicKey)); } catch (_) {}
+  }
+  function cachedPublic() {
+    if (!publicKey) { try { rememberPublic(JSON.parse(localStorage.getItem(PUBLIC_KEY) || 'null')); } catch (_) {} }
+    return publicKey;
+  }
+  function encode(bytes) {
+    bytes = new Uint8Array(bytes); var result = '';
+    for (var offset = 0; offset < bytes.length; offset += 8192) result += String.fromCharCode.apply(null,bytes.subarray(offset,offset+8192));
+    return btoa(result);
+  }
+  function decode(text) { return Uint8Array.from(atob(text),function (character) { return character.charCodeAt(0); }); }
+  async function sealPayload(item,allowMinimal) {
+    if (item.sealed_alert) return item;
+    var record = cachedPublic();
+    try {
+      if (!record || !crypto.subtle) throw new Error('sealing_key_unavailable');
+      var rsa = await crypto.subtle.importKey('spki',decode(record.spki),{name:'RSA-OAEP',hash:'SHA-256'},false,['wrapKey']);
+      var bindingOwner = validOwner(item.owner_id) ? item.owner_id : 0;
+      var purpose = bindingOwner ? 'alert' : 'legacy-unbound';
+      var payload = Object.assign({},item), location = {client_id:item.client_id};
+      delete payload.owner_id;
+      ['lat','lng','location_accuracy','location_recorded_at','location_consent_token'].forEach(function (name) {
+        location[name] = payload[name]; delete payload[name];
+      });
+      async function part(value,purpose) {
+        var aes = await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt']);
+        var iv = crypto.getRandomValues(new Uint8Array(12));
+        var wrapped = await crypto.subtle.wrapKey('raw',aes,rsa,{name:'RSA-OAEP'});
+        var aad = new TextEncoder().encode(JSON.stringify([1,bindingOwner,item.client_id,purpose]));
+        var ciphertext = await crypto.subtle.encrypt({name:'AES-GCM',iv:iv,additionalData:aad},aes,new TextEncoder().encode(JSON.stringify(value)));
+        return {version:1,kid:record.kid,owner_id:bindingOwner,iv:encode(iv),wrapped_key:encode(wrapped),ciphertext:encode(ciphertext)};
+      }
+      var result = {client_id:item.client_id,sealed_alert:await part(payload,purpose)};
+      if (Object.prototype.hasOwnProperty.call(item,'owner_id')) result.owner_id = item.owner_id;
+      if (location.lat !== null && location.lat !== undefined && location.lng !== null && location.lng !== undefined)
+        result.sealed_location = await part(location,purpose+'-location');
+      return result;
+    } catch (_) {
+      if (!allowMinimal) throw new Error('queue_protection_incomplete');
+      // Emergency availability wins over optional GPS. Never persist sensitive
+      // unencrypted location/token/time merely because crypto/key cache failed.
+      emit({type:'privacy_limited',client_id:item.client_id});
+      return {client_id:item.client_id,owner_id:item.owner_id,client_ts:null,
+        lat:null,lng:null,location_accuracy:null,location_recorded_at:null};
+    }
+  }
+  function protectExisting(item) {
+    if (item.sealed_alert) return Promise.resolve(item);
+    return sealPayload(item,false).then(function (sealed) {
+      return openDb().then(function (db) { return new Promise(function (resolve,reject) {
+        var tx = db.transaction(STORE,'readwrite'), store = tx.objectStore(STORE), read = store.get(item.client_id);
+        read.onsuccess = function () {
+          if (JSON.stringify(read.result) !== JSON.stringify(item)) { tx.abort(); return; }
+          try { store.put(sealed); } catch (_) { try { tx.abort(); } catch (_) {} }
+        };
+        tx.oncomplete = function () { resolve(sealed); };
+        tx.onabort = tx.onerror = function () { reject(new Error('queue_protection_incomplete')); };
+      }); });
+    }).catch(function () { emit({type:'privacy_limited',client_id:item.client_id}); return item; });
+  }
   function emit(event) {
     listeners.forEach(function (fn) { try { fn(event); } catch (_) {} });
   }
@@ -127,6 +192,7 @@
       }
 
       activeOwner = owner;
+      rememberPublic(body.sealing_key);
       return owner;
     }, function (error) {
       if (error.status === 401 || error.status === 403) {
@@ -179,7 +245,7 @@
 
       var bound = Object.assign({}, captured, {owner_id: owner});
 
-      return openDb().then(function (db) {
+      return sealPayload(bound,true).then(function (sealed) { return openDb().then(function (db) {
         return new Promise(function (resolve, reject) {
           var tx = db.transaction(STORE, 'readwrite');
           var store = tx.objectStore(STORE);
@@ -198,10 +264,11 @@
               tx.abort();
               return;
             }
-            store.put(bound);
+            try { store.put(sealed); }
+            catch (_) { try { tx.abort(); } catch (_) {} }
           };
         });
-      }).then(function () {
+      }); }).then(function () {
         emit({type: 'queued', client_id: bound.client_id});
       });
     });
@@ -245,12 +312,18 @@
       if (owner !== item.owner_id) {
         throw ownershipError('queue_owner_mismatch');
       }
+      return protectExisting(item);
+    }).then(function (protectedItem) {
+      item = protectedItem;
       return locationPermitted();
     }).then(function (allowed) {
       var payload = Object.assign({}, item);
       delete payload.owner_id;
 
-      if (!allowed) {
+      if (payload.sealed_alert) {
+        payload.suppress_location = !allowed;
+        if (!allowed) delete payload.sealed_location;
+      } else if (!allowed) {
         payload.lat = payload.lng = null;
         payload.location_accuracy = payload.location_recorded_at = null;
       }
@@ -294,7 +367,9 @@
       var transientFailure = false;
       return items.reduce(function (chain, item) {
         return chain.then(function () {
-          return sendOne(item).catch(function (error) {
+          // Protection does not adopt an owner or authorize a send. Even blocked
+          // legacy/foreign records retain their IDs and ownership metadata.
+          return protectExisting(item).then(sendOne).catch(function (error) {
             // Keep rejected items. Do not hammer authentication/validation failures.
             if ([400, 401, 403, 404, 409, 422].indexOf(error.status) !== -1)
               emit({type: 'blocked', client_id: item.client_id});
@@ -325,6 +400,7 @@
     queueAlert: queueAlert, flushQueue: flushQueue,
     queueSize: function () { return allAlerts().then(function (items) { return items.length; }); },
     onFlushed: function (fn) { listeners.push(fn); },
-    locationPermitted: locationPermitted
+    locationPermitted: locationPermitted,
+    publicSealingKey: function () { var value = cachedPublic(); return value ? Object.assign({},value) : null; }
   };
 })(window);

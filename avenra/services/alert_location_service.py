@@ -90,6 +90,9 @@ class AlertLocationService:
                 repo=AlertRepository(self.conn)
                 alert=repo.get_by_client_id(client_id)
                 if alert is None or alert.user_id!=survivor.id: return {'error':'not_found'},404
+                from avenra.repositories.retention_repository import RetentionRepository
+                if RetentionRepository(self.conn).was_deleted(survivor.id,'alert-location',client_id):
+                    return {'error':'location_removed_by_retention'},410
                 if not LocationPermission(self.conn).valid(survivor,data['location_consent_token']):
                     return {'error':'location_permission_required'},403
                 if (datetime.now(timezone.utc)-timestamp(alert.created_at)).total_seconds()>600:

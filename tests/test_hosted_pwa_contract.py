@@ -25,6 +25,9 @@ class HostedPWAContractTests(unittest.TestCase):
         client=client or fixtures.avenra_app.app.test_client()
         response=client.post('/api/device/enroll',json={'token':token},headers={'Origin':'http://localhost'})
         self.assertEqual(response.status_code,201,response.text)
+        if not getattr(self,'requires_locked_vault',False):
+            from vault_fixture import unlock_test_vault
+            unlock_test_vault(client)
         return client,response
 
     def test_install_page_is_public_and_neutral(self):

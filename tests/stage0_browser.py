@@ -7,6 +7,7 @@ No external messages are sent; all records and browser state are temporary.
 import os
 import base64
 import hashlib
+import json
 import sqlite3
 from pathlib import Path
 import secrets
@@ -17,7 +18,7 @@ import tempfile
 import time
 import urllib.request
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -78,6 +79,11 @@ def main(staff_check=None, browser_name='chromium'):
                    SECRET_KEY=secrets.token_urlsafe(48),
                    DATABASE_PATH=str(Path(directory) / 'evaluation.sqlite3'),
                    UPLOADS_DIR=str(Path(directory) / 'uploads'))
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.hazmat.primitives import serialization
+        env.pop('OFFLINE_QUEUE_RETIRED_KEYS_JSON',None)
+        env['OFFLINE_QUEUE_PRIVATE_KEY_PEM']=rsa.generate_private_key(public_exponent=65537,key_size=3072).private_bytes(
+            serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption()).decode()
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
@@ -118,7 +124,7 @@ def main(staff_check=None, browser_name='chromium'):
                 if staff_check is not None:
                     staff_check(page, context, base, env)
                 page.get_by_role('link', name='Shelters', exact=True).click()
-                assert page.locator('tbody tr').count() == 3
+                expect(page.locator('tbody tr')).to_have_count(3)
                 if os.environ.get('AVENRA_SCREENSHOT_DIR'):
                     page.screenshot(path=str(Path(os.environ['AVENRA_SCREENSHOT_DIR']) / 'staff.png'), full_page=True)
                 page.get_by_role('button', name='Sign out everywhere').click()
@@ -155,7 +161,7 @@ def main(staff_check=None, browser_name='chromium'):
                     "() => Object.fromEntries(Object.entries(localStorage))"
                 )
 
-                allowed_keys = {"clear-sky-alert-owner-v1"}
+                allowed_keys = {"clear-sky-alert-owner-v1", "clear-sky-alert-public-key-v1"}
                 assert set(local_values) <= allowed_keys, (
                     "Unexpected localStorage keys",
                     list(local_values),
@@ -169,6 +175,14 @@ def main(staff_check=None, browser_name='chromium'):
                             and 0 < int(owner) <= 9007199254740991
                             and str(int(owner)) == owner
                     ), "Invalid cached account identifier"
+                public_record=local_values.get('clear-sky-alert-public-key-v1')
+                if public_record:
+                    public_record=json.loads(public_record)
+                    assert set(public_record)=={'kid','spki'}
+                    public_bytes=base64.b64decode(public_record['spki'],validate=True)
+                    public_key=serialization.load_der_public_key(public_bytes)
+                    assert isinstance(public_key,rsa.RSAPublicKey) and public_key.key_size>=3072
+                    assert hashlib.sha256(public_bytes).hexdigest()==public_record['kid']
                 assert not errors, errors
                 mobile.close()
                 browser.close()

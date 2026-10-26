@@ -2,6 +2,25 @@
 
 This matrix records implemented controls and automated verification evidence across Stages 5 and 6A. It is engineering verification evidence, not a formal external security certification.
 
+## Stage 9 private-storage follow-up (in progress)
+
+Baseline `46c791e`; design, operator commands, migration/key custody and limits:
+[Stage 9 private storage and recovery](stage-9-private-storage-and-recovery.md).
+Memory-only `X-Vault-Unlock` replaces reusable evidence cookies. **35 focused
+Python tests**, **34 Node checks**, and `pip check` pass. Chromium vault,
+encrypted-alert, ownership queues, Stage 5 diary, weather-tap, Stage 2 HELP,
+Stage 3 case and Stage 4 audit scripts pass; final full-suite/release verification
+is pending. Running many crypto/browser suites concurrently exposed timing
+failures; affected HELP/vault scripts passed again in isolation. This is not
+evidence of physical-device performance.
+The first aggregate run executed 459 tests with 14 failing assertions because
+the database-free diary replay mock fabricated retention tombstones. Its fixture
+now explicitly reports no tombstone; all 12 replay tests and all 48 Stage 4 tests
+pass. A fresh aggregate run is required and currently pending; the prior run
+must not be reported as a full pass.
+No Stage 9 completion tag, hosted rollout, provider DR claim or real-data approval
+is established by this checkpoint. Existing resource-cleanup warnings remain.
+
 ## Stage 8 identity follow-up (2026-10-26)
 
 Baseline: `8c4683d` / `stage-7-complete`. See

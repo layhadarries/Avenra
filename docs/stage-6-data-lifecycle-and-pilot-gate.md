@@ -14,6 +14,12 @@
 
 ## 2. Consent Withdrawal vs Deletion
 
+Stage 9 adds bounded, previewable record-level retention commands and encrypted
+offline queues; see [private storage and recovery](stage-9-private-storage-and-recovery.md).
+This does not approve the proposed retention durations or implement account-wide,
+browser-copy or backup deletion. The primary DB/provider encryption, independent
+custody and hosted restore gates still require operational evidence.
+
 - **Consent Withdrawal (`POST /api/consents` or `POST /api/diary/<id>/share`):** Immediately stops future disclosure to staff and trusted contacts and invalidates open staff screens via `access_signature`, while preserving the survivor's own vault records.
 - **Account / Record Deletion:** Removes the record from the primary database and deletes/quarantines associated photo objects across primary storage and expiring backup snapshots.
 

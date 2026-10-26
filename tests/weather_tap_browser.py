@@ -182,7 +182,9 @@ def exercise(page, staff, base, env):
         taps(phone,8)
         expect(phone.locator('#weather-tap-status')).to_contain_text('Received by Avenra')
         assert count() == before+1 and len(sent) == 1
-        assert sent[0]['lat'] is None and sent[0]['lng'] is None
+        assert 'sealed_alert' in sent[0] and 'sealed_location' not in sent[0]
+        with sqlite3.connect(env['DATABASE_PATH']) as conn:
+            assert conn.execute('SELECT lat,lng FROM alerts WHERE client_id=?',(sent[0]['client_id'],)).fetchone() == (None,None)
         assert phone.url.split('#')[0].endswith('/survivor/cover.html')
         alert_id = phone.evaluate(f"JSON.parse(localStorage.getItem('{STATUS}')).alert_id")
         page.goto(base + '/dashboard')

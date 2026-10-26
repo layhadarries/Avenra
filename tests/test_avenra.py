@@ -18,6 +18,11 @@ os.environ.pop("DATABASE_URL", None)
 # Local fixtures use localhost, never an inherited production origin.
 os.environ.pop("PUBLIC_BASE_URL", None)
 os.environ.pop('STAFF_MFA_ENCRYPTION_KEY', None)
+from cryptography.hazmat.primitives.asymmetric import rsa as _rsa
+from cryptography.hazmat.primitives import serialization as _serialization
+os.environ.pop('OFFLINE_QUEUE_RETIRED_KEYS_JSON', None)
+os.environ['OFFLINE_QUEUE_PRIVATE_KEY_PEM']=_rsa.generate_private_key(public_exponent=65537,key_size=3072).private_bytes(
+    _serialization.Encoding.PEM,_serialization.PrivateFormat.PKCS8,_serialization.NoEncryption()).decode()
 os.environ['APP_ENV'] = 'development'
 os.environ['COOKIE_SECURE'] = '0'
 # Another test may have imported db before this fixture set DATABASE_PATH.
@@ -98,13 +103,19 @@ class avenraStagesTestCase(unittest.TestCase):
         self.survivor_headers = {
             "X-Device-Token": avenra_app.DEVICE_TOKEN,
         }
+        if not getattr(self,'requires_locked_vault',False):
+            from vault_fixture import unlock_test_vault
+            unlock_test_vault(self.client,self.survivor_headers)
 
     def tearDown(self):
         self.tmp_dir.cleanup()
 
     def _login_staff(self, role="responder"):
         # Use a fresh browser session for the requested test role.
+        evidence_grant=self.client.environ_base.get('HTTP_X_VAULT_UNLOCK')
         self.client = avenra_app.app.test_client()
+        if evidence_grant is not None:
+            self.client.environ_base['HTTP_X_VAULT_UNLOCK']=evidence_grant
 
         conn = db.connect()
         try:

@@ -1,6 +1,6 @@
 """Alerts API controller."""
 from typing import Optional
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from avenra.services.alert_service import AlertService
 from avenra.security import device_user, current_user, require_role
 from avenra.config import Config
@@ -19,6 +19,12 @@ class AlertsController:
             return jsonify({"error": "bad_device_token"}), 401
 
         data = request.get_json(silent=True) or {}
+        try:
+            data=self.alert_service.unwrap_queue_payload(survivor,data,current_app.config['OFFLINE_QUEUE_KEYS'])
+        except ValueError:
+            return jsonify(error='invalid_sealed_alert'),400
+        except RuntimeError:
+            return jsonify(error='sealing_key_unavailable'),503
         res, status = self.alert_service.create_alert(
             survivor=survivor,
             client_id=data.get("client_id"),

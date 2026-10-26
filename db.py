@@ -20,6 +20,8 @@ def connect():
     if os.environ.get("VERCEL"):
         raise RuntimeError("Vercel requires DATABASE_URL; local SQLite is disabled on Vercel")
     path = Path(DB_PATH)
+    if any((path.parent / marker).exists() for marker in ('ISOLATED_RESTORE_DO_NOT_DEPLOY','RESTORE_INCOMPLETE')):
+        raise RuntimeError('An isolated restore target cannot be opened by the application or notification workers')
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     conn = sqlite3.connect(DB_PATH, timeout=10)
     if os.name == 'posix':
@@ -52,7 +54,7 @@ def init_db():
     try:
         if os.environ.get("DATABASE_URL"):
             row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
-            if not row or row[0] != 7:
+            if not row or row[0] != 9:
                 raise RuntimeError("Apply the hosted database migration before starting the app")
             return
         with open(SCHEMA_PATH, encoding="utf-8") as f:
@@ -124,3 +126,13 @@ def migrate(conn):
         if statement.strip():
             conn.execute(statement)
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (7)')
+    from avenra.repositories.vault_repository import SCHEMA as VAULT_SCHEMA
+    for statement in VAULT_SCHEMA.split(';'):
+        if statement.strip():
+            conn.execute(statement)
+    conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (8)')
+    from avenra.repositories.retention_repository import SCHEMA as RETENTION_SCHEMA
+    for statement in RETENTION_SCHEMA.split(';'):
+        if statement.strip():
+            conn.execute(statement)
+    conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (9)')

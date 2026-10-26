@@ -155,8 +155,13 @@ class StaffMFATests(unittest.TestCase):
                 AvenraApplication(InvalidEvaluation)._configure_app(Flask('evaluation-check'))
 
     def test_abuse_storage_capacity_counters_and_expiry_are_bounded(self):
-        from avenra.repositories.abuse_repository import AbuseRepository
-        with closing(fixtures.db.connect()) as conn:
+        from avenra.repositories.abuse_repository import AbuseRepository, SCHEMA
+        import sqlite3
+        # Isolate this synthetic clock/capacity check from legitimate vault-login
+        # counters created by broader fixture authorization.
+        with closing(sqlite3.connect(':memory:')) as conn:
+            conn.row_factory=sqlite3.Row
+            conn.execute(SCHEMA)
             repo=AbuseRepository(conn)
             self.assertTrue(repo.allow([('synthetic-a',2)],100,capacity=2))
             self.assertTrue(repo.allow([('synthetic-b',2)],100,capacity=2))

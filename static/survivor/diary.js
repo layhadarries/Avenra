@@ -119,7 +119,7 @@
   }
 
   function queueItem(item, requireNew) {
-    return openDb().then(function (db) {
+    return global.CWVault.seal(item).then(function (sealed) { return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
         var tx = db.transaction(STORE_NAME, 'readwrite');
         var store = tx.objectStore(STORE_NAME);
@@ -127,13 +127,17 @@
           var existing = store.get(item.client_id);
           existing.onsuccess = function () {
             if (existing.result !== undefined) { tx.abort(); return; }
-            store.put(item);
+            try { store.put(sealed); }
+            catch (_) { try { tx.abort(); } catch (_) {} reject(new Error('Local storage unavailable')); }
           };
-        } else { store.put(item); }
-        tx.oncomplete = function () { resolve(item); };
+        } else { store.put(sealed); }
+        tx.oncomplete = function () {
+          Object.defineProperty(item,'_vault_ciphertext',{value:sealed.ciphertext,configurable:true,writable:true});
+          resolve(item);
+        };
         tx.onerror = tx.onabort = function () { reject(new Error('Local storage unavailable')); };
       });
-    });
+    }); });
   }
 
   function queueNewEntry(item) {
@@ -142,7 +146,7 @@
     });
   }
 
-  function getQueuedItems() {
+  function rawQueuedItems() {
     return openDb().then(function (db) {
       return new Promise(function (resolve, reject) {
         var tx = db.transaction(STORE_NAME, 'readonly');
@@ -154,6 +158,71 @@
     });
   }
 
+  function vaultReady() { return global.CWVaultUI && global.CWVaultUI.unlocked(); }
+  function privateHeaders(extra) {
+    return global.CWVaultUI.headers(Object.assign({'X-Device-Token':DEVICE_TOKEN},extra || {}));
+  }
+
+  function getQueuedItems() {
+    if (!vaultReady()) return Promise.reject(new Error('vault_locked'));
+    var owner = global.CWVaultUI.owner();
+    return rawQueuedItems().then(function (items) {
+      return Promise.all(items.map(function (record) {
+        if (record.owner_id !== owner) {
+          var blocked = {client_id:record.client_id,_foreign:true,status:'needs_attention'};
+          if (record.owner_id !== undefined) blocked.owner_id = record.owner_id;
+          return blocked;
+        }
+        return global.CWVault.open(record).then(function (item) {
+          Object.defineProperty(item,'_vault_ciphertext',{value:record.ciphertext,configurable:true,writable:true});
+          return item;
+        });
+      }));
+    });
+  }
+
+  function migrateVault(owner) {
+    if (!global.CWVault.unlocked(owner)) return Promise.reject(new Error('vault_locked'));
+    return rawQueuedItems().then(function (items) {
+      return items.reduce(function (chain,record) {
+        if (record.vault_version === 1) {
+          return record.owner_id === owner ? chain.then(function () { return global.CWVault.open(record); }) : chain;
+        }
+        if (record.legacy_public === 1 && record.owner_id !== owner) return chain;
+        return chain.then(function () {
+          if (record.legacy_public === 1) {
+            var envelope = Object.assign({},record.sealed_payload), bytes = Uint8Array.from(atob(envelope.ciphertext),function (c) { return c.charCodeAt(0); });
+            delete envelope.ciphertext;
+            var form = new FormData();
+            form.append('client_id',record.client_id); form.append('envelope',JSON.stringify(envelope));
+            form.append('payload',new Blob([bytes],{type:'application/octet-stream'}),'encrypted.bin');
+            return fetch('/api/vault/recover',{method:'POST',credentials:'same-origin',cache:'no-store',
+              headers:privateHeaders(),body:form}).then(function (response) {
+              if (!response.ok) throw new Error('legacy_recovery_requires_connection_and_unlock');
+              return response.json();
+            }).then(function (body) { return global.CWVault.seal(global.CWVault.restoreRecord(body.record)); });
+          }
+          return record.owner_id === owner ? global.CWVault.seal(record) :
+            global.CWVault.sealLegacy(record,global.CWQueue.publicSealingKey());
+        }).then(function (sealed) {
+          return openDb().then(function (db) { return new Promise(function (resolve,reject) {
+            var tx = db.transaction(STORE_NAME,'readwrite'), store = tx.objectStore(STORE_NAME);
+            var read = store.get(record.client_id);
+            read.onsuccess = function () {
+              var current = read.result;
+              // Queue payloads are immutable; don't overwrite changed/foreign state.
+              if (!current || current.owner_id !== record.owner_id || JSON.stringify(current) !== JSON.stringify(record)) { tx.abort(); return; }
+              try { store.put(sealed); }
+              catch (_) { try { tx.abort(); } catch (_) {} reject(new Error('vault_migration_incomplete')); }
+            };
+            tx.oncomplete = resolve;
+            tx.onerror = tx.onabort = function () { reject(new Error('vault_migration_incomplete')); };
+          }); });
+        });
+      },Promise.resolve());
+    });
+  }
+
   function removeQueuedItem(item, receipt) {
     if (!verifyReceipt(item, receipt)) {
       return Promise.reject(new Error('Unverified receipt; local entry retained'));
@@ -161,7 +230,7 @@
     // Confirm durable ownership-scoped server metadata before deleting anything.
     return fetch('/api/diary/' + encodeURIComponent(receipt.id), {
       credentials: 'same-origin', cache: 'no-store',
-      headers: {'X-Device-Token': DEVICE_TOKEN}
+      headers: privateHeaders()
     }).then(function (response) {
       if (!response.ok) throw new Error('Server confirmation unavailable');
       return response.json();
@@ -180,7 +249,7 @@
         read.onsuccess = function () {
           var current = read.result;
           if (current === undefined) return;
-          if (current.owner_id !== item.owner_id || !verifyReceipt(current, receipt)) {
+          if (current.owner_id !== item.owner_id || current.vault_version !== 1 || current.ciphertext !== item._vault_ciphertext) {
             tx.abort(); return;
           }
           store.delete(item.client_id);
@@ -258,6 +327,7 @@
   function quickExit(event) {
     if (event && event.preventDefault) event.preventDefault();
     clearSensitiveView();
+    if (global.CWVault) global.CWVault.lock();
     location.replace('/survivor/cover.html');
   }
 
@@ -590,7 +660,7 @@
             throw new Error(code);
           });
         }
-        if (res.status === 400 || res.status === 403 || res.status === 409 || res.status === 413 || res.status === 422) {
+        if (res.status === 400 || res.status === 403 || res.status === 409 || res.status === 410 || res.status === 413 || res.status === 422) {
           return markQueuedItemStatus(item, 'needs_attention', code).then(function () {
             throw new Error(code);
           });
@@ -607,6 +677,7 @@
   }
 
   function flushQueue(forcePermanent) {
+    if (!vaultReady()) return Promise.resolve();
     if (diaryFlushPromise) return diaryFlushPromise;
     isUploading = true;
 
@@ -618,6 +689,7 @@
 
       var sequence = Promise.resolve();
       items.forEach(function (item) {
+        if (item._foreign) return;
         if (!forcePermanent && (item.status === 'auth_expired' || item.status === 'needs_attention')) {
           return;
         }
@@ -741,7 +813,7 @@
     }
     if (entry.has_photo && entry.photo_url) {
       fetch(entry.photo_url, {
-        headers: { 'X-Device-Token': DEVICE_TOKEN },
+        headers: privateHeaders(),
         cache: 'no-store'
       })
       .then(function (r) {
@@ -767,7 +839,7 @@
     var generation = ++detailGeneration;
     showDetailStatus('Loading entry…', 'saving');
     return fetch('/api/diary/' + encodeURIComponent(entryId), {
-      headers: { 'X-Device-Token': DEVICE_TOKEN },
+      headers: privateHeaders(),
       cache: 'no-store'
     })
     .then(function (res) {
@@ -776,7 +848,7 @@
     })
     .then(function (data) {
       showDetailStatus('', 'saving');
-      if (generation === detailGeneration && !document.hidden && data && data.entry) {
+      if (generation === detailGeneration && vaultReady() && !document.hidden && data && data.entry) {
         populateDetailSection(data.entry);
       }
     })
@@ -789,10 +861,10 @@
     showDetailStatus('Updating sharing state…', 'saving');
     return fetch('/api/diary/' + encodeURIComponent(entryId) + '/share', {
       method: 'POST',
-      headers: {
+      headers: privateHeaders({
         'Content-Type': 'application/json',
         'X-Device-Token': DEVICE_TOKEN
-      },
+      }),
       body: JSON.stringify({ shared: Boolean(targetShared) }),
       cache: 'no-store'
     })
@@ -810,7 +882,7 @@
     .catch(function () {
       // Uncertain timeout/network error: refresh authoritative server state before claiming outcome
       return fetch('/api/diary/' + encodeURIComponent(entryId), {
-        headers: { 'X-Device-Token': DEVICE_TOKEN },
+        headers: privateHeaders(),
         cache: 'no-store'
       })
       .then(function (r) { return r.ok ? r.json() : null; })
@@ -845,15 +917,16 @@
   }
 
   function renderEntries() {
-    if (!entriesList) return Promise.resolve();
+    if (!entriesList || !vaultReady()) return Promise.resolve();
 
     return Promise.all([
       getQueuedItems().catch(function () { return []; }),
-      fetch('/api/diary', { headers: { 'X-Device-Token': DEVICE_TOKEN }, cache: 'no-store' })
+      fetch('/api/diary', { headers: privateHeaders(), cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : { entries: [] }; })
         .catch(function () { return { entries: [] }; }),
       global.CWQueue.captureOwner().catch(function () { return null; })
     ]).then(function (results) {
+      if (!vaultReady()) { clearSensitiveView(); return; }
       var owner = results[2];
       var protectedEntries = (results[0] || []).some(function (q) {
         return !owner || q.owner_id !== owner;
@@ -1070,6 +1143,10 @@
     window.addEventListener('pagehide', function () {
       clearSensitiveView();
     });
+    window.addEventListener('vault-locked',clearSensitiveView);
+    window.addEventListener('vault-unlocked',function () {
+      fetchGlobalConsent(); renderEntries(); flushQueue(false);
+    });
 
     window.addEventListener('pageshow', function (event) {
       if (event.persisted) {
@@ -1094,14 +1171,13 @@
       }
     });
 
-    fetchGlobalConsent();
-    renderEntries();
-    flushQueue(false);
+    if (vaultReady()) { fetchGlobalConsent(); renderEntries(); flushQueue(false); }
   }
 
   document.addEventListener('DOMContentLoaded', init);
 
   global.CWDiary = {
+    migrateVault: migrateVault,
     quickExit: quickExit,
     flushQueue: flushQueue,
     saveEntry: saveEntry,

@@ -2,6 +2,7 @@
 import sqlite3
 from playwright.sync_api import expect
 from stage0_browser import main, wait_for_async
+from stage9_vault_browser import unlock
 
 
 def exercise(page,context,base,env):
@@ -26,6 +27,7 @@ def exercise(page,context,base,env):
         owner=phone_context.request.get(base+'/api/device').json()['account_id']
         phone.route('**/api/diary',lambda route:route.abort())
         phone.goto(base+'/survivor/diary.html')
+        unlock(phone)
         phone.wait_for_function('Boolean(window.CWDiary)')
         phone.locator('#diary-note').fill('Fictional online ownership test')
         phone.locator('#diary-save-btn').click()

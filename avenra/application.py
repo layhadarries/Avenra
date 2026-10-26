@@ -43,6 +43,10 @@ class AvenraApplication:
         register_alert_locations(app)
         from avenra.controllers.mfa_controller import register_mfa
         register_mfa(app)
+        from avenra.controllers.vault_controller import register_vault
+        register_vault(app)
+        from avenra.controllers.retention_controller import register_retention
+        register_retention(app)
         from avenra.controllers.worker_controller import register_worker
         register_worker(app)
 
@@ -84,6 +88,9 @@ class AvenraApplication:
         app.config["SESSION_COOKIE_SECURE"] = self.config_class.SESSION_COOKIE_SECURE
         app.config["MAX_CONTENT_LENGTH"] = self.config_class.MAX_CONTENT_LENGTH
         app.config["WTF_CSRF_CHECK_DEFAULT"] = self.config_class.WTF_CSRF_CHECK_DEFAULT
+        from avenra.services.queue_sealing_service import QueueSealingKeys
+        app.config['OFFLINE_QUEUE_KEYS']=QueueSealingKeys(os.environ,required=bool(
+            app.config['APP_ENV']=='production' or os.environ.get('VERCEL') or os.environ.get('DATABASE_URL')))
 
     def _register_extensions(self, app: Flask) -> None:
         self.csrf.init_app(app)
@@ -97,6 +104,7 @@ class AvenraApplication:
         'api_update_consent',
         'create_alert',
         'update_alert_location',
+        'survivor_vault',
         'create_diary_entry',
         'update_diary_entry_sharing',
         'delete_contact',

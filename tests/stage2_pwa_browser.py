@@ -2,6 +2,8 @@
 Run: python tests/stage2_pwa_browser.py (requires Playwright Chromium).
 """
 from playwright.sync_api import expect
+import sqlite3
+from contextlib import closing
 from stage0_browser import main, wait_for_async
 
 FAST = """(() => {
@@ -41,6 +43,11 @@ def exercise(page, staff_context, base, env):
         assert response.ok, response.text()
         body = response.json()
         return len(body['alerts'])
+
+    def stored(client_id):
+        with closing(sqlite3.connect(env['DATABASE_PATH'])) as conn:
+            conn.row_factory=sqlite3.Row
+            return dict(conn.execute('SELECT * FROM alerts WHERE client_id=?',(client_id,)).fetchone())
 
     before = alert_count()
     context, phone = fresh()
@@ -123,8 +130,9 @@ def exercise(page, staff_context, base, env):
     phone.on('request', lambda req: sent.append(req.post_data_json) if req.method == 'POST' and req.url.endswith('/api/alerts') else None)
     trigger(phone)
     expect(phone.locator('#view-sent')).to_be_visible()
-    assert sent[0]['location_accuracy'] == 35.5
-    assert sent[0]['location_recorded_at'] == '2026-10-23T12:00:00.000Z'
+    assert 'sealed_location' in sent[0] and 'lat' not in sent[0]
+    assert stored(sent[0]['client_id'])['location_accuracy'] == 35.5
+    assert stored(sent[0]['client_id'])['location_recorded_at'] == '2026-10-23T12:00:00Z'
     context.close(); passed.append('consented GPS preserves measured accuracy and fix timestamp')
 
     staff_context.request.post(base + '/api/consents', headers=headers, data={'item':'location_sharing','active':False})
@@ -134,7 +142,8 @@ def exercise(page, staff_context, base, env):
     phone.on('request', lambda req: sent.append(req.post_data_json) if req.method == 'POST' and req.url.endswith('/api/alerts') else None)
     trigger(phone)
     expect(phone.locator('#view-sent')).to_be_visible()
-    assert sent[0]['lat'] is None and sent[0]['location_accuracy'] is None
+    assert 'sealed_location' not in sent[0]
+    assert stored(sent[0]['client_id'])['lat'] is None and stored(sent[0]['client_id'])['location_accuracy'] is None
     context.close(); passed.append('revoked consent avoids GPS collection and still sends alert')
 
     # Exit during delayed location lookup must not submit or dereference a cleared pending object.
@@ -205,7 +214,8 @@ def exercise(page, staff_context, base, env):
     phone.on('request', lambda req: sent.append(req.post_data_json) if req.method == 'POST' and req.url.endswith('/api/alerts') else None)
     trigger(phone)
     expect(phone.locator('#view-sent')).to_be_visible()
-    assert sent[0]['lat'] is None and sent[0]['location_recorded_at'] is None
+    assert 'sealed_location' not in sent[0]
+    assert stored(sent[0]['client_id'])['lat'] is None and stored(sent[0]['client_id'])['location_recorded_at'] is None
     context.close(); passed.append('denied GPS still permits an alert without location metadata')
 
     # Server consent is checked again when an old queued payload is flushed.
@@ -218,7 +228,8 @@ def exercise(page, staff_context, base, env):
     context.set_offline(False)
     phone.evaluate('CWQueue.flushQueue()')
     wait_for_async(phone, 'CWQueue.queueSize().then(n => n === 0)')
-    assert sent and sent[0]['lat'] is None and sent[0]['location_recorded_at'] is None
+    assert sent and 'sealed_location' not in sent[0] and sent[0]['suppress_location'] is True
+    assert stored(sent[0]['client_id'])['lat'] is None and stored(sent[0]['client_id'])['location_recorded_at'] is None
     context.close(); passed.append('revoked consent strips GPS from an older queued alert before transmission')
 
     # Exercise the actual contact form as well as backend API validation.

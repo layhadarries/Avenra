@@ -4,7 +4,7 @@ import sqlite3
 from PIL import Image
 from playwright.sync_api import expect
 from stage0_browser import main, wait_for_async
-from stage2_pwa_browser import FAST
+from stage9_vault_browser import unlock
 
 
 def create_png_bytes():
@@ -26,7 +26,9 @@ def exercise(page, staff, base, env):
             has_touch=True,
             service_workers=workers,
         )
-        context.add_init_script(FAST + script)
+        # Real timeouts: accelerating every five-second timer also aborts the
+        # new passphrase-verification request before its real KDF completes.
+        if script: context.add_init_script(script)
         tab = context.new_page()
         tab.on('pageerror', lambda error: errors.append(str(error)))
         return context, tab
@@ -42,6 +44,7 @@ def exercise(page, staff, base, env):
     # Real offline shell acceptance is separate from network-interception tests.
     offline_context, offline_tab = phone(workers='allow')
     offline_tab.goto(base + '/survivor/diary.html')
+    unlock(offline_tab)
     offline_tab.evaluate('() => CWQueue.ready')
     offline_tab.wait_for_function('navigator.serviceWorker.controller !== null')
     wait_for_async(offline_tab, "caches.match('/survivor/diary.html').then(Boolean)")
@@ -52,8 +55,11 @@ def exercise(page, staff, base, env):
     offline_tab.close()
     offline_tab = offline_context.new_page()
     offline_tab.goto(base + '/survivor/diary.html')
+    unlock(offline_tab)
     expect(offline_tab.locator('#diary-entries-list')).to_contain_text('Fictional airplane mode entry')
     offline_context.set_offline(False)
+    expect(offline_tab.locator('#diary-private')).to_be_hidden()
+    unlock(offline_tab)
     offline_tab.click('#sync-refresh-btn')
     wait_for_async(offline_tab, 'window.CWDiary.getQueuedItems().then(q => q.length === 0)')
     offline_context.close()
@@ -63,6 +69,7 @@ def exercise(page, staff, base, env):
 
     context, tab = phone()
     tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
+    unlock(tab)
     tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
     tab.evaluate('() => CWQueue.ready')
     assert tab.title() == 'Clear Sky'
@@ -127,6 +134,7 @@ def exercise(page, staff, base, env):
     tab = context.new_page()
     tab.on('pageerror', lambda error: errors.append(str(error)))
     tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
+    unlock(tab)
     tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
     tab.evaluate('() => CWQueue.ready')
     expect(tab.locator('#diary-entries-list')).to_contain_text('Café — naïve façade 🌍')
@@ -194,7 +202,7 @@ def exercise(page, staff, base, env):
     alert_tab.on('pageerror', lambda error: errors.append(str(error)))
     alert_tab.goto(base + '/survivor/', wait_until='domcontentloaded')
     alert_tab.locator('#panic-btn').dispatch_event('pointerdown')
-    expect(alert_tab.locator('#view-sent')).to_be_visible()
+    expect(alert_tab.locator('#view-sent')).to_be_visible(timeout=15000)
     alert_tab.close()
 
     # 9. Quick Exit clears unsaved state, revokes blob URLs, and preserves offline queues
@@ -206,6 +214,7 @@ def exercise(page, staff, base, env):
     tab.wait_for_url('**/survivor/cover.html')
 
     tab.goto(base + '/survivor/diary.html', wait_until='domcontentloaded')
+    unlock(tab)
     tab.wait_for_function('Boolean(window.CWDiary && window.CWQueue)')
     tab.evaluate('() => CWQueue.ready')
     surviving_queue = tab.evaluate('window.CWDiary.getQueuedItems()')

@@ -153,4 +153,4 @@ def register_devices(app):
         owner = device_user()
         if owner is None:
             return jsonify(error='device_pairing_required'), 401
-        return jsonify(paired=True, account_id=owner.id)
+        return jsonify(paired=True, account_id=owner.id,sealing_key=current_app.config['OFFLINE_QUEUE_KEYS'].public())

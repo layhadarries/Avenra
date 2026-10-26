@@ -103,9 +103,13 @@ def validate_json_body():
         and request.method == "POST"
         and request.mimetype == "multipart/form-data"
     )
+    is_vault_recovery_multipart = (
+        request.endpoint == 'survivor_vault' and (request.view_args or {}).get('action') == 'recover'
+        and request.mimetype == 'multipart/form-data'
+    )
 
     if (
-        not is_diary_multipart
+        not (is_diary_multipart or is_vault_recovery_multipart)
         and request.content_length
         and not isinstance(request.get_json(silent=True), dict)
     ):

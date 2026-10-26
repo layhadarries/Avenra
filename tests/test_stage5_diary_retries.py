@@ -15,6 +15,9 @@ from avenra.services.diary_service import DiaryService
 class DiaryRetryTests(unittest.TestCase):
     def setUp(self):
         self.repo = Mock()
+        # No retention tombstone exists in this database-free replay fixture.
+        # A generic Mock fetchone() is truthy and would fabricate a deletion.
+        self.repo.conn.execute.return_value.fetchone.return_value = None
         self.audit = Mock()
         self.user = SimpleNamespace(id=10, case_code="TEST-10")
         self.entry = DiaryEntry(

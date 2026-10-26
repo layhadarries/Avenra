@@ -182,3 +182,12 @@ negative tests. Operational response coverage must be stated honestly.
 
 These requirements are not all implemented. Never use passing legacy tests or a
 Stage 0 tag as evidence that real-data release blockers have been resolved.
+# Stage 9 storage verification checkpoint
+
+The [private-storage/recovery design](stage-9-private-storage-and-recovery.md)
+documents passphrase-encrypted diary queues, prompt-free public-key emergency
+queues, RAM-only evidence grants, additive migration, retention tombstones/holds,
+and isolated encrypted SQLite restore. These controls do not protect unlocked
+memory, prove provider encryption/PITR, approve real survivor use, or replace
+independent security/privacy review. Stage 9 release verification is in progress;
+Stages 10–12 must not be described as completed by this checkpoint.

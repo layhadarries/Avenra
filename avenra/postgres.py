@@ -8,7 +8,7 @@ import os
 from avenra.database_ca import root_certificate_path
 import sqlite3
 
-TABLES = frozenset(('staff_mfa','staff_mfa_challenges','staff_recovery_codes','auth_attempts','worker_state','diary_objects','device_pairing_attempts','device_enrollments','survivor_devices','schema_migrations','app_metadata','staff_activation_attempts','case_access','alert_workflow','notification_batches','push_acknowledgements'))
+TABLES = frozenset(('retention_holds','deletion_tombstones','retention_runs','retention_media_jobs','survivor_vaults','evidence_unlocks','staff_mfa','staff_mfa_challenges','staff_recovery_codes','auth_attempts','worker_state','diary_objects','device_pairing_attempts','device_enrollments','survivor_devices','schema_migrations','app_metadata','staff_activation_attempts','case_access','alert_workflow','notification_batches','push_acknowledgements'))
 IDENTITY_TABLES = frozenset(('users','shelters','contacts','alerts','referrals','diary_entries',
     'consents','audit_log','alert_history','notification_outbox','push_invites','push_subscriptions','staff_invitations'))
 NOW = "to_char(CURRENT_TIMESTAMP AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"

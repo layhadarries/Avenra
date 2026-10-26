@@ -352,11 +352,23 @@
         <button type="button" id="quick-exit-btn" class="quick-exit-pill">Quick exit</button>
     </header>
 
-    <main class="diary-wrap">
+    <section id="vault-panel" class="diary-wrap" aria-labelledby="vault-title">
+        <h1 id="vault-title">Diary vault</h1>
+        <p id="vault-status" role="status">Checking private connection…</p>
+        <form id="vault-form">
+            <label class="form-label" for="vault-passphrase">Vault passphrase</label>
+            <input id="vault-passphrase" type="password" autocomplete="off" minlength="15" maxlength="128" required class="form-textarea">
+            <p><label class="form-label" for="vault-confirmation">Confirm new passphrase</label>
+            <input id="vault-confirmation" type="password" autocomplete="off" maxlength="128" class="form-textarea"></p>
+            <button id="vault-submit" type="submit" class="btn btn-primary" disabled>Unlock diary</button>
+        </form>
+        <p>Offline reading/editing needs this passphrase. A lost passphrase cannot recover unsent encrypted records. Emergency alerts do not need it. Original gallery photos and operating-system screenshots are outside this vault.</p>
+    </section>
+    <main id="diary-private" class="diary-wrap" hidden>
         <a href="/survivor/" class="back-link">&larr; Home</a>
         <h1 class="diary-title">Incident Diary</h1>
         <p class="diary-subtitle">
-            Securely record notes and attach evidence photos. Entries are saved on this phone when offline and uploaded to your account vault when connected.
+            Record notes and attach evidence photos. Entries are encrypted on this phone and upload while the vault is unlocked and connected.
         </p>
 
         <section class="card" aria-label="New diary entry">
@@ -424,7 +436,7 @@
         <section aria-label="Entries list">
             <h2 class="section-title">Saved Entries &amp; Vault Receipts</h2>
             <p style="font-size: 0.8rem; color: var(--dusty-blue); margin-bottom: 0.75rem;">
-                Server receipts confirm your entries are stored. Items saved while offline are queued and will upload automatically.
+                Server receipts confirm your entries are stored. Offline entries retry while the vault is unlocked and connected; locking never deletes them.
             </p>
             <div id="diary-entries-list" class="entries-list">
                 <p style="font-size: 0.85rem; color: var(--dusty-blue);">Loading entries…</p>
@@ -444,6 +456,8 @@
     <p id="offline-state" role="status"></p>
     <script src="/survivor/shell.js" defer></script>
     <script src="/survivor/queue.js" defer></script>
+    <script src="/survivor/storage-vault.js" defer></script>
+    <script src="/survivor/vault-ui.js" defer></script>
     <script src="/survivor/diary.js" defer></script>
 <script src="/survivor/identity.js" defer></script>
 </body>

@@ -257,6 +257,8 @@ class DiaryAccessTests(unittest.TestCase):
             )
 
         with patch.object(Config, "DEMO_CASE_CODE", "AV-S5-OTHER"):
+            from vault_fixture import unlock_test_vault
+            unlock_test_vault(self.client,self.survivor_headers)
             self.assertEqual(
                 self.client.get(
                     f"/api/diary/{entry_id}", headers=self.survivor_headers
@@ -316,12 +318,16 @@ class DiaryAccessTests(unittest.TestCase):
         self.assertGreaterEqual(len(page2.json["entries"]), 1)
 
         with patch.object(Config, "DEMO_CASE_CODE", "AV-S5-OTHER"):
+            from vault_fixture import unlock_test_vault
+            unlock_test_vault(self.client,self.survivor_headers)
             cross_cursor = self.client.get(
                 f"/api/diary?limit=2&cursor={cursor}",
                 headers=self.survivor_headers,
             )
             self.assertEqual(cross_cursor.status_code, 400)
             self.assertEqual(cross_cursor.json["error"], "invalid_diary_cursor")
+
+        unlock_test_vault(self.client,self.survivor_headers)
 
         bad_limit = self.client.get(
             "/api/diary?limit=99", headers=self.survivor_headers

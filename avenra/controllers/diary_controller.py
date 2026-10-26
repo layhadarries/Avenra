@@ -7,6 +7,12 @@ from avenra.services.diary_service import DiaryService, LEGACY_MAX_PHOTO_BYTES
 from avenra.security import device_user, current_user, require_role
 from avenra.config import Config
 from avenra.repositories.case_access_repository import CaseAccessRepository
+from avenra.services.vault_service import VaultService, HEADER as VAULT_HEADER
+import db
+
+
+def evidence_unlocked(survivor):
+    return VaultService(db.get_db()).authorized(survivor,request.cookies.get('avenra_device',''),request.headers.get(VAULT_HEADER))
 
 
 def get_uploads_dir() -> str:
@@ -119,6 +125,7 @@ class DiaryController:
     def list_diary_entries(self):
         survivor = device_user()
         if survivor is not None:
+            if not evidence_unlocked(survivor): return jsonify(error='vault_unlock_required'),423
             # Survivor sees only vault receipts (no raw text)
             res, status = self.diary_service.list_for_survivor_paginated(
                 survivor, request.args
@@ -170,6 +177,7 @@ class DiaryController:
         survivor = device_user()
         if survivor is None:
             return jsonify({"error": "bad_device_token"}), 401
+        if not evidence_unlocked(survivor): return jsonify(error='vault_unlock_required'),423
 
         res, status = self.diary_service.get_entry_for_survivor(
             survivor, entry_id
@@ -180,6 +188,7 @@ class DiaryController:
         survivor = device_user()
         if survivor is None:
             return jsonify({"error": "bad_device_token"}), 401
+        if not evidence_unlocked(survivor): return jsonify(error='vault_unlock_required'),423
 
         uploads_dir = get_uploads_dir()
         filename = self.diary_service.get_survivor_photo_path(
@@ -202,6 +211,7 @@ class DiaryController:
         survivor = device_user()
         if survivor is None:
             return jsonify({"error": "bad_device_token"}), 401
+        if not evidence_unlocked(survivor): return jsonify(error='vault_unlock_required'),423
 
         data = request.get_json(silent=True)
         res, status = self.diary_service.set_entry_shared(

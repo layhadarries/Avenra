@@ -422,6 +422,10 @@ class DiaryService:
         ):
             return {"error": "client_id_required"}, 400
 
+        from avenra.repositories.retention_repository import RetentionRepository
+        if RetentionRepository(self.diary_repo.conn).was_deleted(survivor.id,'diary',client_id):
+            return {'error':'entry_removed_by_retention'},410
+
         note = data.get("note", "")
         if not isinstance(note, str):
             return {"error": "note_must_be_string"}, 400
@@ -627,6 +631,10 @@ class DiaryService:
         try:
             # Serialise creation so concurrent retries see one committed entry.
             conn.execute("BEGIN IMMEDIATE")
+
+            if RetentionRepository(conn).was_deleted(survivor.id,'diary',client_id):
+                conn.rollback()
+                return {'error':'entry_removed_by_retention'},410
 
             existing = self.diary_repo.get_by_client_id(client_id)
             if existing is not None:
