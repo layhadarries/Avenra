@@ -1,0 +1,8 @@
+{
+  "name": "avenra-acceptance-tools",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "axe-core": "4.14.0"
+  }
+}

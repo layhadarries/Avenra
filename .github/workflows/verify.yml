@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0 # The isolated rollback fixture needs stage-11-complete.
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.14'
@@ -28,6 +29,8 @@ jobs:
       - run: python -m unittest discover -s tests -p 'test_*.py'
       - run: node --test tests/*.cjs
       - run: python -m playwright install --with-deps chromium
+      - run: npm ci --prefix tools/a11y --ignore-scripts --no-audit --no-fund
+      - run: npm audit --prefix tools/a11y --audit-level=moderate
       - name: Isolated browser regressions (fake providers only)
         run: |
           python tests/pwa_design_browser.py
@@ -38,6 +41,8 @@ jobs:
           python tests/stage2_pwa_browser.py
           python tests/stage5_pwa_browser.py
           python tests/stage9_vault_browser.py
+          python tests/stage12_accessibility_browser.py
+          python tests/stage12_load_browser.py
   security:
     runs-on: ubuntu-latest
     timeout-minutes: 20
