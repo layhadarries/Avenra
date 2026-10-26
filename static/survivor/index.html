@@ -132,8 +132,10 @@
 
     <main class="pwa-main">
         <section id="view-ready" class="view">
+            <p class="page-eyebrow">Your support space</p>
             <h1 class="home-heading">Get support</h1>
             <p class="home-intro">Send an alert to your support team and opted-in contacts.</p>
+            <div class="support-card">
             <button type="button" id="panic-btn" class="panic-btn" aria-label="Send emergency alert">
                 <span class="panic-btn-inner">HELP</span>
             </button>
@@ -143,6 +145,11 @@
             </label>
             <p class="panic-caption">Hold HELP for one second. You’ll have five seconds to undo.</p>
             <p class="queue-note" id="queue-note" hidden></p>
+            </div>
+            <nav class="home-shortcuts" aria-label="Your support tools">
+                <a href="/survivor/diary.html"><span class="shortcut-title">Your diary <span aria-hidden="true">&rarr;</span></span><span>Notes, photos &amp; saved entries</span></a>
+                <a href="/survivor/help.html"><span class="shortcut-title">Find help <span aria-hidden="true">&rarr;</span></span><span>Explore nearby support</span></a>
+            </nav>
         </section>
 
         <section id="view-countdown" class="view" hidden>
@@ -190,7 +197,7 @@
     </main>
 
     <nav class="bottom-nav">
-        <button type="button" data-nav="home" class="active">Home</button>
+        <button type="button" data-nav="home" class="active" aria-current="page">Home</button>
         <button type="button" data-nav="help">Find help</button>
         <button type="button" data-nav="diary">Diary</button>
         <button type="button" data-nav="more">More</button>
@@ -217,8 +224,9 @@
                         location.href = "/survivor/diary.html";
                         return;
                     }
-                    navButtons.forEach(function (b) { b.classList.remove("active"); });
+                    navButtons.forEach(function (b) { b.classList.remove("active"); b.removeAttribute("aria-current"); });
                     btn.classList.add("active");
+                    btn.setAttribute("aria-current", "page");
                     if (tab === "more") {
                         homeViews.forEach(function (id) { document.getElementById(id).hidden = true; });
                         morePanel.hidden = false;

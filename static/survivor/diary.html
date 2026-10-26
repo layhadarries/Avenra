@@ -353,19 +353,21 @@
     </header>
 
     <section id="vault-panel" class="diary-wrap" aria-labelledby="vault-title">
+        <p class="page-eyebrow">Your private space</p>
         <h1 id="vault-title">Diary vault</h1>
         <p id="vault-status" role="status">Checking private connection…</p>
-        <form id="vault-form">
+        <form id="vault-form" class="card vault-card">
             <label class="form-label" for="vault-passphrase">Vault passphrase</label>
             <input id="vault-passphrase" type="password" autocomplete="off" minlength="15" maxlength="128" required class="form-textarea">
             <p><label class="form-label" for="vault-confirmation">Confirm new passphrase</label>
             <input id="vault-confirmation" type="password" autocomplete="off" maxlength="128" class="form-textarea"></p>
             <button id="vault-submit" type="submit" class="btn btn-primary" disabled>Unlock diary</button>
         </form>
-        <p>Offline reading/editing needs this passphrase. A lost passphrase cannot recover unsent encrypted records. Emergency alerts do not need it. Original gallery photos and operating-system screenshots are outside this vault.</p>
+        <p class="vault-guidance">Offline reading/editing needs this passphrase. A lost passphrase cannot recover unsent encrypted records. Emergency alerts do not need it. Original gallery photos and operating-system screenshots are outside this vault.</p>
     </section>
     <main id="diary-private" class="diary-wrap" hidden>
         <a href="/survivor/" class="back-link">&larr; Home</a>
+        <p class="page-eyebrow">Your private space</p>
         <h1 class="diary-title">Incident Diary</h1>
         <p class="diary-subtitle">
             Record notes and attach evidence photos. Entries are encrypted on this phone and upload while the vault is unlocked and connected.

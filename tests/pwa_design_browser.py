@@ -12,6 +12,13 @@ def exercise(page, context, base, env):
     try:
         screen = phone.new_page()
         screen.on('pageerror', lambda error: errors.append(str(error)))
+        screen.goto(base + '/survivor/')
+        expect(screen.locator('.support-card')).to_be_visible()
+        expect(screen.get_by_role('navigation', name='Your support tools')).to_be_visible()
+        expect(screen.locator('.home-shortcuts a')).to_have_count(2)
+        expect(screen.locator('.bottom-nav [aria-current="page"]')).to_have_text('Home')
+        screen.locator('[data-nav="more"]').click()
+        expect(screen.locator('.bottom-nav [aria-current="page"]')).to_have_text('More')
         for theme in ('light', 'dark'):
             screen.emulate_media(color_scheme=theme)
             for width in (320, 390):
