@@ -1,4 +1,4 @@
-# Stage 11 release controls (verification in progress)
+# Stage 11 release controls (engineering complete)
 
 Baseline: `c649c22` / `stage-10-complete`. Local fictional-data engineering only.
 No deployment, provider change, hosted migration, message or invitation is performed.
@@ -89,6 +89,14 @@ now pass. Chromium injection tests prove new inline scripts/handlers are blocked
 trusted navigation, Quick Exit and encrypted diary still work. Test polling uses
 CDP evaluation without disabling CSP, rather than Playwright's CSP-blocked string
 poller. Stage 2 HELP, Stage 5 diary, Stage 9 vault and all 34 Node checks pass.
-Full backend and remaining browser regression/CI evidence are pending; no Stage 11
-completion tag is established by this checkpoint. Existing fixture resource
-warnings, physical-device/independent review gaps and Stage 12 gates remain.
+Final local full regression passed **484 tests in 388.261 seconds**; existing
+fixture resource warnings remain. Staff invitation, weather rendering/taps,
+privacy/consent, explicit shell update, Stage 3 case and Stage 4 audit browser
+regressions also pass under the enforced CSP.
+
+GitHub Actions run [40297589254](https://github.com/layhadarries/Avenra/actions/runs/40297589254)
+on implementation `20c0f91` **completed successfully**, including both regression
+and security jobs (static/credential gates, complete dependency audit, SBOM and
+artifact upload). `stage-11-complete` records this bounded engineering release;
+the completion commit updates evidence only. Branch protection was not changed.
+Physical-device/independent review and Stage 12 gates remain separate requirements.
