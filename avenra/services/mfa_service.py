@@ -6,6 +6,8 @@ import re
 import secrets
 import time
 import pyotp
+import qrcode
+from qrcode.image.svg import SvgPathFillImage
 from cryptography.fernet import Fernet
 from flask import current_app
 from avenra.models.user import User
@@ -54,10 +56,18 @@ class MFAService:
             if user is None:
                 return None
             now = int(time.time())
-            self.repo.prepare(user.id, encryption().encrypt(pyotp.random_base32().encode()).decode(), now)
             row = self.repo.credential(user.id)
-            return {'enrolling': row['confirmed_at'] is None,
-                    'secret': encryption().decrypt(row['encrypted_secret'].encode()).decode() if row['confirmed_at'] is None else None}
+            if row is None or (row['confirmed_at'] is None and row['enrollment_expires_at'] <= now):
+                self.repo.prepare(user.id, encryption().encrypt(pyotp.random_base32().encode()).decode(), now)
+                row = self.repo.credential(user.id)
+            secret = encryption().decrypt(row['encrypted_secret'].encode()).decode() if row['confirmed_at'] is None else None
+        # Generate locally, in memory, after the persistence transaction. SVG
+        # contains geometry only; no secret-bearing URL, cache or remote request.
+        qr_svg = None
+        if secret:
+            uri = pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name='Avenra')
+            qr_svg = qrcode.make(uri, image_factory=SvgPathFillImage, border=4).to_string(encoding='unicode')
+        return {'enrolling': secret is not None, 'secret': secret, 'qr_svg': qr_svg}
 
     def verify(self, nonce, raw_code):
         user = self.pending(nonce)

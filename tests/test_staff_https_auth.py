@@ -10,6 +10,21 @@ class StaffHTTPSAuthTests(unittest.TestCase):
     tearDown=fixtures.avenraStagesTestCase.tearDown
 
     @patch.dict('os.environ', {'PUBLIC_BASE_URL':'https://localhost'})
+    def test_auth_forms_preserve_same_origin_but_reject_null_foreign_and_forged_origins(self):
+        for path in ('/login', '/forgot-password', '/reset-password'):
+            page = self.client.get(path, base_url='https://localhost')
+            self.assertEqual(page.headers['Referrer-Policy'], 'same-origin')
+            token = re.search(r'name="csrf_token"\s+value="([^"]+)"', page.text)[1]
+            for origin in ('null', 'https://foreign.example', None):
+                headers = {'Origin': origin} if origin else {}
+                headers.update({'X-Forwarded-Host': 'foreign.example', 'X-Forwarded-Proto': 'http'})
+                response = self.client.post(path, base_url='https://localhost', data={'csrf_token': token}, headers=headers)
+                self.assertEqual(response.status_code, 403)
+            for csrf in (None, 'invalid'):
+                response = self.client.post(path, base_url='https://localhost', data={} if csrf is None else {'csrf_token': csrf}, headers={'Origin': 'https://localhost'})
+                self.assertEqual(response.status_code, 400)
+
+    @patch.dict('os.environ', {'PUBLIC_BASE_URL':'https://localhost'})
     def test_https_login_and_global_logout_without_referer(self):
         with closing(fixtures.db.connect()) as conn:
             email=conn.execute("SELECT email FROM users WHERE role='responder' ORDER BY id LIMIT 1").fetchone()[0]

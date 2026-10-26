@@ -309,13 +309,112 @@ footer {
   text-align: center;
 }
 
+/* MFA shares the login's unboxed brand, theme and responsive form. */
+.mfa-panel .brand {
+  margin-bottom: 20px;
+}
+
+.mfa-panel .error-banner {
+  margin-top: 16px;
+}
+
+.mfa-qr {
+  width: 232px;
+  max-width: 100%;
+  margin: 0 auto 20px;
+  background: #fff;
+  color: #000;
+  line-height: 0;
+}
+
+.mfa-qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.mfa-setup-key {
+  margin-bottom: 20px;
+}
+
+.mfa-setup-key summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-weight: 600;
+}
+
+.mfa-panel code {
+  overflow-wrap: anywhere;
+}
+
+.mfa-recovery-codes {
+  padding-left: 20px;
+  margin: 0 0 24px;
+}
+
+.mfa-recovery-codes li {
+  padding: 4px 0;
+}
+
+.mfa-continue {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 12px;
+  text-align: center;
+  text-decoration: none;
+}
+
 /* Smaller screens */
 @media (max-width: 420px) {
   .page-header {
-    padding-inline: 20px;
+    padding-inline: 16px;
+    min-height: 60px;
   }
 
   main {
-    padding-top: 12px;
+    padding: 8px 16px 32px;
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+
+  body {
+    overflow-y: auto;
+  }
+
+  .brand {
+    height: 90px;
+    margin-bottom: 20px;
+  }
+
+  .brand img {
+    height: 90px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  .intro {
+    margin: 6px 0 16px;
+  }
+
+  .mfa-qr {
+    width: 200px;
+  }
+
+  .mfa-panel .brand {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-height: 640px) {
+  main {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding-bottom: 32px;
+  }
+  body {
+    overflow-y: auto;
   }
 }

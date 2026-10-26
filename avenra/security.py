@@ -149,8 +149,9 @@ def apply_security_headers(resp):
     resp.headers.setdefault('Content-Security-Policy',csp)
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("Referrer-Policy", "same-origin")
-    if request.path in {"/forgot-password", "/reset-password"}:
-        resp.headers["Referrer-Policy"] = "no-referrer"
+    # Native HTTPS form POSTs under no-referrer carry Origin: null in browsers.
+    # same-origin preserves the exact Origin guard while suppressing cross-site
+    # referrers. Reset tokens live in fragments (then form bodies), never paths.
     resp.headers.setdefault("X-Frame-Options", "DENY")
     resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=()")
     if request.path.startswith((

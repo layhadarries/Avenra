@@ -147,9 +147,9 @@ class AvenraApplication:
             if request.endpoint in self.DEVICE_WRITE_ENDPOINTS:
                 return
             if request.endpoint.startswith('contact_push.') or request.endpoint in {'staff_invitation.accept', 'login', 'logout', 'staff_mfa', 'forgot_password', 'reset_password'}:
-                # These pages deliberately suppress Referer. Keep session-bound
-                # CSRF token validation and require HTTPS browser Origin instead
-                # of disabling CSRF or weakening the site's other form checks.
+                # Validate session-bound CSRF and the exact HTTPS browser Origin.
+                # Native forms must use same-origin referrer policy: no-referrer
+                # turns their Origin into null. Contact fetches suppress Referer.
                 from flask_wtf.csrf import validate_csrf
                 from wtforms.validators import ValidationError
                 try:

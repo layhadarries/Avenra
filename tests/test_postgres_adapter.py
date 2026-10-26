@@ -50,3 +50,16 @@ class PostgresAdapterTests(unittest.TestCase):
             Connection('postgresql://synthetic.invalid/example')
         self.assertEqual(connect.call_args.kwargs['sslmode'],'verify-full')
         self.assertTrue(connect.call_args.kwargs['sslrootcert'])
+
+    def test_error_mapping_retains_only_sqlstate_for_auth_diagnostics(self):
+        import sqlite3
+        import psycopg
+        from unittest.mock import Mock
+        from avenra.postgres import Connection
+        connection = object.__new__(Connection)
+        connection.raw = Mock()
+        connection.raw.execute.side_effect = psycopg.errors.UndefinedColumn('synthetic-sensitive-database-detail')
+        with self.assertRaises(sqlite3.OperationalError) as caught:
+            connection.execute('SELECT missing FROM staff_mfa')
+        self.assertEqual(getattr(caught.exception, 'sqlstate', None), '42703')
+        self.assertNotIn('synthetic-sensitive', str(caught.exception))

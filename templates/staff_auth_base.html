@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}Staff verification{% endblock %} · Avenra</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+  <script src="{{ url_for('static', filename='js/login-theme.js') }}" defer></script>
+</head>
+<body>
+  <header class="page-header">
+    <span>Partner portal</span>
+    <button id="theme-toggle" type="button" hidden>Switch theme</button>
+  </header>
+  <main>
+    <section class="login-panel mfa-panel" aria-labelledby="login-heading">
+      <div class="brand">
+        <img class="logo-light" src="{{ url_for('static', filename='images/avenra-logo.png') }}" alt="Avenra" width="300" height="110">
+        <img class="logo-dark" src="{{ url_for('static', filename='images/avenra-logo-dark.png') }}" alt="Avenra" width="300" height="110">
+      </div>
+      <div class="login-content">
+        <p class="eyebrow">Staff access</p>
+        {% block content %}{% endblock %}
+      </div>
+    </section>
+    <p class="page-note">Authorised staff only. Sign-in activity is recorded.</p>
+  </main>
+  <footer>Avenra · Partner portal</footer>
+</body>
+</html>

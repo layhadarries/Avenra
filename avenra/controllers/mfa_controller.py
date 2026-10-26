@@ -1,8 +1,10 @@
 """Private staff MFA views; services own credential and transaction policy."""
 import sqlite3
+import re
+import uuid
 import click
 from cryptography.fernet import InvalidToken
-from flask import request, render_template, redirect, url_for, session
+from flask import request, render_template, redirect, url_for, session, make_response
 import db
 from avenra.services.mfa_service import MFAService
 from avenra.services.auth_service import AuthService
@@ -32,8 +34,17 @@ def register_mfa(app):
                     return redirect(url_for(destination))
                 error = 'Verification failed. Check your code and try again.' if status != 429 else 'Too many attempts. Please wait 15 minutes.'
             return render_template('mfa.html', error=error, **view), status
-        except (sqlite3.Error, RuntimeError, InvalidToken):
-            return render_template('mfa.html', error='Verification temporarily unavailable.', enrolling=False, secret=None), 503
+        except (sqlite3.Error, RuntimeError, InvalidToken) as error:
+            category = 'secret_unreadable' if isinstance(error, InvalidToken) else 'database_unavailable' if isinstance(error, sqlite3.Error) else 'state_unavailable'
+            sqlstate = getattr(error, 'sqlstate', None)
+            sqlstate = sqlstate if isinstance(sqlstate, str) and re.fullmatch(r'[0-9A-Z]{5}', sqlstate) else 'unknown'
+            # Generate our own identifier; never log supplied headers, exception
+            # text, credentials, account identifiers or submitted form contents.
+            request_id = uuid.uuid4().hex
+            app.logger.warning('Staff MFA unavailable category=%s sqlstate=%s request_id=%s', category, sqlstate, request_id)
+            response = make_response(render_template('mfa.html', error='Verification temporarily unavailable.', enrolling=False, secret=None), 503)
+            response.headers['X-Request-ID'] = request_id
+            return response
 
     @app.cli.command('staff-mfa-reset')
     @click.option('--email', required=True)

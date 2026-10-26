@@ -98,12 +98,16 @@ class Connection:
             if return_id:
                 row=cur.fetchone();last_id=row[0] if row else None
             return Cursor(cur,last_id)
-        except psycopg.IntegrityError:
-            raise sqlite3.IntegrityError('Database constraint violation') from None
+        except psycopg.IntegrityError as error:
+            translated_error = sqlite3.IntegrityError('Database constraint violation')
+            translated_error.sqlstate = error.sqlstate
+            raise translated_error from None
         except psycopg.Error as error:
             import logging
             logging.getLogger(__name__).error('Hosted database operation failed (SQLSTATE %s)',error.sqlstate)
-            raise sqlite3.OperationalError('Hosted database operation failed') from None
+            translated_error = sqlite3.OperationalError('Hosted database operation failed')
+            translated_error.sqlstate = error.sqlstate
+            raise translated_error from None
     def commit(self): self.raw.commit()
     def rollback(self): self.raw.rollback()
     def close(self): self.raw.close()
