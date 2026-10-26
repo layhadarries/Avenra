@@ -26,7 +26,7 @@ class RetentionService:
         if not isinstance(case,str) or not 1<=len(case)<=64: raise ValueError('invalid_case')
         owner=UserRepository(self.conn).get_survivor_by_case(case)
         if owner is None: raise ValueError('case_not_found')
-        if not CaseAccessRepository(self.conn).allows(actor.id,owner.id): raise PermissionError('case_assignment_required')
+        if not CaseAccessRepository(self.conn).assigned(actor.id,owner.id): raise PermissionError('case_assignment_required')
         return owner
 
     @staticmethod

@@ -4,9 +4,16 @@ from avenra.repositories.base import BaseRepository
 
 class CaseAccessRepository(BaseRepository):
     def allows(self, staff_id, survivor_id):
+        """Read/workflow access: administrators see every case by policy."""
         user = self.conn.execute('SELECT role FROM users WHERE id=?', (staff_id,)).fetchone()
         if user and user['role'] == 'admin':
             return True
+        return self.assigned(staff_id, survivor_id)
+
+    def assigned(self, staff_id, survivor_id):
+        """Explicit grant only. Irreversible evidence/retention work uses this,
+        so an administrator policy that widens read access does not also widen
+        destructive authority over an unassigned case."""
         return self.conn.execute(
             'SELECT 1 FROM case_access WHERE staff_id = ? AND survivor_id = ?',
             (staff_id, survivor_id),

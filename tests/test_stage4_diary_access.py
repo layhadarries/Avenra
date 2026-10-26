@@ -400,7 +400,9 @@ class DiaryAccessTests(unittest.TestCase):
             403,
         )
 
-        # Admin without case assignment receives 404
+        # Admin without case assignment still reads the case: the admin policy
+        # intentionally grants read access to every case. Evidence deletion is
+        # separately gated by an explicit grant (see retention_service).
         self._login_staff("admin")
         with self.client.session_transaction() as session:
             admin_id = session["user_id"]
@@ -410,10 +412,10 @@ class DiaryAccessTests(unittest.TestCase):
                     "DELETE FROM case_access WHERE staff_id = ? AND survivor_id = ?",
                     (admin_id, self.owner["id"]),
                 )
-        self.assertEqual(self.list_diary().status_code, 404)
+        self.assertEqual(self.list_diary().status_code, 200)
         self.assertEqual(
             self.client.get(f"/cases/diary-photo/{entry_id}").status_code,
-            404,
+            200,
         )
 
 

@@ -7,8 +7,8 @@ from avenra.repositories.base import BaseRepository
 
 class NotificationOutboxRepository(BaseRepository):
     def enqueue_for_alert(self, alert_id):
-        if self.conn.execute('SELECT id FROM alerts WHERE id=?', (alert_id,)).fetchone() is None:
-            raise ValueError('Alert does not exist.')
+        # The alert_id foreign key enforces existence without a separate SELECT
+        # round trip; hosted round trips dominate alert-creation latency.
         # Preserve legacy disabled-mode fixtures, but enabled production channels
         # are independent and never become an implicit fallback for each other.
         if os.environ.get('AVENRA_SMS_ENABLED') == '1' or os.environ.get('AVENRA_WEBPUSH_ENABLED') == '1':
