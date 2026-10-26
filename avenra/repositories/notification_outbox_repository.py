@@ -70,11 +70,36 @@ class NotificationOutboxRepository(BaseRepository):
     def mark_stale_unknown(self, cutoff):
         if not isinstance(cutoff, datetime) or cutoff.tzinfo is None or cutoff.utcoffset() is None:
             raise ValueError('Cutoff must be a timezone-aware datetime.')
-        cursor = self.conn.execute("""UPDATE notification_outbox SET status='unknown',
-            reason_code='transport_uncertain',completed_at=strftime('%Y-%m-%dT%H:%M:%SZ','now')
-            WHERE status='processing' AND claimed_at IS NOT NULL
-            AND julianday(claimed_at)<julianday(?)""", (cutoff.astimezone(timezone.utc).isoformat(),))
-        return cursor.rowcount
+        # Bound both inspected rows and writes. A durable rotating cursor avoids
+        # starving old/corrupt claims behind a full batch of recent claims. Parse
+        # timestamps here rather than letting malformed TEXT abort a Postgres cast.
+        key='notification_recovery_cursor'
+        stored=self.conn.execute('SELECT value FROM app_metadata WHERE key=?',(key,)).fetchone()
+        try: after=int(stored['value']) if stored else 0
+        except (ValueError,TypeError): after=0
+        if not 0<=after<2**63: after=0
+        query="SELECT id,claim_token,claimed_at FROM notification_outbox WHERE status='processing' AND id>? ORDER BY id LIMIT 100"
+        rows=self.conn.execute(query,(after,)).fetchall()
+        if not rows and after: rows=self.conn.execute(query,(0,)).fetchall()
+        changed=0
+        for row in rows:
+            value=row['claimed_at']
+            try:
+                if not isinstance(value,str) or len(value)>64: raise ValueError()
+                claimed=datetime.fromisoformat(value.replace('Z','+00:00'))
+                if claimed.tzinfo is None or claimed.utcoffset() is None: raise ValueError()
+                stale=claimed.astimezone(timezone.utc)<cutoff.astimezone(timezone.utc)
+            except (ValueError,OverflowError): stale=True
+            if stale:
+                cursor=self.conn.execute("""UPDATE notification_outbox SET status='unknown',
+                    reason_code='transport_uncertain',completed_at=strftime('%Y-%m-%dT%H:%M:%SZ','now')
+                    WHERE id=? AND status='processing' AND
+                    (claim_token=? OR (claim_token IS NULL AND CAST(? AS TEXT) IS NULL))""",
+                    (row['id'],row['claim_token'],row['claim_token']))
+                changed+=cursor.rowcount
+        self.conn.execute('''INSERT INTO app_metadata(key,value) VALUES(?,?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value''',(key,str(rows[-1]['id'] if rows else 0)))
+        return changed
 
     def reserve_alert_budget(self, alert_id):
         """At most five distinct alert-notification batches per survivor/hour.
