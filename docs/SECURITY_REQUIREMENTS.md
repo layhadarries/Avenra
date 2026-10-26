@@ -182,12 +182,16 @@ negative tests. Operational response coverage must be stated honestly.
 
 These requirements are not all implemented. Never use passing legacy tests or a
 Stage 0 tag as evidence that real-data release blockers have been resolved.
-# Stage 9 storage verification checkpoint
+## Stage 9 storage verification completion (2026-10-26)
 
 The [private-storage/recovery design](stage-9-private-storage-and-recovery.md)
 documents passphrase-encrypted diary queues, prompt-free public-key emergency
 queues, RAM-only evidence grants, additive migration, retention tombstones/holds,
 and isolated encrypted SQLite restore. These controls do not protect unlocked
 memory, prove provider encryption/PITR, approve real survivor use, or replace
-independent security/privacy review. Stage 9 release verification is in progress;
-Stages 10–12 must not be described as completed by this checkpoint.
+independent security/privacy review. The implementation at `4e1e2a6` passed
+461 backend tests, 35 focused Stage 9 tests, 34 Node checks, dependency
+consistency and the documented Chromium regressions. See the linked final
+release evidence for failure history and remaining operational gates.
+`stage-9-complete` records local engineering completion only; Stages 10–12
+must not be described as completed by this release.

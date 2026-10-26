@@ -2,7 +2,10 @@
 
 Baseline: `46c791e` (`stage-8-complete`). Engineering work only; not permission
 to onboard survivors, deploy, change providers or run hosted migrations.
-Release status: **verification/review in progress; no Stage 9 completion claim**.
+Release status: **Stage 9 local engineering gates complete** (2026-10-26).
+Verified implementation: `4e1e2a6`; the release adds only completion evidence.
+The `stage-9-complete` tag covers this bounded engineering scope, not hosted
+rollout, provider disaster recovery, independent review or real-data approval.
 
 ## Protection and remaining exposure
 
@@ -129,7 +132,27 @@ revocation/foreign-owner boundaries and isolated restore fidelity.
 
 See `tests/test_stage9_*.py`, `tests/storage-vault.cjs`,
 `tests/stage9_vault_browser.py` and `tests/stage9_alert_queue_browser.py`.
-Final aggregate results and staged secret review must be recorded before a
-completion tag. Chromium mobile/touch emulation and injected lifecycle/GPS are
-not physical Android/iPhone testing. WebKit host libraries, independent security,
+### Final release evidence
+
+| Gate | Result |
+|---|---|
+| Full backend regression | `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'`: **461 tests passed**, 747.584 seconds; existing unclosed-file/database resource warnings remain |
+| Focused Stage 9 backend | **35 tests passed**, including grant ownership/expiry/revocation, retained-key rotation, generation/no-overwrite, tombstones/holds/audit rollback, malformed archive rejection and exact isolated restore fidelity; rerun passed before tagging |
+| JavaScript contracts | `node --test tests/*.cjs`: **34 checks passed**, including maximum-size legacy photo encryption/reopen; rerun passed before tagging |
+| Runtime dependency consistency | `.venv/bin/pip check`: passed; not a vulnerability scan or SBOM |
+| Stage 9 Chromium acceptance | Vault and encrypted-alert browser scripts rerun and passed on the verified implementation; copied cookies cannot read evidence, grants are not persisted, offline reopen/migration failures preserve records, revoked GPS is omitted and minimal capture remains available |
+| Existing browser regressions | Stage 5 diary, weather-tap, Stage 2 HELP, hosted ownership diary/alert queues, Stage 3 case and Stage 4 audit passed during Stage 9 verification |
+| Review and release hygiene | Reviewed crypto/key lifecycle, API guards, additive migrations, retention/restore failure handling and bounded operator tools; staged diff whitespace/credential-pattern checks passed, no private runtime artifacts included; unrelated configuration/package files excluded |
+
+The first aggregate run (459 tests) failed on 14 assertions because a generic
+database-free replay mock fabricated retention tombstones. The fixture now
+explicitly reports no tombstone; the fresh **461-test pass** supersedes that
+failed run, without changing production tombstone checks. Excessive concurrent
+crypto/browser runs also exposed timing failures; affected HELP/vault scripts
+passed separately. No physical-device performance claim follows from those runs.
+
+Chromium `156.0.8078.4` mobile/touch emulation and injected lifecycle/GPS are not
+physical Android/iPhone testing. WebKit host libraries, independent security,
 privacy/safeguarding review and real operational approval remain outstanding.
+Stages 10–12 are not completed by this release. No hosted migration, deployment,
+live provider change or real invitation/notification was performed.

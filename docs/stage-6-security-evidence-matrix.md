@@ -2,24 +2,27 @@
 
 This matrix records implemented controls and automated verification evidence across Stages 5 and 6A. It is engineering verification evidence, not a formal external security certification.
 
-## Stage 9 private-storage follow-up (in progress)
+## Stage 9 private-storage follow-up (2026-10-26)
 
 Baseline `46c791e`; design, operator commands, migration/key custody and limits:
 [Stage 9 private storage and recovery](stage-9-private-storage-and-recovery.md).
 Memory-only `X-Vault-Unlock` replaces reusable evidence cookies. **35 focused
 Python tests**, **34 Node checks**, and `pip check` pass. Chromium vault,
 encrypted-alert, ownership queues, Stage 5 diary, weather-tap, Stage 2 HELP,
-Stage 3 case and Stage 4 audit scripts pass; final full-suite/release verification
-is pending. Running many crypto/browser suites concurrently exposed timing
+Stage 3 case and Stage 4 audit scripts pass. Full backend regression passed
+**461 tests in 747.584 seconds** on implementation `4e1e2a6`. Focused Python,
+Node, dependency consistency and both Stage 9 browser scripts were rerun before
+the completion tag and passed. Running many crypto/browser suites concurrently exposed timing
 failures; affected HELP/vault scripts passed again in isolation. This is not
 evidence of physical-device performance.
 The first aggregate run executed 459 tests with 14 failing assertions because
 the database-free diary replay mock fabricated retention tombstones. Its fixture
 now explicitly reports no tombstone; all 12 replay tests and all 48 Stage 4 tests
-pass. A fresh aggregate run is required and currently pending; the prior run
-must not be reported as a full pass.
-No Stage 9 completion tag, hosted rollout, provider DR claim or real-data approval
-is established by this checkpoint. Existing resource-cleanup warnings remain.
+pass. The fresh 461-test pass supersedes that failed run; the prior run must not
+be reported as a full pass. `stage-9-complete` records the bounded local
+engineering scope described in the release evidence, not hosted rollout,
+provider DR, independent review or real-data approval. Existing resource-cleanup
+warnings remain. Stages 10–12 remain separate, incomplete work.
 
 ## Stage 8 identity follow-up (2026-10-26)
 
