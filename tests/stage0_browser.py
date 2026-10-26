@@ -32,7 +32,13 @@ def complete_staff_mfa(page, env, email='nomsa@avenra.demo'):
     saved = getattr(complete_staff_mfa, 'codes', {})
     key = (env['DATABASE_PATH'], email)
     if enrolling:
-        code = pyotp.TOTP(page.locator('#mfa-secret').inner_text()).now()
+        # The redesigned enrollment page hides the manual key in <details>.
+        # inner_text() is empty until it is disclosed, so follow the visible UI.
+        page.get_by_text('Can’t scan? Enter setup key', exact=True).click()
+        expect(page.locator('#mfa-secret')).to_be_visible()
+        secret = page.locator('#mfa-secret').inner_text().strip()
+        assert secret, 'MFA setup key is empty after opening the disclosure'
+        code = pyotp.TOTP(secret).now()
     else:
         with sqlite3.connect(env['DATABASE_PATH']) as conn:
             row = conn.execute('SELECT m.encrypted_secret,m.last_counter FROM staff_mfa m JOIN users u ON u.id=m.user_id WHERE u.email=?', (email,)).fetchone()
@@ -40,7 +46,11 @@ def complete_staff_mfa(page, env, email='nomsa@avenra.demo'):
         totp = pyotp.TOTP(cipher.decrypt(row[0].encode()).decode())
         code = totp.now() if int(time.time())//30 > row[1] else saved[key].pop()
     page.get_by_label('Verification code', exact=True).fill(code)
-    page.get_by_role('button', name='Verify', exact=True).click()
+    mfa_url = page.url
+    with page.expect_response(lambda response: response.request.method == 'POST' and response.url == mfa_url) as verification:
+        page.get_by_role('button', name='Verify', exact=True).click()
+    expected_status = 200 if enrolling else 302
+    assert verification.value.status == expected_status, f'MFA verification failed: HTTP {verification.value.status}'
     if enrolling:
         page.get_by_role('heading', name='Save your recovery codes safely').wait_for()
         saved[key] = page.locator('[data-recovery-code]').all_text_contents()
