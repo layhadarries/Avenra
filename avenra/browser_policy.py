@@ -40,7 +40,7 @@ def policy():
         "script-src 'self' "+' '.join(sorted(hashes)),
         "script-src-attr 'none'",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: blob:",
+        "img-src 'self' data: blob: https://tile.openstreetmap.org",
         "font-src 'self'",
         "connect-src 'self' https://api.open-meteo.com https://geocoding-api.open-meteo.com https://api.bigdatacloud.net",
         "worker-src 'self'",
