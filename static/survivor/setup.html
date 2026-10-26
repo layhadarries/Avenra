@@ -95,6 +95,20 @@
                 btn.addEventListener("click", function () { remove(c.id); });
                 row.appendChild(info);
                 row.appendChild(btn);
+                var sms = document.createElement("button");
+                sms.type = "button";
+                sms.textContent = c.sms_opt_in ? "Disable emergency SMS" : "Enable emergency SMS";
+                sms.addEventListener("click", function () {
+                    if (!c.sms_opt_in && !window.confirm("Has this trusted contact agreed to receive emergency SMS from you? Only enable with their permission. SMS may be delayed or fail.")) return;
+                    sms.disabled = true;
+                    fetch("/api/contacts/" + c.id + "/sms", {
+                        method: "POST", cache: "no-store",
+                        headers: headers({"Content-Type": "application/json"}),
+                        body: JSON.stringify({enabled: !c.sms_opt_in})
+                    }).then(checked).then(function (body) { render(body.contacts); })
+                      .catch(function () { sms.disabled = false; showError("Could not update SMS permission. Please reconnect and retry."); });
+                });
+                if (c.sms_available) row.appendChild(sms);
                 if (pushAvailable) {
                     var invite = document.createElement("button");
                     invite.type = "button"; invite.textContent = "Invite for notifications";

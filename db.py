@@ -56,6 +56,10 @@ def init_db():
             row = conn.execute("SELECT MAX(version) FROM schema_migrations").fetchone()
             if not row or row[0] != 9:
                 raise RuntimeError("Apply the hosted database migration before starting the app")
+            try:
+                conn.execute('SELECT sms_opt_in FROM contacts LIMIT 0')
+            except sqlite3.Error:
+                raise RuntimeError('Apply sql/010_contact_sms_opt_in.sql before starting this build') from None
             return
         with open(SCHEMA_PATH, encoding="utf-8") as f:
             conn.executescript(f.read())
@@ -79,7 +83,7 @@ def migrate(conn):
         conn.execute('ALTER TABLE users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 1 CHECK(auth_version>=1)')
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (1)')
     # Fixed identifiers/definitions: no request or environment input enters SQL.
-    additions = {'contacts': [('channel', "TEXT NOT NULL DEFAULT 'sms'"), ('chat_id', 'TEXT')],
+    additions = {'contacts': [('sms_opt_in', 'INTEGER NOT NULL DEFAULT 0 CHECK(sms_opt_in IN (0,1))'), ('channel', "TEXT NOT NULL DEFAULT 'sms'"), ('chat_id', 'TEXT')],
                  'shelters': [('updated_at', 'TEXT')], 'alerts': [
             ('notify_status', "TEXT NOT NULL DEFAULT 'pending'"),
             ('notify_detail', 'TEXT'),
@@ -136,3 +140,5 @@ def migrate(conn):
         if statement.strip():
             conn.execute(statement)
     conn.execute('INSERT OR IGNORE INTO schema_migrations(version) VALUES (9)')
+
+    conn.execute("INSERT OR IGNORE INTO app_metadata(key,value) VALUES('contact_sms_opt_in_v1','applied')")

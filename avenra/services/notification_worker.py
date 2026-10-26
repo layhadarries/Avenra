@@ -55,6 +55,8 @@ class NotificationWorker:
             self._finish(job,'cancelled',reason_code='recipient_unavailable'); return True
         if context['channel']!='sms':
             self._finish(job,'cancelled',context['case_code'],reason_code='unsupported_channel'); return True
+        if not context.get('sms_opt_in'):
+            self._finish(job,'cancelled',context['case_code'],reason_code='recipient_unavailable'); return True
         lat,lng=context['lat'],context['lng']
         if not self.consents.is_active(context['user_id'],'location_sharing'): lat=lng=None
         message=sms.build_message(context['case_code'],lat,lng,context['client_ts'])

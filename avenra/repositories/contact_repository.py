@@ -4,7 +4,7 @@ from avenra.repositories.base import BaseRepository
 class ContactRepository(BaseRepository):
     def get_for_user(self,user_id):
         return [dict(r) for r in self.conn.execute(
-            'SELECT id,name,phone FROM contacts WHERE user_id=? ORDER BY id',(user_id,))]
+            'SELECT id,name,phone,sms_opt_in,channel FROM contacts WHERE user_id=? ORDER BY id',(user_id,))]
     def replace_contacts(self,user_id,contacts):
         existing=self.get_for_user(user_id)
         by_phone={row['phone']:row for row in existing}

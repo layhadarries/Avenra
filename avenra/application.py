@@ -35,6 +35,8 @@ class AvenraApplication:
         register_webpush(app)
         from avenra.controllers.staff_invitation_controller import register_staff_invitations
         register_staff_invitations(app)
+        from avenra.controllers.password_recovery_controller import register_password_recovery
+        register_password_recovery(app)
 
         from avenra.controllers.device_controller import register_devices
         register_devices(app)
@@ -113,6 +115,7 @@ class AvenraApplication:
         'update_diary_entry_sharing',
         'delete_contact',
         'save_contacts',
+        'contact_sms_preference',
         'contact_push.invite',
     ))
 
@@ -143,14 +146,14 @@ class AvenraApplication:
                 return
             if request.endpoint in self.DEVICE_WRITE_ENDPOINTS:
                 return
-            if request.endpoint.startswith('contact_push.') or request.endpoint in {'staff_invitation.accept', 'login', 'logout', 'staff_mfa'}:
+            if request.endpoint.startswith('contact_push.') or request.endpoint in {'staff_invitation.accept', 'login', 'logout', 'staff_mfa', 'forgot_password', 'reset_password'}:
                 # These pages deliberately suppress Referer. Keep session-bound
                 # CSRF token validation and require HTTPS browser Origin instead
                 # of disabling CSRF or weakening the site's other form checks.
                 from flask_wtf.csrf import validate_csrf
                 from wtforms.validators import ValidationError
                 try:
-                    validate_csrf(request.form.get('csrf_token') if request.endpoint in {'staff_invitation.accept', 'login', 'logout', 'staff_mfa'} else request.headers.get('X-CSRFToken'))
+                    validate_csrf(request.form.get('csrf_token') if request.endpoint in {'staff_invitation.accept', 'login', 'logout', 'staff_mfa', 'forgot_password', 'reset_password'} else request.headers.get('X-CSRFToken'))
                 except ValidationError:
                     raise CSRFError('Invalid contact form token.') from None
                 if request.is_secure and request.headers.get('Origin') != os.environ.get('PUBLIC_BASE_URL', request.host_url.rstrip('/')).rstrip('/'):
@@ -250,6 +253,8 @@ class AvenraApplication:
         app.add_url_rule("/api/contacts", endpoint="list_contacts", view_func=contacts_ctrl.list_contacts, methods=["GET"])
         app.add_url_rule("/api/contacts", endpoint="save_contacts", view_func=contacts_ctrl.save_contacts, methods=["POST"])
         app.add_url_rule("/api/contacts/<int:contact_id>", endpoint="delete_contact", view_func=contacts_ctrl.delete_contact, methods=["DELETE"])
+
+        app.add_url_rule('/api/contacts/<int:contact_id>/sms', endpoint='contact_sms_preference', view_func=contacts_ctrl.set_sms_preference, methods=['POST'])
 
         # API: Shelters & Referrals
         app.add_url_rule("/api/shelters", endpoint="api_shelters", view_func=shelters_ctrl.api_shelters, methods=["GET"])

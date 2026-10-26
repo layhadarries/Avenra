@@ -9,16 +9,18 @@ class NotificationOutboxRepository(BaseRepository):
     def enqueue_for_alert(self, alert_id):
         if self.conn.execute('SELECT id FROM alerts WHERE id=?', (alert_id,)).fetchone() is None:
             raise ValueError('Alert does not exist.')
-        if os.environ.get('AVENRA_WEBPUSH_ENABLED') == '1':
+        # Preserve legacy disabled-mode fixtures, but enabled production channels
+        # are independent and never become an implicit fallback for each other.
+        if os.environ.get('AVENRA_SMS_ENABLED') == '1' or os.environ.get('AVENRA_WEBPUSH_ENABLED') == '1':
             cursor = self.conn.execute("""INSERT INTO notification_outbox(alert_id,contact_id)
                 SELECT a.id,c.id FROM alerts a JOIN contacts c ON c.user_id=a.user_id
-                WHERE a.id=? AND c.channel='webpush' AND EXISTS(
-                SELECT 1 FROM push_subscriptions s WHERE s.contact_id=c.id AND s.active=1)
-                ON CONFLICT(alert_id,contact_id) DO NOTHING""", (alert_id,))
-            return cursor.rowcount
-        cursor = self.conn.execute("""INSERT INTO notification_outbox(alert_id,contact_id)
-            SELECT a.id,c.id FROM alerts a JOIN contacts c ON c.user_id=a.user_id
-            WHERE a.id=? ON CONFLICT(alert_id,contact_id) DO NOTHING""", (alert_id,))
+                WHERE a.id=? AND ((?='1' AND c.channel='sms' AND c.sms_opt_in=1) OR
+                (?='1' AND c.channel='webpush' AND EXISTS(SELECT 1 FROM push_subscriptions s WHERE s.contact_id=c.id AND s.active=1)))
+                ON CONFLICT(alert_id,contact_id) DO NOTHING""", (alert_id,os.environ.get('AVENRA_SMS_ENABLED','0'),os.environ.get('AVENRA_WEBPUSH_ENABLED','0')))
+        else:
+            cursor = self.conn.execute("""INSERT INTO notification_outbox(alert_id,contact_id)
+                SELECT a.id,c.id FROM alerts a JOIN contacts c ON c.user_id=a.user_id
+                WHERE a.id=? ON CONFLICT(alert_id,contact_id) DO NOTHING""", (alert_id,))
         return cursor.rowcount
 
     def pending(self, limit=50):
@@ -59,7 +61,7 @@ class NotificationOutboxRepository(BaseRepository):
 
     def dispatch_context(self, job_id, claim_token):
         row = self.conn.execute("""SELECT a.user_id,a.case_code,a.lat,a.lng,a.client_ts,
-            c.name,c.phone,c.channel FROM notification_outbox n
+            c.name,c.phone,c.channel,c.sms_opt_in FROM notification_outbox n
             JOIN alerts a ON a.id=n.alert_id
             JOIN users u ON u.id=a.user_id AND u.role='survivor'
             JOIN contacts c ON c.id=n.contact_id AND c.user_id=a.user_id

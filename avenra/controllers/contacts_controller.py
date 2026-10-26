@@ -15,7 +15,7 @@ class ContactsController:
         if survivor is None:return jsonify({'error':'bad_device_token'}),401
         rows=self.contact_repo.get_for_user(survivor.id)
         return jsonify({'contacts':[{'id':r['id'],'name':r['name'],
-            'phone_masked':'••••'+r['phone'][-4:]} for r in rows]})
+            'sms_available':r['channel']=='sms', 'sms_opt_in':bool(r['sms_opt_in']), 'phone_masked':'••••'+r['phone'][-4:]} for r in rows]})
     def save_contacts(self):
         survivor=device_user()
         if survivor is None:return jsonify({'error':'bad_device_token'}),401
@@ -72,6 +72,22 @@ class ContactsController:
         except sqlite3.Error:
             return jsonify({'error':'contact_storage_unavailable'}),503
         return self.list_contacts(),201
+
+    def set_sms_preference(self,contact_id):
+        survivor=device_user()
+        if survivor is None:return jsonify(error='bad_device_token'),401
+        data=request.get_json(silent=True)
+        if not isinstance(data,dict) or set(data)!={'enabled'} or type(data['enabled']) is not bool:
+            return jsonify(error='boolean_enabled_required'),400
+        conn=self.contact_repo.conn
+        with conn:
+            conn.execute('BEGIN IMMEDIATE')
+            changed=conn.execute("UPDATE contacts SET sms_opt_in=? WHERE id=? AND user_id=? AND channel='sms'",(int(data['enabled']),contact_id,survivor.id))
+            if changed.rowcount!=1:return jsonify(error='not_found'),404
+            # Consent changes never release historical pending messages.
+            conn.execute("UPDATE notification_outbox SET status='cancelled',reason_code='recipient_unavailable' WHERE contact_id=? AND status='pending'",(contact_id,))
+            self.audit_repo.log(f'survivor {survivor.case_code}','contact_sms_preference',survivor.case_code,f"contact {contact_id}; enabled={data['enabled']}",commit=False)
+        return self.list_contacts()
 
     def delete_contact(self,contact_id):
         survivor=device_user()

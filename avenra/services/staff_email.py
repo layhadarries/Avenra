@@ -25,16 +25,13 @@ def send_staff_email(recipient, subject, body):
         "",
     )
     html_body = (
-        "<html><body style=\"font-family:Arial,sans-serif;color:#352b37\">"
-        "<div style=\"max-width:560px;margin:24px auto;padding:28px\">"
-        "<img src=\"cid:avenra-logo\" alt=\"Avenra\" width=\"190\">"
-        "<h1>Welcome to Avenra</h1>"
-        "<p>Your organisation has invited you to its staff workspace.</p>"
-        "<p>Create your password and activate your account using this link:</p>"
-        + (f"<p><a href=\"{escape(link, quote=True)}\">Set up your account</a></p>" if link else "")
-        + "<p>This invitation expires in 24 hours and works once. "
-        "If you were not expecting it, contact your organisation.</p>"
-        "</div></body></html>"
+        '<html><body style="font-family:Arial,sans-serif;color:#352b37">'
+        '<div style="max-width:560px;margin:24px auto;padding:28px">'
+        '<img src="cid:avenra-logo" alt="Avenra" width="190">'
+        + '<h1>' + escape(subject) + '</h1>'
+        + '<p>' + escape(body).replace('\n', '<br>') + '</p>'
+        + (f'<p><a href="{escape(link, quote=True)}">Continue securely</a></p>' if link else '')
+        + '</div></body></html>'
     )
     message.add_alternative(html_body, subtype="html")
 

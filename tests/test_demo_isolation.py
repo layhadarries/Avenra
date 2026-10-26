@@ -71,7 +71,7 @@ class DemoIsolationTests(unittest.TestCase):
                     conn.execute("INSERT INTO users(id,name,role,email,case_code,is_active) VALUES(1,'Fictional operational survivor','survivor','operational@example.invalid','TEST-OP-1',1)")
                     conn.execute("INSERT INTO users(id,name,role,email,is_active) VALUES(2,'Fictional operational staff','responder','staff@example.invalid',1)")
                     conn.execute('INSERT INTO case_access(staff_id,survivor_id) VALUES(2,1)')
-                    conn.execute("INSERT INTO contacts(id,user_id,name,phone,channel) VALUES(1,1,'Fictional contact','+27000000001','sms')")
+                    conn.execute("INSERT INTO contacts(id,user_id,name,phone,channel,sms_opt_in) VALUES(1,1,'Fictional contact','+27000000001','sms',1)")
                     conn.execute("INSERT INTO alerts(id,user_id,case_code,client_id) VALUES(1,1,'TEST-OP-1','isolated-operational-alert')")
                     conn.execute('INSERT INTO notification_outbox(alert_id,contact_id) VALUES(1,1)')
                 sender = Mock(return_value={'outcome':'accepted'})

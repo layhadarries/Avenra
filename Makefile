@@ -14,3 +14,13 @@ run:
 
 staff-setup:
 	$(VENV_PYTHON) -m flask --app app staff-setup
+
+.PHONY: mail-setup sms-setup
+mail-setup:
+	$(VENV_PYTHON) tools/configure_staff_mail.py
+sms-setup:
+	$(VENV_PYTHON) tools/configure_sms.py
+
+.PHONY: release-check
+release-check:
+	$(VENV_PYTHON) tools/verify_final_release.py --browsers

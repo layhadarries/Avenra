@@ -24,6 +24,9 @@ class NotificationWorkerTests(unittest.TestCase):
         self.alert_id = response.get_json()["id"]
 
         self.conn = test_avenra.db.connect()
+        # Explicit permission in these synthetic provider-dispatch fixtures.
+        self.conn.execute("UPDATE contacts SET sms_opt_in=1")
+        self.conn.commit()
 
         # Keep one job in this temporary fixture for deterministic tests.
         row = self.conn.execute(

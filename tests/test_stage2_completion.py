@@ -68,7 +68,13 @@ class SenderTests(unittest.TestCase):
         self.assertEqual(result['outcome'],'unknown')
 
 class Stage2APITests(unittest.TestCase):
-    setUp=test_avenra.avenraStagesTestCase.setUp
+    def setUp(self):
+        test_avenra.avenraStagesTestCase.setUp(self)
+        conn=test_avenra.db.connect()
+        try:
+            conn.execute('UPDATE contacts SET sms_opt_in=1')
+            conn.commit()
+        finally:conn.close()
     tearDown=test_avenra.avenraStagesTestCase.tearDown
     _login_staff=test_avenra.avenraStagesTestCase._login_staff
     def alert(self,key,**extra):

@@ -12,6 +12,7 @@ from types import SimpleNamespace
 with db.connect() as conn:
     if conn.execute('SELECT MAX(version) FROM schema_migrations').fetchone()[0]!=9:
         raise SystemExit('Hosted schema upgrade required; no changes were made.')
+    conn.execute('SELECT sms_opt_in FROM contacts LIMIT 0')
     user=UserRepository(conn).get_by_email('nonexistent-check@example.invalid')
     if user is not None:
         raise SystemExit('Reserved fictional probe identifier is not available; no changes were made.')
