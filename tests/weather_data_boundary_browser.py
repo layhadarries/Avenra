@@ -32,7 +32,9 @@ def exercise(page, staff, base, env):
         p.goto(base+'/survivor/diary.html'); unlock(p)
         p.locator('#diary-note').fill('Fictional weather separation note')
         p.locator('#diary-save-btn').click()
-        expect(p.locator('#diary-entries-list')).to_contain_text('Fictional weather separation note')
+        wait_for_async(p, "async()=> (await CWDiary.getQueuedItems()).length === 0")
+        p.locator("#diary-entries-list").get_by_role("button", name="View entry", exact=True).first.click()
+        expect(p.locator("#detail-note")).to_contain_text("Fictional weather separation note")
         wait_for_async(p, 'async()=> (await CWDiary.getQueuedItems()).length === 0')
         with sqlite3.connect(env['DATABASE_PATH']) as conn:
             alert = conn.execute('SELECT lat,lng,location_accuracy,location_recorded_at FROM alerts ORDER BY id DESC LIMIT 1').fetchone()

@@ -7,6 +7,10 @@ import tempfile
 
 ROOT=Path(__file__).resolve().parents[1]
 BROWSERS=(
+    'weather_data_boundary_browser.py',
+    'stage11_csp_browser.py',
+    'stage12_accessibility_browser.py',
+    'stage12_load_browser.py',
     'staff_invitation_browser.py','password_recovery_browser.py',
     'hosted_pwa_pairing_browser.py','hosted_alert_queue_browser.py',
     'hosted_diary_queue_browser.py','stage2_pwa_browser.py',
