@@ -21,11 +21,12 @@ one-shot emergency GPS requires a separate setup opt-in and active sharing conse
 it never uses a selected weather place. Late fixes are best-effort authenticated
 updates, not new alerts or repeat notifications. See
 [release boundaries](docs/stage-6-release.md#weather-tap-location-follow-up-local-verification-no-deployment)
-for limits and local test evidence; this follow-up has not been deployed.
+for design limits and historical test evidence. The current source has since been deployed; this does not establish universal phone compatibility.
 
 <details>
   <summary>Table of contents</summary>
   <ol>
+    <li><a href="#release-status">Release status</a></li>
     <li><a href="#demo">Demo</a></li>
     <li><a href="#what-works-in-the-hosted-demo">What works</a></li>
     <li><a href="#technology-stack">Technology stack</a></li>
@@ -36,6 +37,26 @@ for limits and local test evidence; this follow-up has not been deployed.
     <li><a href="#further-reading">Further reading</a></li>
   </ol>
 </details>
+
+## Release status
+
+The current application source is deployed at the public demo URLs below.
+Live checks confirmed:
+
+- Sign-in, forgot-password and reset-password pages respond successfully with
+  private, no-store caching.
+- Signed-out requests cannot read diary or personal access-history APIs.
+- The authenticated worker dry run processes no jobs.
+- The release commit reported by the deployed worker matches the verified checkout.
+
+These checks do not prove actual emergency response, notification receipt,
+universal Android support or readiness for real survivor information.
+The latest verification scope and remaining limitations are recorded in
+[authentication and SMS verification](docs/final-auth-sms-verification.md).
+
+**Twilio status:** console test SMS received; Avenra custom alert SMS blocked
+by the trial restriction. Dashboard and PWA demonstration can proceed without
+claiming application SMS delivery.
 
 ## Demo
 
@@ -60,7 +81,8 @@ The QR opens the public app and does not enrol or authorise a device. Pairing re
 
 ### Staff dashboard
 
-- Email invitations with one-use password setup, normal sign-in and global sign-out.
+- Branded email invitations with one-use password setup, authenticator MFA and global sign-out.
+- Generic sign-in errors and rate-limited, expiring email password-reset links.
 - Roles for administrators, responders and shelter staff.
 - Explicit case assignments; an administrator role alone does not grant access to survivor cases.
 - Alert triage, acknowledgement and consent-aware location display.
@@ -73,7 +95,30 @@ Service listings do not guarantee availability or placement. Staff and survivors
 
 ### Hosted runtime
 
-The dashboard is deployed on Vercel and uses Supabase PostgreSQL with verified TLS. Hosted diary photos are kept in private database storage; delivery uses a bounded worker endpoint invoked by Supabase Cron and Vault-managed credentials. The original hosted worker processes opted-in Web Push jobs. This source update adds separately enabled, permission-gated Twilio SMS; configure and verify it before claiming hosted SMS works. Neither channel falls back to the other. The hosted scheduler heartbeat and phone acceptance checks have been confirmed for the demo.
+Avenra is deployed on Vercel with Supabase PostgreSQL over verified TLS.
+Hosted diary photos remain in private database storage. An authenticated,
+bounded worker is invoked by the existing Supabase Cron schedule, with its
+credential stored in Vault.
+
+The deployed source includes staff authenticator MFA, email password recovery,
+encrypted offline queue support and separately enabled Twilio SMS. Accounts,
+case assignments, evidence and existing application keys are preserved during
+normal additive upgrades.
+
+Web Push and SMS are independent channels, not automatic fallbacks. Each
+contact has one active notification channel under the current outbox model.
+
+**SMS demonstration limitation:** Twilio console onboarding successfully sent
+a test SMS, but Avenra custom-message requests were rejected by the current
+trial account with error **572006**. That trial permits predefined templates
+rather than arbitrary alert text. The integration is present, but successful
+delivery of an Avenra alert SMS has **not** been demonstrated. An appropriate
+upgraded Twilio account and permitted sender must be configured and tested
+before claiming custom SMS delivery works.
+
+See [Twilio error 572006](https://www.twilio.com/docs/api/errors/572006).
+Do not replace an emergency alert with an unrelated trial template or describe
+a rejected message as delivered.
 
 ## Technology stack
 
@@ -92,10 +137,17 @@ The dashboard is deployed on Vercel and uses Supabase PostgreSQL with verified T
 
 ## Developer setup
 
-Local Stage 8 code now requires staff TOTP verification after password sign-in or
-invitation activation. Hosted rollout is **not performed**: it first requires the
-additive MFA migration and a separately provisioned encryption key. See
-[staff identity and recovery operations](docs/staff-email-invitations.md#mandatory-staff-mfa-and-recovery-stage-8).
+Staff sign-in requires a password followed by authenticator-app TOTP.
+New invitations lead to password creation and MFA enrollment. Password recovery
+uses an expiring email link and preserves MFA; email possession alone cannot
+remove the second factor.
+
+The current hosted deployment has the required MFA and offline queue keys
+provisioned. New installations must provision their own persistent keys using
+the linked operations documentation. Never reuse demo keys or regenerate
+working keys as a routine deployment step.
+
+See [staff identity and recovery operations](docs/staff-email-invitations.md#mandatory-staff-mfa-and-recovery-stage-8).
 
 Requirements: Python, Node.js for service-worker checks, and Fish shell for the commands below. Install the app dependencies and start the local server:
 
@@ -154,7 +206,7 @@ The hosted demo is not the production-readiness finish line. Before using real s
 - Independent security review and a scoped penetration test, followed by remediation and retesting.
 - A safeguarding and incident-response plan with named, trained people responsible for monitoring and follow-up.
 - Privacy impact assessment, lawful basis and consent language review, retention/deletion policy, data-subject request process and breach-response workflow.
-- Multi-factor authentication for staff, account recovery controls and least-privilege access review.
+- Ongoing staff MFA and recovery exercises, access reviews and independent assessment of the implemented identity controls.
 - Production-grade secrets/key lifecycle, access monitoring and audit-log retention review.
 - Provider-level backups plus scheduled restore drills, disaster-recovery objectives and recovery ownership.
 - Notification delivery, retry, rate-limit and escalation policies that clearly distinguish queued, provider-accepted, delivered and acknowledged states.
@@ -247,9 +299,9 @@ alone does not remove MFA. Never put reset/invitation URLs in screenshots or log
 
 1. Create a Twilio account and follow its SMS onboarding at
    <https://www.twilio.com/docs/usage/trials/try-out-sms>. Obtain the Account SID,
-   Auth Token and an SMS-capable Twilio sender number. Trial restrictions vary;
-   verify the intended recipients and check account-specific restrictions before
-   testing. Upgrade only if you choose to pay for the needed capability.
+   Auth Token and an SMS-capable Twilio sender number. The current trial blocks Avenra custom message bodies with error 572006;
+   verify account permissions, recipient eligibility and sender requirements
+   before expecting application SMS delivery. Upgrade only if you choose to pay for the needed capability.
 2. Allow **South Africa only** under Messaging Geographic Permissions for this
    deployment: <https://www.twilio.com/docs/messaging/guides/sms-geo-permissions>.
    Review sender registration requirements and set billing/usage alerts. This
@@ -295,8 +347,8 @@ to pending to test the integration: that can resend historic alerts.
 ### Hosted upgrade (preserve existing keys and records)
 
 Back up first using the existing hosted runbook. Apply the additive
-`sql/010_contact_sms_opt_in.sql` to the **private avenra schema** after migrations
-1–9, before deploying this source. It adds an opt-in flag without opting anyone in.
+`sql/010_contact_sms_opt_in.sql` to the **private avenra schema** after the existing staff MFA, survivor vault and retention migrations,
+before deploying this source. It adds an opt-in flag without opting anyone in.
 Do not reset the database. Hosted startup requires the new column. The major schema version remains 9;
 a capability marker records this additive upgrade, preserving the previous source's
 version check for rollback. Leave the new column and marker in place on rollback.
@@ -324,6 +376,6 @@ supply those results. See the included verification report for checks actually r
 
 Run `make release-check` after installing `requirements-dev.txt` and
 `requirements-security.txt` and Chromium. The runner strips provider credentials
-from its subprocesses, runs all Python and Node tests, security gates and twelve
+from its subprocesses, runs all Python and Node tests, security gates and the configured
 local browser journeys, and stops on a failed or unavailable check. It does not
 deploy, apply hosted migrations, or prove actual provider delivery.
