@@ -4,6 +4,9 @@ from avenra.repositories.base import BaseRepository
 
 class CaseAccessRepository(BaseRepository):
     def allows(self, staff_id, survivor_id):
+        user = self.conn.execute('SELECT role FROM users WHERE id=?', (staff_id,)).fetchone()
+        if user and user['role'] == 'admin':
+            return True
         return self.conn.execute(
             'SELECT 1 FROM case_access WHERE staff_id = ? AND survivor_id = ?',
             (staff_id, survivor_id),

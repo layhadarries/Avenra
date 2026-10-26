@@ -5,8 +5,13 @@ from avenra.models.identifiers import MAX_PAGE
 
 class PortalRepository(BaseRepository):
     def alert_page(self, staff_id, filters):
-        clauses = ['EXISTS (SELECT 1 FROM case_access c WHERE c.staff_id=? AND c.survivor_id=a.user_id)']
-        params = [staff_id]
+        user = self.conn.execute('SELECT role FROM users WHERE id=?', (staff_id,)).fetchone()
+        if user and user['role'] == 'admin':
+            clauses = ['1=1']
+            params = []
+        else:
+            clauses = ['EXISTS (SELECT 1 FROM case_access c WHERE c.staff_id=? AND c.survivor_id=a.user_id)']
+            params = [staff_id]
         for key, expression in [('status', 'a.status=?'), ('assignee', 'w.assigned_to=?'),
                                 ('since', 'a.created_at>=?'), ('until', 'a.created_at<?'),
                                 ('snapshot', 'a.id<=?')]:
@@ -29,6 +34,14 @@ class PortalRepository(BaseRepository):
         return rows, total
 
     def cases(self, staff_id):
+        user = self.conn.execute('SELECT role FROM users WHERE id=?', (staff_id,)).fetchone()
+        if user and user['role'] == 'admin':
+            return self.conn.execute(
+                '''SELECT u.case_code, COUNT(a.id) AS alert_count, MAX(a.created_at) AS last_alert
+                   FROM users u
+                   LEFT JOIN alerts a ON a.user_id=u.id
+                   WHERE u.role='survivor'
+                   GROUP BY u.id ORDER BY last_alert DESC, u.case_code''').fetchall()
         return self.conn.execute(
             '''SELECT u.case_code, COUNT(a.id) AS alert_count, MAX(a.created_at) AS last_alert
                FROM users u JOIN case_access c ON c.survivor_id=u.id
@@ -75,12 +88,16 @@ class PortalRepository(BaseRepository):
         if page > MAX_PAGE:
             raise ValueError('Invalid page')
         limit = min(100, max(1, int(args.get('limit', 50))))
-        query = ''' FROM audit_log e WHERE (EXISTS (
-                   SELECT 1 FROM users s JOIN case_access c ON c.survivor_id=s.id
-                   WHERE s.case_code=e.case_code AND c.staff_id=?)'''
-        params = [user.id]
-        query += " OR (e.case_code IS NULL AND e.actor=?))"
-        params.append(f'user:{user.id}')
+        if user.role == 'admin':
+            query = ''' FROM audit_log e WHERE 1=1'''
+            params = []
+        else:
+            query = ''' FROM audit_log e WHERE (EXISTS (
+                       SELECT 1 FROM users s JOIN case_access c ON c.survivor_id=s.id
+                       WHERE s.case_code=e.case_code AND c.staff_id=?)'''
+            params = [user.id]
+            query += " OR (e.case_code IS NULL AND e.actor=?))"
+            params.append(f'user:{user.id}')
         case_code = args.get("case_code", "").strip().upper()
         if len(case_code) > 80:
             raise ValueError("Invalid case filter")
@@ -107,17 +124,26 @@ class PortalRepository(BaseRepository):
     def access_signature(self, user):
         """Change marker only, never a client-side authorization credential."""
         import hashlib
-        rows = self.conn.execute(
-            '''SELECT c.survivor_id, co.id, co.item, co.granted_at, co.revoked_at
-               FROM case_access c LEFT JOIN consents co ON co.user_id=c.survivor_id
-               WHERE c.staff_id=? ORDER BY c.survivor_id,co.id''', (user.id,)).fetchall()
-        diary_rows = []
-        if user.role in ('responder', 'admin'):
+        if user.role == 'admin':
+            rows = self.conn.execute(
+                '''SELECT u.id AS survivor_id, co.id, co.item, co.granted_at, co.revoked_at
+                   FROM users u LEFT JOIN consents co ON co.user_id=u.id
+                   WHERE u.role='survivor' ORDER BY u.id,co.id''').fetchall()
             diary_rows = self.conn.execute(
-                '''SELECT d.id, d.shared FROM case_access c
-                   JOIN diary_entries d ON d.user_id=c.survivor_id
-                   WHERE c.staff_id=? AND d.shared=1 ORDER BY d.id''',
-                (user.id,)).fetchall()
+                '''SELECT d.id, d.shared FROM diary_entries d
+                   WHERE d.shared=1 ORDER BY d.id''').fetchall()
+        else:
+            rows = self.conn.execute(
+                '''SELECT c.survivor_id, co.id, co.item, co.granted_at, co.revoked_at
+                   FROM case_access c LEFT JOIN consents co ON co.user_id=c.survivor_id
+                   WHERE c.staff_id=? ORDER BY c.survivor_id,co.id''', (user.id,)).fetchall()
+            diary_rows = []
+            if user.role in ('responder',):
+                diary_rows = self.conn.execute(
+                    '''SELECT d.id, d.shared FROM case_access c
+                       JOIN diary_entries d ON d.user_id=c.survivor_id
+                       WHERE c.staff_id=? AND d.shared=1 ORDER BY d.id''',
+                    (user.id,)).fetchall()
         if user.role == 'shelter':
             rows = self.conn.execute(
                 '''SELECT co.id, co.revoked_at FROM referrals r JOIN alerts a ON a.id=r.alert_id
