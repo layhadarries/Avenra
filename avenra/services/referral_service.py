@@ -55,43 +55,52 @@ class ReferralService:
     ) -> Tuple[Dict[str, Any], int]:
         if not valid_identifier(alert_id) or not valid_identifier(shelter_id):
             return {'error': 'alert_id_and_shelter_id_required'}, 400
-        self.referral_repo.conn.execute('BEGIN IMMEDIATE')
-        alert = self.alert_repo.get_by_id(alert_id)
-        shelter = self.shelter_repo.get_by_id(shelter_id)
-        if alert is None or shelter is None:
-            return {"error": "not_found"}, 404
+        conn = self.referral_repo.conn
+        committed = False
+        try:
+            conn.execute('BEGIN IMMEDIATE')
+            alert = self.alert_repo.get_by_id(alert_id)
+            shelter = self.shelter_repo.get_by_id(shelter_id)
+            if alert is None or shelter is None:
+                return {"error": "not_found"}, 404
 
-        if not CaseAccessRepository(self.referral_repo.conn).allows(user.id, alert.user_id):
-            return {"error": "not_found"}, 404
-        if not self.consent_repo.is_active(alert.user_id, "shelter_referral_sharing"):
-            return {"error": "referral_consent_required"}, 403
-        if alert.status == 'resolved':
-            return {"error": "alert_resolved"}, 409
-        existing = self.referral_repo.conn.execute(
-            "SELECT id FROM referrals WHERE alert_id=? AND status IN ('sent','accepted','placed')", (alert_id,)).fetchone()
-        if existing:
-            referral = self.referral_repo.get_by_id(existing['id'])
-            if referral.shelter_id == shelter_id:
-                return {"referral": referral.serialize(), "already": True}, 200
-            return {"error": "active_referral"}, 409
+            if not CaseAccessRepository(conn).allows(user.id, alert.user_id):
+                return {"error": "not_found"}, 404
+            if not self.consent_repo.is_active(alert.user_id, "shelter_referral_sharing"):
+                return {"error": "referral_consent_required"}, 403
+            if alert.status == 'resolved':
+                return {"error": "alert_resolved"}, 409
+            existing = conn.execute(
+                "SELECT id FROM referrals WHERE alert_id=? AND status IN ('sent','accepted','placed')", (alert_id,)).fetchone()
+            if existing:
+                referral = self.referral_repo.get_by_id(existing['id'])
+                if referral.shelter_id == shelter_id:
+                    return {"referral": referral.serialize(), "already": True}, 200
+                return {"error": "active_referral"}, 409
 
-        now = utc_now()
-        referral = self.referral_repo.create(alert_id, shelter_id)
+            now = utc_now()
+            referral = self.referral_repo.create(alert_id, shelter_id)
 
-        if alert.status in ("new", "acknowledged"):
-            self.alert_repo.set_in_progress(alert_id, user.name, now)
+            if alert.status in ("new", "acknowledged"):
+                self.alert_repo.set_in_progress(alert_id, user.name, now)
 
-        portal = PortalRepository(self.referral_repo.conn)
-        state = portal.workflow(alert_id)
-        portal.update_workflow(alert_id, state['assigned_to'] or user.id, state['escalated_at'])
-        portal.record(alert_id, user.id, 'referral_sent', f'Referral #{referral.id}')
-        self.audit_repo.log(
-            f'user:{user.id}',
-            "referral_sent",
-            alert.case_code,
-            f"referral {referral.id} -> {shelter.name} (alert {alert_id})",
-        )
-        return {"referral": referral.serialize()}, 201
+            portal = PortalRepository(conn)
+            state = portal.workflow(alert_id)
+            portal.update_workflow(alert_id, state['assigned_to'] or user.id, state['escalated_at'])
+            portal.record(alert_id, user.id, 'referral_sent', f'Referral #{referral.id}')
+            self.audit_repo.log(
+                f'user:{user.id}',
+                "referral_sent",
+                alert.case_code,
+                f"referral {referral.id} -> {shelter.name} (alert {alert_id})",
+                commit=False,
+            )
+            conn.commit()
+            committed = True
+            return {"referral": referral.serialize()}, 201
+        finally:
+            if not committed:
+                conn.rollback()
 
     def update_status(
         self,
@@ -104,52 +113,60 @@ class ReferralService:
         if new_status not in ("accepted", "declined", "placed"):
             return {"error": "invalid_status"}, 400
 
-        self.referral_repo.conn.execute("BEGIN IMMEDIATE")
-        existing = self.referral_repo.get_by_id(ref_id)
-        if existing is None:
-            return {"error": "not_found"}, 404
+        conn = self.referral_repo.conn
+        committed = False
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            existing = self.referral_repo.get_by_id(ref_id)
+            if existing is None:
+                return {"error": "not_found"}, 404
 
-        if user.role == "shelter" and user.shelter_id != existing.shelter_id:
-            return {"error": "forbidden"}, 403
+            if user.role == "shelter" and user.shelter_id != existing.shelter_id:
+                return {"error": "forbidden"}, 403
 
-        alert = self.alert_repo.get_by_id(existing.alert_id)
-        if user.role != 'shelter' and not CaseAccessRepository(self.referral_repo.conn).allows(user.id, alert.user_id):
-            return {"error": "not_found"}, 404
-        if not self.consent_repo.is_active(alert.user_id, 'shelter_referral_sharing'):
-            return {"error": "referral_consent_required"}, 403
-        decline_clean = None
-        if new_status == "declined":
-            if not isinstance(decline_reason, str):
-                return {"error": "invalid_decline_reason"}, 400
+            alert = self.alert_repo.get_by_id(existing.alert_id)
+            if user.role != 'shelter' and not CaseAccessRepository(conn).allows(user.id, alert.user_id):
+                return {"error": "not_found"}, 404
+            if not self.consent_repo.is_active(alert.user_id, 'shelter_referral_sharing'):
+                return {"error": "referral_consent_required"}, 403
+            decline_clean = None
+            if new_status == "declined":
+                if not isinstance(decline_reason, str):
+                    return {"error": "invalid_decline_reason"}, 400
 
-            decline_clean = decline_reason.strip()
-            if not 1 <= len(decline_clean) <= 200:
-                return {"error": "invalid_decline_reason"}, 400
-        if new_status == existing.status:
-            return {"referral": existing.serialize(), "already": True}, 200
-        if alert.status == 'resolved':
-            return {"error": "alert_resolved"}, 409
+                decline_clean = decline_reason.strip()
+                if not 1 <= len(decline_clean) <= 200:
+                    return {"error": "invalid_decline_reason"}, 400
+            if new_status == existing.status:
+                return {"referral": existing.serialize(), "already": True}, 200
+            if alert.status == 'resolved':
+                return {"error": "alert_resolved"}, 409
 
-        allowed = self.ALLOWED_TRANSITIONS.get(existing.status, set())
-        if new_status != existing.status and new_status not in allowed:
-            return {"error": "invalid_transition"}, 409
+            allowed = self.ALLOWED_TRANSITIONS.get(existing.status, set())
+            if new_status != existing.status and new_status not in allowed:
+                return {"error": "invalid_transition"}, 409
 
-        shelter = self.shelter_repo.get_by_id(existing.shelter_id)
-        if shelter is None:
-            return {"error": "not_found"}, 404
+            shelter = self.shelter_repo.get_by_id(existing.shelter_id)
+            if shelter is None:
+                return {"error": "not_found"}, 404
 
-        updated = self.referral_repo.update_status(ref_id, new_status, decline_clean)
+            updated = self.referral_repo.update_status(ref_id, new_status, decline_clean)
 
-        if new_status == "placed" and existing.status != "placed":
-            self.alert_repo.resolve(existing.alert_id)
+            if new_status == "placed" and existing.status != "placed":
+                self.alert_repo.resolve(existing.alert_id)
 
-        detail = f"referral {ref_id} ({existing.shelter_name}) -> {new_status}"
-        if new_status == "declined" and decline_clean:
-            detail += f" ({decline_clean})"
+            detail = f"referral {ref_id} ({existing.shelter_name}) -> {new_status}"
+            if new_status == "declined" and decline_clean:
+                detail += f" ({decline_clean})"
 
-        portal = PortalRepository(self.referral_repo.conn)
-        state = portal.workflow(existing.alert_id)
-        portal.update_workflow(existing.alert_id, state['assigned_to'], state['escalated_at'])
-        portal.record(existing.alert_id, user.id, f'referral_{new_status}', f'Referral #{ref_id}')
-        self.audit_repo.log(f'user:{user.id}', f"referral_{new_status}", existing.case_code, f'referral {ref_id}')
-        return {"referral": updated.serialize()}, 200
+            portal = PortalRepository(conn)
+            state = portal.workflow(existing.alert_id)
+            portal.update_workflow(existing.alert_id, state['assigned_to'], state['escalated_at'])
+            portal.record(existing.alert_id, user.id, f'referral_{new_status}', f'Referral #{ref_id}')
+            self.audit_repo.log(f'user:{user.id}', f"referral_{new_status}", existing.case_code, f'referral {ref_id}', commit=False)
+            conn.commit()
+            committed = True
+            return {"referral": updated.serialize()}, 200
+        finally:
+            if not committed:
+                conn.rollback()
