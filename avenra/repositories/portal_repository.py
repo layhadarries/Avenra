@@ -103,7 +103,7 @@ class PortalRepository(BaseRepository):
             raise ValueError("Invalid case filter")
 
         if case_code:
-            query += "AND e.case_code = ?"
+            query += " AND e.case_code = ?"
             params.append(case_code)
 
         if args.get('q'):

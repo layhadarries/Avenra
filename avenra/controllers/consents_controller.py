@@ -31,9 +31,14 @@ class ConsentsController:
             if user.role not in Config.ALERT_ROLES:
                 return jsonify({"error": "forbidden"}), 403
 
-            survivor = self.user_repo.get_survivor_by_case(
-                Config.DEMO_CASE_CODE
-            )
+            case_code = request.args.get("case_code", "")
+            if not case_code:
+                case_code = Config.DEMO_CASE_CODE
+            case_code = case_code.strip().upper()
+            if not case_code or len(case_code) > 80:
+                return jsonify({"error": "not_found"}), 404
+
+            survivor = self.user_repo.get_survivor_by_case(case_code)
 
             if survivor is None or not CaseAccessRepository(
                     self.user_repo.conn
