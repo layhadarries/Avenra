@@ -56,17 +56,40 @@ def dependency_findings(report,expected=None):
     return len(report['dependencies'])
 
 
-def runtime_pins(path):
+def runtime_pins(path,include=None):
     pins={}
-    for line in path.read_text().splitlines():
+    included=False
+    text=path.read_text()
+    # Join pip continuations before validating the entire requirement. Never
+    # silently skip hashes, includes, URL requirements or installer overrides.
+    text=re.sub(r'\\\r?\n[ \t]*',' ',text)
+    options={'--require-hashes','--only-binary=:all:','--no-binary=http-ece'}
+    for line in text.splitlines():
         line=line.strip()
         if not line or line.startswith('#'): continue
-        match=re.fullmatch(r'([A-Za-z0-9_.-]+)==([A-Za-z0-9_.+-]+)',line)
-        if not match: raise ValueError('Runtime pins must be explicit exact versions')
+        if line in options: continue
+        if include and line=='-r '+include and not included:
+            included=True
+            continue
+        match=re.fullmatch(r'([A-Za-z0-9_.-]+)==([A-Za-z0-9_.+-]+)(?:\s+--hash=sha256:[0-9a-f]{64})+',line)
+        if not match: raise ValueError('Runtime pins must be exact versions with SHA-256 hashes')
         name=re.sub(r'[-_.]+','-',match[1]).lower()
         if name in pins: raise ValueError('Duplicate runtime pin')
         pins[name]=match[2]
     if not pins: raise ValueError('Runtime pins are empty')
+    if include and not included: raise ValueError('Required runtime lock include is missing')
+    return pins
+
+
+def declared_pins(path):
+    pins={}
+    for line in path.read_text().splitlines():
+        line=line.strip()
+        if not line or line.startswith('#'): continue
+        match=re.fullmatch(r'([a-z0-9-]+)==([A-Za-z0-9_.+-]+)',line)
+        if not match or match[1] in pins: raise ValueError('Invalid exact dependency declarations')
+        pins[match[1]]=match[2]
+    if not pins: raise ValueError('Dependency declarations are empty')
     return pins
 
 
@@ -114,11 +137,22 @@ def main():
     parser.add_argument('--resolution-report',type=Path)
     parser.add_argument('--sbom',type=Path)
     parser.add_argument('--secret-scan',action='store_true')
+    parser.add_argument('--lock-check',action='store_true')
     parser.add_argument('--reviewed',type=Path,default=ROOT/'security'/'bandit-reviewed.json')
     args=parser.parse_args()
-    if not any((args.bandit_report,args.run_bandit,args.dependency_report,args.resolution_report,args.sbom,args.secret_scan)):
+    if not any((args.bandit_report,args.run_bandit,args.dependency_report,args.resolution_report,args.sbom,args.secret_scan,args.lock_check)):
         parser.error('Choose at least one required check')
     try:
+        if args.lock_check:
+            for source,target in (('requirements.in','requirements-lock.txt'),
+                                  ('requirements-build.in','requirements-build-lock.txt'),
+                                  ('requirements-dev.in','requirements-dev-lock.txt'),
+                                  ('requirements-security.in','requirements-security-lock.txt'),
+                                  ('requirements-webpush.in','requirements-webpush.txt')):
+                include='requirements-lock.txt' if source=='requirements-dev.in' else None
+                if declared_pins(ROOT/source)!=runtime_pins(ROOT/target,include=include):
+                    raise ValueError('Dependency lock differs from declarations: '+target)
+            print('Dependency hash/declaration gate passed')
         if args.run_bandit:
             result=subprocess.run([sys.executable,'-m','bandit','-r','avenra','tools','app.py','db.py','sms.py','seed.py',
                 '-f','json','-o',str(args.run_bandit)],cwd=ROOT,check=False)

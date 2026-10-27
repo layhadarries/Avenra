@@ -31,6 +31,7 @@ def main():
     def run(command):
         subprocess.run(command,cwd=ROOT,env=env,check=True)
     run([sys.executable,'-m','pip','check'])
+    run([sys.executable,'tools/security_gate.py','--lock-check'])
     run([sys.executable,'-m','unittest','discover','-s','tests','-p','test_*.py'])
     run(['node','--test',*[str(path.relative_to(ROOT)) for path in sorted((ROOT/'tests').glob('*.cjs'))]])
     with tempfile.TemporaryDirectory(prefix='avenra-security-') as temporary:

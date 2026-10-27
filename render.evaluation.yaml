@@ -5,7 +5,7 @@ services:
     name: avenra-evaluation
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements-lock.txt
+    buildCommand: python tools/install_dependencies.py
     startCommand: gunicorn app:app --workers 1 --threads 4 --bind 0.0.0.0:$PORT
     healthCheckPath: /health
     envVars:

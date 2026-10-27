@@ -149,7 +149,7 @@ working keys as a routine deployment step.
 
 See [staff identity and recovery operations](docs/staff-email-invitations.md#mandatory-staff-mfa-and-recovery-stage-8).
 
-Requirements: Python, Node.js for service-worker checks, and Fish shell for the commands below. Install the app dependencies and start the local server:
+Requirements: Python 3.12 or 3.14, Node.js for service-worker checks, and Fish shell for the commands below. Install the app dependencies and start the local server:
 
 ```fish
 cd ~/Desktop/Avenra
@@ -161,6 +161,10 @@ make run
 ```
 
 The local app is at `http://127.0.0.1:5050`. It creates the schema without seeding demo accounts. Keep local database and upload paths separate from hosted production settings; do not copy production secrets into a development shell.
+
+`make set-up` verifies dependency SHA-256 hashes and installs the pinned build
+tools required by `http-ece`. See [dependency locking](docs/dependency-locking.md)
+for isolated installs, lock updates and verification.
 
 ### Provision staff
 
@@ -192,7 +196,7 @@ node tests/pwa-shell.cjs
 Browser tests require the browser test dependencies and a Playwright Chromium installation:
 
 ```fish
-python -m pip install -r requirements-dev.txt
+python tools/install_dependencies.py --profile dev
 python -m playwright install chromium
 python tests/hosted_pwa_pairing_browser.py
 ```

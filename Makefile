@@ -4,7 +4,7 @@ VENV_PYTHON := .venv/bin/python
 
 set-up:
 	$(PYTHON) -m venv .venv
-	$(VENV_PYTHON) -m pip install -r requirements-lock.txt
+	$(VENV_PYTHON) tools/install_dependencies.py
 
 test:
 	$(VENV_PYTHON) -m unittest discover -s tests -p "test_*.py" -v

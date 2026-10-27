@@ -13,7 +13,7 @@ if not isinstance(service,dict) or service.get('root','.')!='.':
 backup=root/'.vercel/vercel-config-before-dashboard.json'
 backup.parent.mkdir(exist_ok=True)
 if path.exists() and not backup.exists(): backup.write_text(path.read_text())
-service['buildCommand']='pip install -r requirements.txt && python tools/build_vercel_assets.py'
+service['buildCommand']='python tools/install_dependencies.py && python tools/build_vercel_assets.py'
 path.write_text(json.dumps(config,indent=2)+'\n')
 ignore=root/'.gitignore'
 content=ignore.read_text() if ignore.exists() else ''

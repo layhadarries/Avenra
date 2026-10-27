@@ -2,7 +2,7 @@
   "services": {
     "avenra": {
       "root": ".",
-      "buildCommand": "pip install -r requirements.txt && python tools/build_vercel_assets.py",
+      "buildCommand": "python tools/install_dependencies.py && python tools/build_vercel_assets.py",
       "entrypoint": "app:app"
     }
   },

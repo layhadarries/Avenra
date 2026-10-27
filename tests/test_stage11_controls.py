@@ -3,6 +3,7 @@ import base64
 from hashlib import sha256
 from html.parser import HTMLParser
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 import test_avenra as fixtures
@@ -62,6 +63,46 @@ class BrowserPolicyTests(unittest.TestCase):
 
 
 class ReleaseGateTests(unittest.TestCase):
+    def test_runtime_hash_lock_rejects_unhashed_or_unsafe_requirements(self):
+        from tools.security_gate import runtime_pins
+        digest = 'a' * 64
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'requirements.txt'
+            path.write_text('--require-hashes\nfictional-package==1.0 \\\n'
+                            '    --hash=sha256:' + digest + '\n')
+            self.assertEqual(runtime_pins(path), {'fictional-package': '1.0'})
+            for entry in ('fictional==1.0',
+                          'fictional>=1.0 --hash=sha256:' + digest,
+                          'fictional==1.0 --hash=sha256:invalid',
+                          'fictional==1.0 --hash=sha1:' + digest,
+                          '--no-require-hashes', '--trusted-host example.invalid',
+                          '-r unreviewed.txt', 'fictional @ https://example.invalid/pkg.whl'):
+                with self.subTest(entry=entry):
+                    path.write_text(entry + '\n')
+                    with self.assertRaises(ValueError):
+                        runtime_pins(path)
+
+    def test_runtime_hash_lock_rejects_duplicate_names(self):
+        from tools.security_gate import runtime_pins
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'requirements.txt'
+            path.write_text('fictional-package==1.0 --hash=sha256:' + 'a' * 64 + '\n'
+                            'Fictional_Package==2.0 --hash=sha256:' + 'b' * 64 + '\n')
+            with self.assertRaises(ValueError):
+                runtime_pins(path)
+
+    def test_development_lock_must_include_only_the_expected_runtime_lock(self):
+        from tools.security_gate import runtime_pins
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'requirements.txt'
+            pin = 'fictional==1.0 --hash=sha256:' + 'a' * 64 + '\n'
+            path.write_text('-r requirements-lock.txt\n' + pin)
+            self.assertEqual(runtime_pins(path, include='requirements-lock.txt'), {'fictional': '1.0'})
+            for prefix in ('', '-r unreviewed.txt\n', '-r requirements-lock.txt\n-r requirements-lock.txt\n'):
+                path.write_text(prefix + pin)
+                with self.assertRaises(ValueError):
+                    runtime_pins(path, include='requirements-lock.txt')
+
     def test_followup_browser_checks_run_without_removing_csp_acceptance(self):
         workflow = Path('.github/workflows/verify.yml').read_text()
         for name in ('stage11_csp_browser.py','followup_privacy_browser.py','weather_data_boundary_browser.py'):

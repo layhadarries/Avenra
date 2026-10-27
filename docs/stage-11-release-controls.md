@@ -46,6 +46,11 @@ Render evaluation build, without editing an unrelated local Render change.
 It is a **version pin file, not a cryptographic hash lock**. Tools are isolated from
 the runtime and pinned separately in `requirements-security.txt`.
 
+**2026-10-27 follow-up:** the current files now use SHA-256 locks for the runtime,
+browser tests, scanner dependencies and source-build tools. The paragraph above
+records the original Stage 11 result. See [dependency locking](dependency-locking.md)
+for the current installation and regeneration process.
+
 `tools/security_gate.py` fails closed on:
 
 - missing/malformed/empty scan reports, scanner errors or no source coverage;
