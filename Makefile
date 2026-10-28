@@ -5,6 +5,7 @@ VENV_PYTHON := .venv/bin/python
 set-up:
 	$(PYTHON) -m venv .venv
 	$(VENV_PYTHON) tools/install_dependencies.py
+	$(VENV_PYTHON) tools/install_gitleaks.py --hooks
 
 test:
 	$(VENV_PYTHON) -m unittest discover -s tests -p "test_*.py" -v
@@ -24,3 +25,11 @@ sms-setup:
 .PHONY: release-check
 release-check:
 	$(VENV_PYTHON) tools/verify_final_release.py --browsers
+
+.PHONY: security-setup secrets-check
+security-setup:
+	$(PYTHON) tools/install_gitleaks.py --hooks
+
+secrets-check:
+	$(PYTHON) tools/check_secrets.py --staged
+	$(PYTHON) tools/check_secrets.py --history

@@ -34,3 +34,41 @@ evaluation-uploads/
 /.env*
 
 /public/static/
+
+# Local credentials, private key containers and private test/scan artifacts.
+*.key
+*.p12
+*.pfx
+*.p8
+*.pkcs12
+*.jks
+*.keystore
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+.aws/
+.ssh/
+.npmrc
+.pypirc
+.netrc
+.pgpass
+credentials.json
+service-account.json
+service_account.json
+storage-state.json
+storage_state.json
+cookies.json
+cookies.txt
+backups/
+security-reports/
+blob-report/
+*.dump
+*.backup
+*.bak
+*.log
+*.tfstate
+*.tfstate.*
+
+# This example remains public; its contents are still scanned.
+!.env.example

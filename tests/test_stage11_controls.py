@@ -154,6 +154,6 @@ class ReleaseGateTests(unittest.TestCase):
         content=Path('.github/workflows/verify.yml').read_text()
         self.assertIn('contents: read',content)
         self.assertNotIn('pull_request_target',content)
-        self.assertNotIn('secrets.',content)
+        self.assertNotRegex(content,r'(?i)\$\{\{[^}]*\bsecrets\s*(?:\.|\[)')
         for marker in ('security_gate.py','pip-audit','bandit','cyclonedx-json','node --test','unittest discover'):
             self.assertIn(marker,content)

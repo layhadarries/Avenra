@@ -1,7 +1,6 @@
 name: Verify isolated engineering release
 on:
   push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -10,7 +9,25 @@ concurrency:
   group: verify-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  secret-scan:
+    name: Secret and private-file guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.14'
+      - run: python tools/install_gitleaks.py
+      - name: Secret-guard regression checks using fictional fixtures
+        run: python -m unittest discover -s tests -p 'test_secret_guard.py'
+      - name: Scan every reachable file version without exposing matched values
+        run: python tools/check_secrets.py --history
   regression:
+    needs: secret-scan
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -28,6 +45,7 @@ jobs:
         with:
           node-version: '24'
       - run: python tools/install_dependencies.py --profile dev
+      - run: python tools/install_gitleaks.py
       - run: python tools/security_gate.py --lock-check
       - run: python -m pip check
       - run: python -m unittest discover -s tests -p 'test_*.py'
@@ -50,6 +68,7 @@ jobs:
           python tests/stage12_accessibility_browser.py
           python tests/stage12_load_browser.py
   security:
+    needs: secret-scan
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -77,6 +96,8 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: dependency-and-static-reports
-          path: security-reports/*.json
+          name: dependency-reports
+          path: |
+            security-reports/dependencies.json
+            security-reports/sbom.cdx.json
           retention-days: 14

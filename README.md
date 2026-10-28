@@ -183,6 +183,10 @@ Never put database URIs, SMTP credentials, VAPID private keys, invitation links 
 
 ## Verification
 
+Credential/private-file protection runs before local commits and pushes and as
+a required dependency of the CI jobs. Enable the local hooks with
+`make security-setup`; see [secret protection](docs/secret-protection.md).
+
 Run the Python suite and service-worker contract checks:
 
 ```fish
