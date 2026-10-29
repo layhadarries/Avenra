@@ -1,5 +1,8 @@
 # Avenra working notes
 
+- Work on `tazio`, the operator's personal development branch. Preserve `main`
+  as the hackathon snapshot; do not merge into it or change its settings.
+- Complete changes and checks before making one commit and one push per task.
 - At the start of each task, read `../Avenra-memory-book.md` if it exists. It is
   the operator's local Desktop work history; verify current Git/code state before
   relying on older entries.

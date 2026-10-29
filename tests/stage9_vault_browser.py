@@ -6,6 +6,8 @@ PHRASE='Cedar! private river vault 826'
 
 
 def unlock(page):
+    # Initialization decides whether confirmation is needed before enabling submit.
+    expect(page.locator('#vault-submit')).to_be_enabled()
     page.locator('#vault-passphrase').fill(PHRASE)
     if page.locator('#vault-confirmation').is_visible(): page.locator('#vault-confirmation').fill(PHRASE)
     page.locator('#vault-submit').click()
