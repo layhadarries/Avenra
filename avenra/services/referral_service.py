@@ -41,10 +41,17 @@ class ReferralService:
         self.audit_repo = audit_repo or AuditRepository()
 
     def list_referrals(self, user: User) -> List[Dict[str, Any]]:
-        shelter_filter = user.shelter_id if user.role == "shelter" else None
-        if user.role == 'shelter' and shelter_filter is None:
-            return []
-        referrals = self.referral_repo.get_all(shelter_id=shelter_filter, staff_id=user.id if user.role != 'shelter' else None)
+        if user.role == "shelter":
+            if user.shelter_id is None:
+                return []
+            referrals = self.referral_repo.get_all(shelter_id=user.shelter_id)
+        elif user.role == "admin":
+            # Mirrors CaseAccessRepository.allows(): create/update already let
+            # administrators work across cases, so the list must not narrow
+            # them to explicit grants. Consent remains the hard gate.
+            referrals = self.referral_repo.get_all()
+        else:
+            referrals = self.referral_repo.get_all(staff_id=user.id)
         return [r.serialize() for r in referrals]
 
     def create_referral(

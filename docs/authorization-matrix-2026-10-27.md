@@ -22,6 +22,7 @@ regressions are listed where they already covered the same boundary.
 | `GET /cases/diary-photo/<id>` | responder, shelter, admin | Entry owner must satisfy `allows()` before file lookup | Active consent, shared entry, verified object, view audit | stage12, `test_stage4_diary_access` |
 | `GET /api/consents?case_code=` | responder, shelter, admin | Case selected from the query, then `allows()`; admin sees all; default remains the demo case when omitted | Read only | stage12 |
 | `GET /api/audit-log?case_code=` | responder, shelter, admin | Admin sees all; staff see events for assigned cases plus their own null-case events | Read only; `case_code` filter is applied inside that scope | stage12 |
+| `GET /api/referrals`, `GET /referrals` | responder, shelter, admin | Responder: explicit grants only; shelter: own `shelter_id`; admin: every consent-active referral by role policy | Active `shelter_referral_sharing`; no alert location fields | `test_referral_access` |
 | `POST /api/referrals` | responder, shelter, admin | `allows()` on the alert owner before consent or duplicate checks | Active `shelter_referral_sharing`; unresolved alert; one active referral | stage12, `test_referral_access` |
 | `POST /api/referrals/<id>/status` | shelter, responder, admin | Shelter role bound to its own shelter; staff need `allows()` on the alert owner | Active referral consent and allowed state transition | stage12, `test_referral_access` |
 | `POST /api/shelters/<id>/capacity` | shelter, responder, admin | Shelter role bound to its own `shelter_id`; responder/admin may update any shelter by role design | Bounded integer update and audit entry | `test_avenra` shelter-capacity tests |
@@ -54,6 +55,15 @@ client-supplied user or case selector.
    the analogous malformed fragment on the staff path), so a case filter failed
    with a database error instead of scoping results. The filter now has its
    separating space and is exercised on both the admin and assigned-staff paths.
+
+## Follow-up defect fixed 2026-10-30
+
+3. `GET /api/referrals` and `/referrals` narrowed administrators to explicit
+   `case_access` grants, while referral creation and status updates already used
+   `allows()`. An administrator could create a referral on an unassigned case
+   and then not see it. The list now follows the same policy: responders remain
+   grant-scoped, shelters remain bound to their own shelter, and administrators
+   see every consent-active referral. Consent remains a hard gate.
 
 ## Deliberately unchanged
 

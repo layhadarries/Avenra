@@ -94,6 +94,47 @@ class ReferralAccessTests(unittest.TestCase):
 
         self.assertEqual(status, "sent")
 
+    def test_admin_list_is_not_limited_to_explicit_case_grants(self):
+        with closing(test_avenra.db.connect()) as conn, conn:
+            conn.execute(
+                """
+                DELETE FROM case_access
+                WHERE staff_id = (
+                    SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 1
+                )
+                """
+            )
+
+        self._login_staff("admin")
+        response = self.client.get("/api/referrals")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {self.own_referral_id, self.other_referral_id},
+            {entry["id"] for entry in response.json["referrals"]},
+        )
+
+        page = self.client.get("/referrals")
+        self.assertEqual(page.status_code, 200)
+        html = page.get_data(as_text=True)
+        for referral_id in (self.own_referral_id, self.other_referral_id):
+            self.assertIn(f'data-referral-id="{referral_id}"', html)
+
+    def test_responder_list_remains_limited_to_explicit_case_grants(self):
+        with closing(test_avenra.db.connect()) as conn, conn:
+            conn.execute(
+                """
+                DELETE FROM case_access
+                WHERE staff_id = (
+                    SELECT id FROM users WHERE role = 'responder' ORDER BY id LIMIT 1
+                )
+                """
+            )
+
+        self._login_staff("responder")
+        response = self.client.get("/api/referrals")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json["referrals"], [])
+
     def test_revoked_consent_hides_referrals_from_api_and_page(self):
         with closing(test_avenra.db.connect()) as conn:
             with conn:
@@ -105,7 +146,7 @@ class ReferralAccessTests(unittest.TestCase):
                     """
                 )
 
-        for role in ("responder", "shelter"):
+        for role in ("responder", "shelter", "admin"):
             with self.subTest(role=role):
                 self._login_staff(role)
 
